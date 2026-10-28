@@ -107,6 +107,7 @@ final class BatteryPresence {
     }
 
     private static void refresh(Context context) {
+        if (ColorOsHooks.dispatchBatteryRefresh(() -> refresh(context))) return;
         try {
             final Intent battery = context.registerReceiver(null,
                     new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
@@ -199,6 +200,7 @@ final class BatteryPresence {
     }
 
     private static void publish(boolean attached, float watts, int temperature) {
+        if (ColorOsHooks.dispatchBatteryPublish(() -> publish(attached, watts, temperature))) return;
         final boolean beforeAttached = TrioState.sChargingAttached;
         final float beforeWatts = TrioState.sChargePowerW;
         final int beforeTemperature = TrioState.sBatteryTempC;

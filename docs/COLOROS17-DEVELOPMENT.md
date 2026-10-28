@@ -10,7 +10,7 @@
 | 仓库 | `chorusfruit-233/ColorDuo` |
 | 应用 ID | `io.github.chorusfruit_233.colorduo` |
 | 源码 namespace | `io.github.yixing233.hyperduo`，沿用共享源码的命名 |
-| 当前版本 | `0.2.5` / `10014` |
+| 当前版本 | `0.2.6` / `10015` |
 | compileSdk / targetSdk / minSdk | 37 / 36 / 29 |
 | 框架 API | libxposed 102 |
 | 作用域 | `com.android.systemui` |
@@ -41,6 +41,7 @@ Windows 可使用 `gradlew.bat --no-daemon :app:assembleDebug`。首次构建需
 | `ColorOsHooks.java` | ColorOS 视图接管、原生更新跟踪、状态流捕获与恢复 |
 | `ColorOsPolicy.java` | 模型解析、信号换算、参考固件电流单位及 slot 所有权规则 |
 | `ColorOsBattery.java` | 只读检测 Oplus 串联电芯数量、选择整包电压并归一化功率输入 |
+| `ColorOsCharger.java` / `ColorOsChargerClient.java` | Oplus AIDL 只读查询、数据校验、异步缓存及厂商串并联配置 |
 | `ColorOsCharge.java` | 限频读取原生 PLC 旁路状态，向共享充电规则提供已确认或未知的读数 |
 | `DuoPolicy.java` / `ColorOsRadio.java` | Duo 状态规则、默认数据卡顺序及各状态栏实例共享的限频电话服务采样 |
 | `ColorOsLayout.java` | 主状态栏、锁屏与通知/QS 头部的本地容器关联，隔离各行图标 |
@@ -55,7 +56,7 @@ Windows 可使用 `gradlew.bat --no-daemon :app:assembleDebug`。首次构建需
 
 图标只在电池最近的 `system_icons` 或 `quick_qs_status_icons` 行内查找，找不到或存在歧义时保留原生图标。QS 使用 ConstraintLayout，环外读数挂在电池内部的 LinearLayout 中，由电池宽度为其占位；普通状态栏与锁屏使用同一行的兄弟视图。原生时钟隐藏仍限定主状态栏，不接管锁屏和面板的大时钟。
 
-网络类型应从 ColorOS 原生映射模型取值，按真实订阅与卡槽匹配。电流单位修正目前限定于已验证的完整固件指纹；扩展固件时，需要记录原始接口值和单位证据，保持 µA 输入、电压 mV 与共享功率公式一致。
+网络类型应从 ColorOS 原生映射模型取值，按真实订阅与卡槽匹配。功率优先采用校验通过的厂商电流、电压对，电流按该接口的 mA 口径归一化。平台回退中的电流单位例外仍限定已验证完整指纹；扩展接口时记录原始值及单位证据，保持 µA 输入、电压 mV 与共享功率公式一致。
 
 ## 检查
 
@@ -87,7 +88,7 @@ adb logcat -v time -s LSPosedFramework | rg 'ColorDuo|io\.github\.chorusfruit233
 
 设备信息应包含机型、完整固件指纹、SystemUI、Android、LSPosed 和模块版本。记录组件顺序、连接与充电状态，再与实际状态栏对照；预览使用固定示例数据。
 
-电池日志包含原始电流、单位、归一化电流、广播电压、串联电芯数量及来源、功率计算使用的电压及来源。网络日志包含模型捕获情况、数据卡槽、信号等级和制式文字。反馈入口是 [ColorDuo Issues](https://github.com/chorusfruit-233/ColorDuo/issues)。
+电池日志包含框架原始电流、单位、归一化电流、广播电压、电芯配置及来源、功率计算电压、厂商接口状态及两路电压；数据来源或接口状态变化时始终记录，调试模式额外记录读数变化。网络日志包含模型捕获情况、数据卡槽、信号等级和制式文字。反馈入口是 [ColorDuo Issues](https://github.com/chorusfruit-233/ColorDuo/issues)。
 
 ## 构建产物与分发
 

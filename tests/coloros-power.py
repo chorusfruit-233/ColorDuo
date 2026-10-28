@@ -23,7 +23,8 @@ def method(source, name):
 separator = re.search(r"static final char PERF_BREAK = ('[^']+');", hooks)
 if not separator:
     raise RuntimeError("Production separator missing")
-methods = "\n".join((method(battery, "wattsOf"), method(hooks, "powerText"), method(hooks, "perfText")))
+methods = "\n".join((method(battery, "wattsOf"), method(battery, "publish"),
+                     method(hooks, "powerText"), method(hooks, "perfText")))
 harness = r'''
 package io.github.yixing233.hyperduo;
 
@@ -65,6 +66,20 @@ public final class ColorOsPowerTest {
         boolean perfAnywhere() { return perfPower || perfTemp; }
     }
     static final char PERF_BREAK = @SEPARATOR@;
+
+    static class ColorOsHooks {
+        static boolean worker;
+        static Runnable publish;
+        static boolean dispatchBatteryPublish(Runnable value) {
+            if (!worker) return false;
+            publish = value;
+            return true;
+        }
+    }
+    static class TrioHooks {
+        static int invalidations;
+        static void invalidateHosts() { invalidations++; }
+    }
 
 @METHODS@
 
@@ -305,20 +320,79 @@ public final class ColorOsPowerTest {
                 "the measured mV-node exception does not become a general voltage heuristic");
         check(nodes.voltageReads == 0 && actual.voltageReads == 0,
                 "the existing OnePlus firmware never reads the PMX-specific voltage fallback");
+        TrioState.sChargingAttached = false;
+        TrioState.sChargePowerW = 0;
+        TrioState.sBatteryTempC = 0;
+        ColorOsHooks.worker = true;
+        publish(true, 5.9f, 32);
+        check(!TrioState.sChargingAttached && TrioState.sChargePowerW == 0 && TrioState.sBatteryTempC == 0,
+                "background sampling queues the entire UI snapshot without partially publishing it");
+        ColorOsHooks.worker = false;
+        ColorOsHooks.publish.run();
+        check(TrioState.sChargingAttached && TrioState.sChargePowerW == 5.9f && TrioState.sBatteryTempC == 32
+                && TrioHooks.invalidations == 1, "the production publisher applies the snapshot on the UI side");
+        publish(true, 5.9f, 32);
+        check(TrioHooks.invalidations == 1, "an unchanged sample does not cause another redraw");
         System.out.println("ColorOS current units, series-cell detection, pack-voltage selection and upstream rendering passed");
     }
 }
 '''
 harness = harness.replace("@SEPARATOR@", separator.group(1)).replace("@METHODS@", methods)
 with tempfile.TemporaryDirectory(prefix="colorduo-power-") as directory:
+    # Independent Android/service fixtures for the production AIDL reflection adapter.
+    fixtures = {
+        "android/os/IBinder.java": """package android.os;
+            public interface IBinder { boolean isBinderAlive(); }""",
+        "android/os/SystemClock.java": """package android.os;
+            public class SystemClock { public static long elapsedRealtime() { return 0; } }""",
+        "android/os/ServiceManager.java": """package android.os;
+            public class ServiceManager {
+                public static IBinder binder;
+                public static boolean denied;
+                public static int lookups;
+                public static IBinder checkService(String name) {
+                    lookups++;
+                    if (!name.equals("vendor.oplus.hardware.charger.ICharger/default"))
+                        throw new AssertionError("Unexpected service: " + name);
+                    if (denied) throw new SecurityException("denied");
+                    return binder;
+                }
+            }""",
+        "vendor/oplus/hardware/charger/ICharger.java": """package vendor.oplus.hardware.charger;
+            import android.os.IBinder;
+            public interface ICharger {
+                String queryChargeInfo();
+                abstract class Stub {
+                    public static ICharger asInterface(IBinder binder) { return (ICharger) binder; }
+                }
+            }""",
+        "org/json/JSONObject.java": """package org.json;
+            public class JSONObject {
+                public JSONObject(String text) {}
+                public JSONObject optJSONObject(String key) { return null; }
+                public Object opt(String key) { return null; }
+            }""",
+    }
+    fixture_paths = []
+    for name, content in fixtures.items():
+        path = Path(directory) / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content)
+        fixture_paths.append(str(path))
     test_source = Path(directory) / "ColorOsPowerTest.java"
     test_source.write_text(harness)
     compiler = [shutil.which("javac")] if shutil.which("javac") else ["java", "-m", "jdk.compiler/com.sun.tools.javac.Main"]
     subprocess.run(compiler + ["-encoding", "UTF-8", "-d", directory,
                               str(SOURCE / "Refl.java"), str(SOURCE / "ColorOsPolicy.java"),
                               str(SOURCE / "ColorOsBattery.java"),
+                              str(SOURCE / "ColorOsCharger.java"),
+                              str(SOURCE / "ColorOsChargerClient.java"),
                               str(SOURCE / "ColorOsCharge.java"), str(SOURCE / "DuoPolicy.java"),
                               str(ROOT / "tests/ColorOsChargeTest.java"),
-                              str(test_source)], check=True)
+                              str(ROOT / "tests/ColorOsChargerTest.java"),
+                              str(ROOT / "tests/ColorOsChargerClientTest.java"),
+                              str(test_source)] + fixture_paths, check=True)
     subprocess.run(["java", "-cp", directory, "io.github.yixing233.hyperduo.ColorOsPowerTest"], check=True)
     subprocess.run(["java", "-cp", directory, "io.github.yixing233.hyperduo.ColorOsChargeTest"], check=True)
+    subprocess.run(["java", "-cp", directory, "io.github.yixing233.hyperduo.ColorOsChargerTest"], check=True)
+    subprocess.run(["java", "-cp", directory, "io.github.yixing233.hyperduo.ColorOsChargerClientTest"], check=True)

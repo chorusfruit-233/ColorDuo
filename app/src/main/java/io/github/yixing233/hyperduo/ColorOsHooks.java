@@ -13,6 +13,7 @@ import android.graphics.PixelFormat;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.PowerManager;
 import android.os.SystemClock;
@@ -36,6 +37,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
 
 import io.github.libxposed.api.XposedInterface;
 import io.github.libxposed.api.XposedModule;
@@ -68,6 +70,10 @@ final class ColorOsHooks {
     private static Class<?> statusIconsClass;
     private static Context context;
     private static String lastBatterySample;
+    private static String lastBatterySource;
+    private static Handler batteryWorker;
+    private static boolean batteryRefreshQueued;
+    private static ColorOsCharger charger;
     private static long nextSimPoll;
     private static final ColorOsLayout.Tree<View> VIEW_TREE = new ColorOsLayout.Tree<>() {
         @Override public View parent(View view) {
@@ -87,13 +93,44 @@ final class ColorOsHooks {
 
     static boolean isInstalled() { return installed; }
 
+    /** Coalesce ColorOS reads off the main thread; the inherited MIUI path stays synchronous. */
+    static synchronized boolean dispatchBatteryRefresh(Runnable refresh) {
+        if (!installed) return false;
+        if (batteryWorker == null) {
+            HandlerThread thread = new HandlerThread("ColorDuo-battery",
+                    android.os.Process.THREAD_PRIORITY_BACKGROUND);
+            thread.start();
+            batteryWorker = new Handler(thread.getLooper());
+        }
+        if (Looper.myLooper() == batteryWorker.getLooper()) return false;
+        if (!batteryRefreshQueued) {
+            batteryRefreshQueued = true;
+            batteryWorker.post(() -> {
+                synchronized (ColorOsHooks.class) { batteryRefreshQueued = false; }
+                refresh.run();
+            });
+        }
+        return true;
+    }
+
+    static boolean dispatchBatteryPublish(Runnable publish) {
+        if (!installed || Looper.myLooper() == Looper.getMainLooper()) return false;
+        MAIN.post(publish);
+        return true;
+    }
+
     private static final ColorOsBattery BATTERY_SAMPLER = new ColorOsBattery();
     private static final ColorOsCharge CHARGE_SAMPLER = new ColorOsCharge();
     private static final ColorOsRadio RADIO_SAMPLER = new ColorOsRadio();
     private static volatile DuoPolicy.Charge observedCharge = DuoPolicy.Charge.UNKNOWN;
     private static String lastChargeNote;
+    private static int lastBatteryPlugged = -1;
 
     static boolean batteryStatus(int status, int plugged) {
+        if (plugged != lastBatteryPlugged) {
+            lastBatteryPlugged = plugged;
+            if (charger != null) charger.invalidate();
+        }
         ColorOsCharge.Sample sample = CHARGE_SAMPLER.sample(status, plugged, SystemClock.elapsedRealtime());
         DuoPolicy.Charge next = sample.charge;
         String note = "ColorOS charging: state=" + next + " status=" + status + " plugged=" + plugged
@@ -111,16 +148,27 @@ final class ColorOsHooks {
 
     /** Normalize current units and per-cell voltage before the shared upstream calculation. */
     static ColorOsBattery.Sample batterySample(int reported, int voltageMilliVolts) {
+        long now = SystemClock.elapsedRealtime();
+        ColorOsCharger.Observation vendor = charger == null
+                ? new ColorOsCharger.Observation(null, "unavailable") : charger.sample(now);
         ColorOsBattery.Sample sample = BATTERY_SAMPLER.sample(Build.FINGERPRINT, reported, voltageMilliVolts,
-                android.os.SystemClock.elapsedRealtime());
-        String note = "ColorOS battery: rawCurrent=" + reported
-                + " rawUnit=" + (ColorOsPolicy.batteryReportsMilliamps(Build.FINGERPRINT) ? "mA" : "uA")
-                + " currentMicroAmps=" + sample.currentMicroAmps + " voltageMilliVolts=" + voltageMilliVolts
+                now, vendor.reading);
+        String halState = vendor.reading != null && vendor.reading.topology == ColorOsCharger.Topology.PARALLEL
+                ? "parallel_current_unverified" : vendor.state;
+        String note = "ColorOS battery: frameworkCurrent=" + reported
+                + " frameworkUnit=" + (ColorOsPolicy.batteryReportsMilliamps(Build.FINGERPRINT) ? "mA" : "uA")
+                + " currentMicroAmps=" + sample.currentMicroAmps + " broadcastVoltageMilliVolts=" + voltageMilliVolts
                 + " seriesCells=" + sample.seriesCells + " cellsSource=" + sample.cellsSource
-                + " powerVoltageMilliVolts=" + sample.voltageMilliVolts + " voltageSource=" + sample.voltageSource;
-        if (lastBatterySample == null || (TrioConfig.debugLog() && !note.equals(lastBatterySample))) {
+                + " powerVoltageMilliVolts=" + sample.voltageMilliVolts + " voltageSource=" + sample.voltageSource
+                + " dataSource=" + sample.dataSource + " hal=" + halState
+                + " halTopology=" + (vendor.reading == null ? "unknown" : vendor.reading.topology)
+                + " halVoltageMilliVolts=" + (vendor.reading == null ? 0 : vendor.reading.voltageMilliVolts)
+                + " halSecondMilliVolts=" + (vendor.reading == null ? 0 : vendor.reading.secondMilliVolts);
+        String source = sample.dataSource + "/" + sample.voltageSource + "/" + sample.cellsSource + "/" + halState;
+        if (!source.equals(lastBatterySource) || (TrioConfig.debugLog() && !note.equals(lastBatterySample))) {
             TrioHooks.log(TrioHooks.LOG_INFO, note);
         }
+        lastBatterySource = source;
         lastBatterySample = note;
         return sample;
     }
@@ -139,6 +187,15 @@ final class ColorOsHooks {
             throw new IllegalStateException("ColorOS battery/status bar classes unavailable");
         }
         TrioHooks.useLogger(module);
+        charger = new ColorOsCharger(new ColorOsChargerClient(loader),
+                Executors.newSingleThreadExecutor(task -> {
+                    Thread thread = new Thread(() -> {
+                        android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
+                        task.run();
+                    }, "ColorDuo-charger");
+                    thread.setDaemon(true);
+                    return thread;
+                }), SystemClock::elapsedRealtime);
         installed = true;
         TrioConfig.install(module);
         TrioConfig.addListener(ColorOsHooks::invalidateHosts);

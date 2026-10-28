@@ -60,6 +60,10 @@ def normalize(name, data):
                                 ("    private " + signature).encode())
     if name == "BatteryPresence.java":
         data = data.replace(
+            b"        if (ColorOsHooks.dispatchBatteryRefresh(() -> refresh(context))) return;\n", b"")
+        data = data.replace(
+            b"        if (ColorOsHooks.dispatchBatteryPublish(() -> publish(attached, watts, temperature))) return;\n", b"")
+        data = data.replace(
             b"            // ColorOS readouts follow actual charging, not merely an attached cable.\n"
             b"            final boolean readoutActive = ColorOsHooks.isInstalled()\n"
             b"                    ? ColorOsHooks.batteryStatus(status, plugged) : attached;\n", b"")

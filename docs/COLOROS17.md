@@ -24,7 +24,7 @@ ColorDuo 是完全由 Codex 维护、专注 ColorOS 17 的 HyperDuo fork。本�
 | Wi-Fi | `WifiIcon.Companion.fromModel` 的实时模型，仓库 StateFlow 和框架连接状态兜底 |
 | 分卡信号 | `OplusCellularIconViewModelImpl` / `OplusMobileIconViewModel` 构造时捕获 backing StateFlow；getter 用于兼容没有内联调用的固件 |
 | 网络类型 | `Os17Binding.bindNetworkTypeText` 的实际模型；Interactor 原生映射用于提供可见性过滤前的制式文字 |
-| 充电功率 | `BatteryManager.CURRENT_NOW` 经参考固件单位归一化后，传给上游 `BatteryPresence` 的原有计算 |
+| 充电功率 | 优先采用 Oplus `ICharger.queryChargeInfo()` 的有效电流、电压对；框架接口和已验证节点回退，复用原有功率公式 |
 | 原生图标 | `StatusIconContainer.mIgnoredSlots`；仅撤销模块自己添加的 slot |
 
 alpha5 接管 `StatBatteryMeterView` 的各个实例，包括主状态栏、锁屏、下拉通知栏与控制面板头部。原生 Drawable、尺寸、ScaleType 和子视图可见性按实例保存，系统更新完成后重新记录；某个实例异常时只恢复它的原生显示。
@@ -47,6 +47,16 @@ alpha5 接管 `StatBatteryMeterView` 的各个实例，包括主状态栏、锁�
 - 原生时钟容器 `clock_for_fake` 仅在当帧布局真正显示时间时隐藏；模块关闭、布局交还时恢复原生可见性，系统更新同样纳入原生状态跟踪。
 
 `python3 tests/upstream-parity.py` 继续对比固定上游的 19 个未演进文件；8 个明确演进的状态、渲染、布局和设置文件由针对性的行为回归覆盖。应用标识与平台采样桥接仍单独归一化；默认值、配置迁移和功率公式保持原有保护。CI 使用完整提交历史。
+
+## 0.2.6：Oplus 充电接口
+
+接口方案参考 [LuckyTool 的只读充电服务调用](https://github.com/luckyzyx/LuckyTool/blob/bb9282be820538cb4c24bd1345b963104d02b6a6/app/src/main/java/com/luckyzyx/luckytool/hook/utils/IChargerUtils.kt)，本项目独立实现 `vendor.oplus.hardware.charger.ICharger/default` 的现代 AIDL 适配。电池广播仅触发刷新，优先使用 `queryChargeInfo()` 中完整且有效的电流、电压对；不把协议瓦数当作实时功率。电流遵循该厂商接口的 mA 口径，电压在互不重叠的有效 mV/µV 范围内归一化；缺字段、重复字段、异常值、矛盾配置或不兼容响应均不接管。
+
+从 `/odm/etc/devices_config/devices_config.json` 读取串并联标记。串联设备优先整包电压，其次两路实测电芯电压求和，再回退原有单节折算；已有整包电压不重复翻倍。并联设备的单支路/总电流口径尚未验证，因此不采用厂商支路读数，也不套用串联倍率。未知配置保留原有电芯检测。
+
+ColorOS 电池采样在后台合并执行，完整显示快照交回主线程。厂商 IPC 单独执行，最多一个查询在途，成功请求间隔至少 3 秒，缓存最长 6 秒；失败限频重试，不等待服务启动，挂起查询不会阻塞平台回退。拔插电源立即失效缓存，并丢弃旧连接的迟到响应。不新增 Root 守护进程，也不修改充电控制。
+
+离线检查覆盖生产解析、功率计算、数据源选择、Binder 查找/断连/重连、异步合并与过期回退及主线程发布。接口依据来自公开代码，仍需目标 ColorOS 17 设备确认服务访问权限、字段单位和硬件配置；源码检查与构建通过不代表真机验收完成。
 
 ## 0.2.5：PMX110 功率输入
 
