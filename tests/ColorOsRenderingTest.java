@@ -95,9 +95,24 @@ public final class ColorOsRenderingTest {
                 float start=(left.x(1)+appearance.ringStroke/2f+1)*transform[0]+transform[1];
                 float end=(right.x(0)-appearance.ringStroke/2f-1)*transform[0]+transform[1];
                 check(ink.getMinX()>=start-.1 && ink.getMaxX()<=end+.1,
-                        "default split opening clears battery digits: "+value);
+                        "default split opening clears battery digits: "+value+" ink="+ink+" gap="+start+":"+end+" font="+frame.textSize);
                 check(Math.abs(frame.textSize-Prefs.DEF_VALUE_SIZE)<.05,
-                        "default split opening fits the actual default battery font size");
+                        "default split opening fits the actual default battery font size: value="+value+" actual="+frame.textSize+" ink="+ink+" opening="+TrioGeometry.splitOpeningWidth(appearance,0));
+            }
+        }
+        for(int link:new int[]{0,1})for(int distance:new int[]{10,24})for(int opening:new int[]{16,48}) {
+            settings.splitLink=link;settings.splitLeftDistance=distance;settings.splitLeftTop=opening;
+            TrioState state=new TrioState();state.level=100;
+            TrioAppearance appearance=TrioAppearance.of(settings);float[] transform=new float[3];
+            TrioRenderer.designTransform(480,400,appearance,transform);
+            var left=new TrioGeometry.EllipseSide(appearance,0);var right=new TrioGeometry.EllipseSide(appearance,1);
+            try(Frame frame=new Frame()) {
+                TrioRenderer.drawState(frame,480,400,state,settings);
+                var ink=frame.textBounds.get(0);
+                float from=(left.x(1)+appearance.ringStroke/2f+1)*transform[0]+transform[1];
+                float to=(right.x(0)-appearance.ringStroke/2f-1)*transform[0]+transform[1];
+                check(ink.getMinX()>=from-.1 && ink.getMaxX()<=to+.1,
+                        "narrow split opening fits actual centred glyph overhang: d="+distance+" o="+opening+" ink="+ink+" gap="+from+":"+to+" font="+frame.textSize);
             }
         }
     }

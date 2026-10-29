@@ -599,7 +599,7 @@ public final class TrioRenderer {
                     final int suffixScale = part == Prefs.PART_TYPE ? a.typeSuffixScale : 100;
                     float fitted = ringTextSize(text, requested, z, a.ringStroke, suffixScale, r.parts);
                     if (a.splitMode == 1 && z != 1) {
-                        fitted = fitSize(text, fitted, TrioGeometry.splitOpeningWidth(a,z), suffixScale);
+                        fitted = fitSplitText(text, fitted, TrioGeometry.splitOpeningWidth(a,z), suffixScale);
                     }
                     // Centred in the band, and on its INK rather than its metrics: the
                     // metrics reserve leading above the capitals that a digits-only
@@ -624,6 +624,21 @@ public final class TrioRenderer {
             }
             c.restoreToCount(save);
         }
+    }
+
+    /** Advance width alone misses asymmetric glyph overhang at a centred opening. */
+    private static float fitSplitText(String text,float requested,float room,int suffixScale) {
+        float size=fitSize(text,requested,room,suffixScale);
+        if (TrioGeometry.hasShrunkSuffix(text,suffixScale)) return size;
+        for (int pass=0;pass<8;pass++) {
+            TEXT.setTextSize(size);
+            float advance=TEXT.measureText(text);
+            TEXT.getTextBounds(text,0,text.length(),TEXT_INK);
+            float reach=Math.max(advance/2f-TEXT_INK.left,TEXT_INK.right-advance/2f);
+            if (reach*2<=room || reach<=0) break;
+            size*=Math.max(.01f,room-1f)/(reach*2);
+        }
+        return size;
     }
 
     private static float alignedY(TrioAppearance a,int zone,float halfHeight) {

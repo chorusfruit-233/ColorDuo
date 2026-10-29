@@ -1198,7 +1198,7 @@ public final class Prefs {
     public static final String KEY_PAIR_Y = "pair_y";
     public static final int DEF_PAIR_Y = 0, MIN_PAIR_Y = -40, MAX_PAIR_Y = 40;
     public static final String KEY_SPLIT_LEFT_DISTANCE = "split_left_distance";
-    public static final int DEF_SPLIT_LEFT_DISTANCE = 18, MIN_SPLIT_LEFT_DISTANCE = 0, MAX_SPLIT_LEFT_DISTANCE = 80;
+    public static final int DEF_SPLIT_LEFT_DISTANCE = 28, MIN_SPLIT_LEFT_DISTANCE = 0, MAX_SPLIT_LEFT_DISTANCE = 80;
     public static final String KEY_SPLIT_LEFT_BEND = "split_left_bend";
     public static final int DEF_SPLIT_LEFT_BEND = 40, MIN_SPLIT_LEFT_BEND = 0, MAX_SPLIT_LEFT_BEND = 80;
     public static final String KEY_SPLIT_LEFT_HEIGHT = "split_left_height";
@@ -1210,7 +1210,7 @@ public final class Prefs {
     public static final String KEY_SPLIT_LEFT_Y = "split_left_y";
     public static final int DEF_SPLIT_LEFT_Y = 0, MIN_SPLIT_LEFT_Y = -40, MAX_SPLIT_LEFT_Y = 40;
     public static final String KEY_SPLIT_RIGHT_DISTANCE = "split_right_distance";
-    public static final int DEF_SPLIT_RIGHT_DISTANCE = 18, MIN_SPLIT_RIGHT_DISTANCE = 0, MAX_SPLIT_RIGHT_DISTANCE = 80;
+    public static final int DEF_SPLIT_RIGHT_DISTANCE = 28, MIN_SPLIT_RIGHT_DISTANCE = 0, MAX_SPLIT_RIGHT_DISTANCE = 80;
     public static final String KEY_SPLIT_RIGHT_BEND = "split_right_bend";
     public static final int DEF_SPLIT_RIGHT_BEND = 40, MIN_SPLIT_RIGHT_BEND = 0, MAX_SPLIT_RIGHT_BEND = 80;
     public static final String KEY_SPLIT_RIGHT_HEIGHT = "split_right_height";

@@ -2027,7 +2027,7 @@ final class TrioGeometry {
     static float splitOpeningWidth(TrioAppearance a, int zone) {
         EllipseSide left=new EllipseSide(a,0),right=new EllipseSide(a,1);
         float xLeft=left.x(zone==0?1:0),xRight=right.x(zone==0?0:1);
-        return Math.max(1f,xRight-xLeft-a.ringStroke-2f);
+        return Math.max(1f,2f*Math.min(B_CX-xLeft,xRight-B_CX)-a.ringStroke-2f);
     }
 
     /** Unscaled ink bounds of the legacy four-dot ring row, in design coordinates. */
