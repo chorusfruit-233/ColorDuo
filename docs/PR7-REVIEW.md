@@ -18,6 +18,8 @@
 
 测试包为 **0.3.4 / 10024**，使用本项目正式签名，可覆盖 0.2.6，保留配置。下载构建产物 ZIP，安装其中的 APK，然后重启一次 SystemUI 或手机。本轮不向模块仓发布，也不将测试草稿设为正式 Latest。
 
+[下载已核验的 0.3.4 测试包](https://github.com/chorusfruit-233/ColorDuo/actions/runs/40909410332/artifacts/12913247508) · [构建记录](https://github.com/chorusfruit-233/ColorDuo/actions/runs/40909410332)。对应代码提交 `4ea6e5e`，已核对版本、正式签名及 APK 校验和；ZIP 同时附带安装说明与布局、镜像参考图。
+
 ## 新布局
 
 先记录原布局，测试后可切回；安装本身不会自动替换已有布局。
