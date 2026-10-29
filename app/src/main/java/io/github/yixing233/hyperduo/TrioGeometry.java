@@ -2017,6 +2017,19 @@ final class TrioGeometry {
      */
     static final int QUICK_CHARGE = 0xFFFFBA28;
 
+    /** The two centre rows belong to the right-hand body cell, beside the clock. */
+    static float capPairHalfWidth(TrioAppearance a) {
+        return (18f*a.pairPitch/100f+4f*a.dotScaleFactor())*a.signalIconScaleFactor();
+    }
+    static float capPairCx(float stroke, TrioAppearance a) {
+        return capRightCx(stroke);
+    }
+    static float splitOpeningWidth(TrioAppearance a, int zone) {
+        EllipseSide left=new EllipseSide(a,0),right=new EllipseSide(a,1);
+        float xLeft=left.x(zone==0?1:0),xRight=right.x(zone==0?0:1);
+        return Math.max(1f,xRight-xLeft-a.ringStroke-2f);
+    }
+
     /** Unscaled ink bounds of the legacy four-dot ring row, in design coordinates. */
     static float[] signalRowBounds(int zone,TrioAppearance a) {
         float radius=arcRowDotR(zone,a.ringStroke,78f-a.ringStroke,a.dotScaleFactor());

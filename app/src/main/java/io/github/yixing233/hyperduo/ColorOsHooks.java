@@ -78,6 +78,12 @@ final class ColorOsHooks {
     private static HandlerThread batteryThread;
     private static ExecutorService chargerWorker;
     private static boolean batteryRefreshQueued;
+    private static boolean batteryReadActive;
+    private static boolean reloadPreparing;
+    private static boolean batteryWorkerStopped;
+    private static final List<Thread> stoppingBatteryThreads = new ArrayList<>();
+    private static final List<ExecutorService> stoppingChargerWorkers = new ArrayList<>();
+    private static ClassLoader chargerLoader;
     private static ColorOsCharger charger;
     private static long nextSimPoll;
     private static final ColorOsLayout.Tree<View> VIEW_TREE = new ColorOsLayout.Tree<>() {
@@ -100,10 +106,20 @@ final class ColorOsHooks {
 
     static void drainRetiredCallbacks() { MAIN.removeCallbacksAndMessages(null); }
 
-    /** Called on the main looper: leave only platform/SystemUI objects in the handoff. */
-    static Map<String, Object> retire() {
-        ColorOsReload.retiring = true;
-        MAIN.removeCallbacksAndMessages(null);
+    /** A busy sampler declines before touching views, callbacks or worker executors. */
+    static synchronized boolean prepareReload() {
+        stoppingBatteryThreads.removeIf(thread -> !thread.isAlive());
+        stoppingChargerWorkers.removeIf(ExecutorService::isTerminated);
+        if (reloadPreparing || batteryReadActive || !stoppingBatteryThreads.isEmpty()
+                || !stoppingChargerWorkers.isEmpty() || (charger != null && !charger.isIdle())) return false;
+        reloadPreparing = true;
+        if (batteryWorker != null) batteryWorker.removeCallbacksAndMessages(null);
+        batteryRefreshQueued = false;
+        return true;
+    }
+
+    /** Called on the main looper; no destructive changes before state validation succeeds. */
+    static Map<String, Object> snapshotForReload() {
         Map<String, Object> saved = new HashMap<>();
         saved.put("settings", TrioConfig.get().toBundle());
         saved.put("context", context);
@@ -123,16 +139,53 @@ final class ColorOsHooks {
             Host h = reference.get();
             if (h == null) continue;
             meters.add(new Object[] {h.meter, h.viewModel});
-            h.onViewDetachedFromWindow(h.meter);
-            h.meter.removeOnAttachStateChangeListener(h);
-            h.glyph.setCallback(null);
         }
         saved.put("meters", meters);
-        HOSTS.clear();
-        CHILDREN.clear();
-        ColorOsNetworkType.stop();
-        ColorOsReload.closeCallbacks();
         return saved;
+    }
+
+    static void retire() {
+        ColorOsReload.retiring = true;
+        try {
+            for (WeakReference<Host> reference : new ArrayList<>(HOSTS.values())) {
+                Host h = reference.get();
+                if (h == null) continue;
+                h.onViewDetachedFromWindow(h.meter);
+                h.meter.removeOnAttachStateChangeListener(h);
+                h.glyph.setCallback(null);
+            }
+            // Failed unregister operations restore already released registrations. Handlers
+            // are cancelled only after all external registrations have closed successfully.
+            ColorOsReload.closeCallbacks();
+            ColorOsNetworkType.stop();
+            MAIN.removeCallbacksAndMessages(null);
+        } finally {
+            HOSTS.clear();
+            CHILDREN.clear();
+        }
+    }
+
+    static void cancelReload(Map<String, Object> saved) {
+        boolean detached = ColorOsReload.retiring;
+        ColorOsReload.retiring = false;
+        synchronized (ColorOsHooks.class) {
+            reloadPreparing = false;
+            batteryRefreshQueued = false;
+            if (batteryThread != null && !batteryThread.isAlive()) {
+                batteryWorker = null;
+                batteryThread = null;
+            } else if (batteryThread != null && batteryWorkerStopped) {
+                stoppingBatteryThreads.add(batteryThread);
+                batteryWorker = null;
+                batteryThread = null;
+            }
+            if (chargerWorker != null && chargerWorker.isShutdown()) {
+                if (!chargerWorker.isTerminated()) stoppingChargerWorkers.add(chargerWorker);
+                startChargerWorker(chargerLoader);
+            }
+        }
+        if (detached && saved != null) resume(saved);
+        invalidateHosts();
     }
 
     /** Do not approve unloading while vendor IPC or a sampler is still executing old code. */
@@ -142,6 +195,7 @@ final class ColorOsHooks {
             thread = batteryThread;
             if (batteryWorker != null) batteryWorker.removeCallbacksAndMessages(null);
             if (thread != null) thread.quit();
+            batteryWorkerStopped = true;
         }
         if (chargerWorker != null) chargerWorker.shutdownNow();
         if (thread != null) thread.join(3000L);
@@ -178,21 +232,27 @@ final class ColorOsHooks {
 
     /** Coalesce ColorOS reads off the main thread; the inherited MIUI path stays synchronous. */
     static synchronized boolean dispatchBatteryRefresh(Runnable refresh) {
-        if (ColorOsReload.retiring) return true;
+        if (ColorOsReload.retiring || reloadPreparing) return true;
         if (!installed) return false;
         if (batteryWorker == null) {
             HandlerThread thread = new HandlerThread("ColorDuo-battery",
                     android.os.Process.THREAD_PRIORITY_BACKGROUND);
             thread.start();
             batteryThread = thread;
+            batteryWorkerStopped = false;
             batteryWorker = new Handler(thread.getLooper());
         }
         if (Looper.myLooper() == batteryWorker.getLooper()) return false;
         if (!batteryRefreshQueued) {
             batteryRefreshQueued = true;
             batteryWorker.post(() -> {
-                synchronized (ColorOsHooks.class) { batteryRefreshQueued = false; }
-                refresh.run();
+                synchronized (ColorOsHooks.class) {
+                    batteryRefreshQueued = false;
+                    if (reloadPreparing || ColorOsReload.retiring) return;
+                    batteryReadActive = true;
+                }
+                try { refresh.run(); }
+                finally { synchronized (ColorOsHooks.class) { batteryReadActive = false; } }
             });
         }
         return true;
@@ -259,6 +319,19 @@ final class ColorOsHooks {
         return sample;
     }
 
+    private static void startChargerWorker(ClassLoader loader) {
+        chargerWorker = Executors.newSingleThreadExecutor(task -> {
+            Thread thread = new Thread(() -> {
+                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
+                task.run();
+            }, "ColorDuo-charger");
+            thread.setDaemon(true);
+            return thread;
+        });
+        charger = new ColorOsCharger(new ColorOsChargerClient(loader),
+                chargerWorker, SystemClock::elapsedRealtime);
+    }
+
     static void install(XposedModule module, ClassLoader loader) {
         meterClass = Refl.cls(METER_CLASS, loader);
         phoneBarClass = Refl.cls("com.android.systemui.statusbar.phone.PhoneStatusBarView", loader);
@@ -273,16 +346,8 @@ final class ColorOsHooks {
             throw new IllegalStateException("ColorOS battery/status bar classes unavailable");
         }
         TrioHooks.useLogger(module);
-        chargerWorker = Executors.newSingleThreadExecutor(task -> {
-                    Thread thread = new Thread(() -> {
-                        android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
-                        task.run();
-                    }, "ColorDuo-charger");
-                    thread.setDaemon(true);
-                    return thread;
-                });
-        charger = new ColorOsCharger(new ColorOsChargerClient(loader),
-                chargerWorker, SystemClock::elapsedRealtime);
+        chargerLoader = loader;
+        startChargerWorker(loader);
         installed = true;
         TrioConfig.install(module);
         TrioConfig.addListener(ColorOsHooks::invalidateHosts);
@@ -998,8 +1063,8 @@ final class ColorOsHooks {
                     if (DuoPolicy.hasNotice(radio.services[slot])) state.slotLevels[slot] = 0;
                     if (id == dataId || (dataId < 0 && state.mobileLevel < 0)) {
                         state.mobileLevel = state.slotLevels[slot];
-                        String radioType = ColorOsNetworkType.read(id);
-                        state.mobileType = mobile == null ? radioType : mobile.networkType(radioType);
+                        state.mobileType = mobile == null ? "" : mobile.networkType("");
+                        if (state.mobileType.isEmpty()) state.mobileType = ColorOsNetworkType.read(id);
                         if (state.dataSlot < 0) state.dataSlot = slot;
                         if (state.mobileService == DuoPolicy.Radio.UNKNOWN && mobile != null) {
                             Object service = value(mobile.inService);

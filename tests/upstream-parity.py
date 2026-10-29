@@ -111,4 +111,3 @@ if failures:
     sys.exit("Shared behavior differs from upstream:\n" + "\n".join(failures))
 print(f"Inherited-code guard passed: {checked} unchanged files match {UPSTREAM[:7]}; "
       f"{len(DUO_FILES)} Duo behavior files are covered by focused regressions")
-

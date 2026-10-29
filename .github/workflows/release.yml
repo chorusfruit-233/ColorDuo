@@ -78,6 +78,10 @@ jobs:
         run: >-
           python3 scripts/ci/artifacts.py package --variant release
           --version "$VERSION_NAME" --version-code "$VERSION_CODE"
+      - name: Render layout reference
+        run: python3 scripts/ci/preview_layouts.py --output dist/layout-preview.png
+      - name: Include device test guide
+        run: cp docs/PR7-REVIEW.md dist/DEVICE-TEST.md
       - name: Upload release bundle
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

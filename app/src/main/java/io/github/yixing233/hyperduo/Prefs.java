@@ -1149,7 +1149,7 @@ public final class Prefs {
     public static final boolean DEF_CHARGING_SHOWS_VALUE = false;
 
     public static final String KEY_PAUSED_GRAY_ALL = "paused_gray_all";
-    public static final boolean DEF_PAUSED_GRAY_ALL = false;
+    public static final boolean DEF_PAUSED_GRAY_ALL = true;
     public static final boolean DEF_TYPE_HIDE_ON_WIFI = false;
     /**
      * Size of the ring's level-dot rows, as a percentage of the bead the stroke implies.
@@ -1198,27 +1198,27 @@ public final class Prefs {
     public static final String KEY_PAIR_Y = "pair_y";
     public static final int DEF_PAIR_Y = 0, MIN_PAIR_Y = -40, MAX_PAIR_Y = 40;
     public static final String KEY_SPLIT_LEFT_DISTANCE = "split_left_distance";
-    public static final int DEF_SPLIT_LEFT_DISTANCE = 10, MIN_SPLIT_LEFT_DISTANCE = 0, MAX_SPLIT_LEFT_DISTANCE = 80;
+    public static final int DEF_SPLIT_LEFT_DISTANCE = 18, MIN_SPLIT_LEFT_DISTANCE = 0, MAX_SPLIT_LEFT_DISTANCE = 80;
     public static final String KEY_SPLIT_LEFT_BEND = "split_left_bend";
     public static final int DEF_SPLIT_LEFT_BEND = 40, MIN_SPLIT_LEFT_BEND = 0, MAX_SPLIT_LEFT_BEND = 80;
     public static final String KEY_SPLIT_LEFT_HEIGHT = "split_left_height";
-    public static final int DEF_SPLIT_LEFT_HEIGHT = 96, MIN_SPLIT_LEFT_HEIGHT = 20, MAX_SPLIT_LEFT_HEIGHT = 110;
+    public static final int DEF_SPLIT_LEFT_HEIGHT = 110, MIN_SPLIT_LEFT_HEIGHT = 20, MAX_SPLIT_LEFT_HEIGHT = 110;
     public static final String KEY_SPLIT_LEFT_TOP = "split_left_top";
-    public static final int DEF_SPLIT_LEFT_TOP = 16, MIN_SPLIT_LEFT_TOP = 0, MAX_SPLIT_LEFT_TOP = 80;
+    public static final int DEF_SPLIT_LEFT_TOP = 48, MIN_SPLIT_LEFT_TOP = 0, MAX_SPLIT_LEFT_TOP = 80;
     public static final String KEY_SPLIT_LEFT_BOTTOM = "split_left_bottom";
-    public static final int DEF_SPLIT_LEFT_BOTTOM = 16, MIN_SPLIT_LEFT_BOTTOM = 0, MAX_SPLIT_LEFT_BOTTOM = 80;
+    public static final int DEF_SPLIT_LEFT_BOTTOM = 48, MIN_SPLIT_LEFT_BOTTOM = 0, MAX_SPLIT_LEFT_BOTTOM = 80;
     public static final String KEY_SPLIT_LEFT_Y = "split_left_y";
     public static final int DEF_SPLIT_LEFT_Y = 0, MIN_SPLIT_LEFT_Y = -40, MAX_SPLIT_LEFT_Y = 40;
     public static final String KEY_SPLIT_RIGHT_DISTANCE = "split_right_distance";
-    public static final int DEF_SPLIT_RIGHT_DISTANCE = 10, MIN_SPLIT_RIGHT_DISTANCE = 0, MAX_SPLIT_RIGHT_DISTANCE = 80;
+    public static final int DEF_SPLIT_RIGHT_DISTANCE = 18, MIN_SPLIT_RIGHT_DISTANCE = 0, MAX_SPLIT_RIGHT_DISTANCE = 80;
     public static final String KEY_SPLIT_RIGHT_BEND = "split_right_bend";
     public static final int DEF_SPLIT_RIGHT_BEND = 40, MIN_SPLIT_RIGHT_BEND = 0, MAX_SPLIT_RIGHT_BEND = 80;
     public static final String KEY_SPLIT_RIGHT_HEIGHT = "split_right_height";
-    public static final int DEF_SPLIT_RIGHT_HEIGHT = 96, MIN_SPLIT_RIGHT_HEIGHT = 20, MAX_SPLIT_RIGHT_HEIGHT = 110;
+    public static final int DEF_SPLIT_RIGHT_HEIGHT = 110, MIN_SPLIT_RIGHT_HEIGHT = 20, MAX_SPLIT_RIGHT_HEIGHT = 110;
     public static final String KEY_SPLIT_RIGHT_TOP = "split_right_top";
-    public static final int DEF_SPLIT_RIGHT_TOP = 16, MIN_SPLIT_RIGHT_TOP = 0, MAX_SPLIT_RIGHT_TOP = 80;
+    public static final int DEF_SPLIT_RIGHT_TOP = 48, MIN_SPLIT_RIGHT_TOP = 0, MAX_SPLIT_RIGHT_TOP = 80;
     public static final String KEY_SPLIT_RIGHT_BOTTOM = "split_right_bottom";
-    public static final int DEF_SPLIT_RIGHT_BOTTOM = 16, MIN_SPLIT_RIGHT_BOTTOM = 0, MAX_SPLIT_RIGHT_BOTTOM = 80;
+    public static final int DEF_SPLIT_RIGHT_BOTTOM = 48, MIN_SPLIT_RIGHT_BOTTOM = 0, MAX_SPLIT_RIGHT_BOTTOM = 80;
     public static final String KEY_SPLIT_RIGHT_Y = "split_right_y";
     public static final int DEF_SPLIT_RIGHT_Y = 0, MIN_SPLIT_RIGHT_Y = -40, MAX_SPLIT_RIGHT_Y = 40;
     public static final String KEY_SIGNAL_ICON_SCALE = "signal_icon_scale";

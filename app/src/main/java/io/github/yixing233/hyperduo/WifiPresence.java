@@ -91,7 +91,7 @@ final class WifiPresence {
             }
             registered = true;
             // ColorDuo reload lifecycle.
-            ColorOsReload.watch(context, receiver);
+            ColorOsReload.watch(context, receiver, filter);
             // End ColorDuo reload lifecycle.
             refresh(context);
             final ConnectivityManager cm = context.getSystemService(ConnectivityManager.class);
@@ -102,9 +102,10 @@ final class WifiPresence {
                             @Override public void onCapabilitiesChanged(Network network,
                                     NetworkCapabilities capabilities) { scheduleRefresh(context); }
                         };
-                cm.registerNetworkCallback(new NetworkRequest.Builder()
-                        .addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build(), callback);
-                ColorOsReload.watch(cm, callback);
+                NetworkRequest request = new NetworkRequest.Builder()
+                        .addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build();
+                cm.registerNetworkCallback(request, callback);
+                ColorOsReload.watch(cm, callback, request);
             }
         } catch (RuntimeException ignored) {
             // Unknown remains on the existing ROM-compatible icon fallback.

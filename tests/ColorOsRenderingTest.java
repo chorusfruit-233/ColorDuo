@@ -74,7 +74,51 @@ public final class ColorOsRenderingTest {
         wholeSignalScale();
         trueEllipseRendering();
         centrePairDuringCharging();
+        splitDefaultTextClearance();
+        capsulePairClockClearance();
         System.out.println("Capsule fill, live clock handoff and reachable percentage sizing passed: " + checks + " checks");
+    }
+
+
+    private static void splitDefaultTextClearance() {
+        TrioSettings settings=TrioSettings.defaults();settings.splitMode=1;
+        settings.ringZones=Prefs.decodeLayout("3|||");
+        for(int value:new int[]{8,84,100}) {
+            TrioState state=new TrioState();state.level=value;
+            TrioAppearance appearance=TrioAppearance.of(settings);
+            float[] transform=new float[3];TrioRenderer.designTransform(480,400,appearance,transform);
+            TrioGeometry.EllipseSide left=new TrioGeometry.EllipseSide(appearance,0);
+            TrioGeometry.EllipseSide right=new TrioGeometry.EllipseSide(appearance,1);
+            try(Frame frame=new Frame()) {
+                TrioRenderer.drawState(frame,480,400,state,settings);
+                var ink=frame.textBounds.get(0);
+                float start=(left.x(1)+appearance.ringStroke/2f+1)*transform[0]+transform[1];
+                float end=(right.x(0)-appearance.ringStroke/2f-1)*transform[0]+transform[1];
+                check(ink.getMinX()>=start-.1 && ink.getMaxX()<=end+.1,
+                        "default split opening clears battery digits: "+value);
+                check(Math.abs(frame.textSize-Prefs.DEF_VALUE_SIZE)<.05,
+                        "default split opening fits the actual default battery font size");
+            }
+        }
+    }
+
+    private static void capsulePairClockClearance() {
+        TrioState state=new TrioState();state.level=84;state.slotLevels=new int[]{4,2};
+        state.sims=2;state.mobileService=DuoPolicy.Radio.AVAILABLE;TrioState.sClockText="09:41";
+        for(int length:new int[]{-30,0,60})for(int size:new int[]{50,100,200}) {
+            TrioSettings settings=pairedSettings(Prefs.STYLE_CAPSULE,1,50);
+            settings.capsuleLength=length;settings.signalIconScale=size;
+            settings.ringZones[TrioZones.Zone.LEFT.ordinal()]=new int[]{Prefs.PART_CLOCK};
+            try(Frame frame=new Frame()) {
+                TrioRenderer.drawState(frame,480,400,state,settings);
+                check(frame.circles.size()==8,"capsule centre keeps both rows beside the clock");
+                float pairLeft=Float.MAX_VALUE;
+                for(float[] dot:frame.circles)pairLeft=Math.min(pairLeft,dot[0]-dot[2]);
+                var clock=frame.textBounds.get(0);
+                check(clock.getMaxX()+.1<pairLeft,
+                        "capsule centre pair reserves the clock's real ink: length="+length+", size="+size);
+            }
+        }
     }
 
     private static TrioSettings pairedSettings(int style, int zone, int gap) {
@@ -172,6 +216,7 @@ public final class ColorOsRenderingTest {
         state.useTint = true;
         state.tintColor = 0xff44ccff;
         state.chargingPaused = true;
+        settings.pausedGrayAll = false;
         try (Frame ring = new Frame(); Frame all = new Frame()) {
             TrioRenderer.drawState(ring, 480, 400, state, settings);
             settings.pausedGrayAll = true;

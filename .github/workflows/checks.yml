@@ -26,12 +26,18 @@ jobs:
         run: python3 tests/duo-policy.py
       - name: ColorOS ownership and signals
         run: sh tests/coloros-policy.sh
+      - name: Telephony and transactional hot reload
+        run: python3 tests/coloros-reload.py
       - name: Ring rendering and settings
         run: sh tests/coloros-settings.sh
       - name: Battery units and power rendering
         run: python3 tests/coloros-power.py
       - name: Main, keyguard and shade hosts
         run: python3 tests/coloros-hosts.py
+      - name: Native battery binding
+        run: python3 tests/coloros-binding.py
+      - name: Settings summary formatting
+        run: python3 tests/settings-format.py
       - name: Publication metadata
         run: python3 tests/release-artifacts.py
       - name: Module repository publication

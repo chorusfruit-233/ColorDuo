@@ -36,7 +36,8 @@ public final class ColorOsSettingsTest {
             check(placed.ringZones[0].length==0&&placed.ringZones[2][0]==Prefs.PART_SIM_1,"independent placement removes the paired component");
         }
 
-        check(!fresh.pausedGrayAll, "paused charge defaults to battery ring only");
+        check(fresh.pausedGrayAll, "upgrade retains the existing all-icons paused grayscale");
+        fresh.pausedGrayAll = false;
         TrioSettings pausedSettings = fresh.copy();
         pausedSettings.pausedGrayAll = true;
         check(!pausedSettings.equals(fresh), "grayscale preference participates in change detection");
@@ -301,6 +302,7 @@ public final class ColorOsSettingsTest {
         TrioSettings targetsplitRightY=TrioSettings.defaults();
         check(targetsplitRightY.applyKeyFrom(source,Prefs.KEY_SPLIT_RIGHT_Y) && targetsplitRightY.splitRightY==40,"splitRightY hot reload");
         TrioSettings a=TrioSettings.defaults(); a.splitMode=1;
+        a.splitLeftTop=a.splitLeftBottom=0;
         TrioGeometry.SplitRing original=new TrioGeometry.SplitRing(TrioAppearance.of(a));
         a.splitLeftDistance+=20;
         TrioGeometry.SplitRing moved=new TrioGeometry.SplitRing(TrioAppearance.of(a));

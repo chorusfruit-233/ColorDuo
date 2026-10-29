@@ -527,7 +527,9 @@ public final class TrioRenderer {
                 // must count before scaling, otherwise the arcs escape their slot.
                 final float extra = Math.max(0f, a.arcStroke - TrioGeometry.W_STROKE);
                 // The slot fit, then the user's own size inside it.
-                final float scale = Math.min(width / (TrioGeometry.W_INK_W + extra),
+                final float room = a.splitMode == 1 && z != 1
+                        ? Math.min(width, TrioGeometry.splitOpeningWidth(a,z)) : width;
+                final float scale = Math.min(room / (TrioGeometry.W_INK_W + extra),
                         height / (TrioGeometry.W_INK_H + extra)) * a.wifiScaleFactor();
                 if(a.splitMode==1)c.translate(0,alignedY(a,z,(TrioGeometry.W_INK_H+extra)*scale/2)-cy);
                 c.scale(scale, scale);
@@ -595,7 +597,10 @@ public final class TrioRenderer {
                     // about 58% of the room it really had, and the bottom third came
                     // out around a third of the size asked for.
                     final int suffixScale = part == Prefs.PART_TYPE ? a.typeSuffixScale : 100;
-                    final float fitted = ringTextSize(text, requested, z, a.ringStroke, suffixScale, r.parts);
+                    float fitted = ringTextSize(text, requested, z, a.ringStroke, suffixScale, r.parts);
+                    if (a.splitMode == 1 && z != 1) {
+                        fitted = fitSize(text, fitted, TrioGeometry.splitOpeningWidth(a,z), suffixScale);
+                    }
                     // Centred in the band, and on its INK rather than its metrics: the
                     // metrics reserve leading above the capitals that a digits-only
                     // string never draws, so a metrics-centred line sits high enough to
@@ -881,7 +886,7 @@ public final class TrioRenderer {
                 wifiLevel, mobileType, fg, a);
 
         if (!radioMuted && cap.dotParts[TrioZones.Zone.CENTRE.ordinal()] == Prefs.PART_SIM_PAIR) {
-            drawPair(canvas, slotLevels, TrioGeometry.capDotCx() + a.capsuleRightDx,
+            drawPair(canvas, slotLevels, TrioGeometry.capPairCx(stroke,a) + a.capsuleRightDx,
                     TrioGeometry.capInteriorCy(stroke) + a.capsuleRightDy,
                     4f * a.dotScaleFactor(), fg, a);
         }
@@ -935,16 +940,17 @@ public final class TrioRenderer {
         // Dot rows are not offered in this column: drawCapsuleDots paints the two OPENINGS,
         // whose y come from the outline geometry. A row here would need its own baseline.
         // LEFT on every branch: this cell reads from its inner edge, nudge or no nudge.
+        final float leftWidth = capsuleLeftWidth(cap,stroke,a);
         switch (part) {
             case Prefs.PART_CLOCK:
-                drawCapsuleTime(c, stroke, fg, a, cx, cy, -1f, SlotAlign.LEFT);
+                drawCapsuleTime(c, stroke, fg, a, cx, cy, -1f, SlotAlign.LEFT, leftWidth);
                 break;
             case Prefs.PART_VALUE:
-                drawCapsuleValue(c, stroke, level, fg, a, cx, cy, -1f, SlotAlign.LEFT);
+                drawCapsuleValue(c, stroke, level, fg, a, cx, cy, -1f, SlotAlign.LEFT, leftWidth);
                 break;
             case Prefs.PART_TYPE:
                 drawCapsuleType(c, stroke, type, fg, a, cx, cy, -1f,
-                        TrioGeometry.capReadingTrackWidth(stroke),
+                        leftWidth,
                         bodyTypeSize(a), SlotAlign.LEFT);
                 break;
             case Prefs.PART_WIFI:
@@ -1341,9 +1347,23 @@ public final class TrioRenderer {
     }
 
     /** The time of day, in a capsule cell centred on {@code (cx, cy)}. */
+    private static float capsuleLeftWidth(TrioAppearance.Capsule cap,float stroke,TrioAppearance a) {
+        if (cap.dotParts[TrioZones.Zone.CENTRE.ordinal()] != Prefs.PART_SIM_PAIR)
+            return TrioGeometry.capReadingTrackWidth(stroke);
+        float pairLeft=TrioGeometry.capPairCx(stroke,a)+a.capsuleRightDx+a.pairX
+                -TrioGeometry.capPairHalfWidth(a);
+        return Math.max(1f,pairLeft-TrioGeometry.CAP_TEXT_GAP
+                -TrioGeometry.capLeftAlignedX(stroke)-a.capsuleLeftDx);
+    }
+
+    private static void drawCapsuleTime(Canvas c, float stroke, int fg, TrioAppearance a,
+                                        float cx, float cy, float heightHint, SlotAlign align) {
+        drawCapsuleTime(c,stroke,fg,a,cx,cy,heightHint,align,Float.POSITIVE_INFINITY);
+    }
+
     private static void drawCapsuleTime(Canvas c, float stroke, int fg, TrioAppearance a,
                                         float cx, float cy, float heightHint,
-                                        SlotAlign align) {
+                                        SlotAlign align, float widthLimit) {
         final String text = TrioState.sClockText;
         if (text == null || text.isEmpty()) {
             return;
@@ -1356,7 +1376,7 @@ public final class TrioRenderer {
         // again as long as "100" at the same size, so an even split capped the clock
         // at a setting of about 36 whatever the slider said.
         final float size = capsuleTextSize(text, a.clockSize, stroke,
-                capsuleSlotWidth(TrioZones.Zone.CENTRE, heightHint, stroke, true),
+                Math.min(widthLimit,capsuleSlotWidth(TrioZones.Zone.CENTRE, heightHint, stroke, true)),
                 100, effectiveHeightLimit(heightHint, stroke));
         TEXT.setTextSize(size);
         TEXT.setColor(fg);
@@ -1368,10 +1388,16 @@ public final class TrioRenderer {
     private static void drawCapsuleValue(Canvas c, float stroke, int level, int fg,
                                          TrioAppearance a, float cx, float cy,
                                          float heightHint, SlotAlign align) {
+        drawCapsuleValue(c,stroke,level,fg,a,cx,cy,heightHint,align,Float.POSITIVE_INFINITY);
+    }
+
+    private static void drawCapsuleValue(Canvas c, float stroke, int level, int fg,
+                                         TrioAppearance a, float cx, float cy,
+                                         float heightHint, SlotAlign align, float widthLimit) {
         final String text = String.valueOf(level);
         applyWeight(a.valueWeight);
         final float size = capsuleTextSize(text, a.valueSize, stroke,
-                capsuleSlotWidth(TrioZones.Zone.CENTRE, heightHint, stroke, false),
+                Math.min(widthLimit,capsuleSlotWidth(TrioZones.Zone.CENTRE, heightHint, stroke, false)),
                 100, effectiveHeightLimit(heightHint, stroke));
         TEXT.setTextSize(size);
         TEXT.setColor(fg);
@@ -2255,7 +2281,8 @@ public final class TrioRenderer {
                 float cy=z==0 ? TrioGeometry.capDotTopY()+pitch/2 : z==2
                         ? TrioGeometry.capDotBottomY()-pitch/2
                         : TrioGeometry.capInteriorCy(appearance.ringStroke*TrioGeometry.CAP_STROKE_RATIO)+appearance.capsuleRightDy;
-                float cx=TrioGeometry.capDotCx()+(z==1?appearance.capsuleRightDx:0);
+                float cx=z==1 ? TrioGeometry.capPairCx(appearance.ringStroke*TrioGeometry.CAP_STROKE_RATIO,appearance)
+                        +appearance.capsuleRightDx : TrioGeometry.capDotCx();
                 capMinX=Math.min(capMinX,cx+appearance.pairX-rx);capMaxX=Math.max(capMaxX,cx+appearance.pairX+rx);
                 capMinY=Math.min(capMinY,cy+appearance.pairY-ry);capMaxY=Math.max(capMaxY,cy+appearance.pairY+ry);
             }
