@@ -135,6 +135,7 @@ class SettingsRepository(context: Context) {
                 Prefs.encodeLayout(next.ringZones))
             e.putBoolean(Prefs.styledKey(Prefs.KEY_SHOW_WIFI, style), next.showWifi)
             e.putBoolean(Prefs.styledKey(Prefs.KEY_SHOW_MOBILE, style), next.showMobile)
+            e.putInt(Prefs.styledKey(Prefs.KEY_SIGNAL_MODE, style), next.signalMode)
             e.putBoolean(Prefs.styledKey(Prefs.KEY_SHOW_VALUE, style), next.showValue)
             e.putBoolean(Prefs.styledKey(Prefs.KEY_SHOW_BOLT, style), next.showBolt)
             e.putBoolean(Prefs.styledKey(Prefs.KEY_SHOW_SIM_1, style), next.showSim1)
@@ -155,6 +156,17 @@ class SettingsRepository(context: Context) {
      * type slot) removes the piece. The three ints are still the three zones, which is why
      * the mapping is kept - the ring's editor drives the priority lists directly.
      */
+    fun setSignalLayout(paired: Boolean) {
+        val current = TrioSettings.from(preferences(), density)
+        applyRingAssignment(io.github.yixing233.hyperduo.TrioZones.withSignalArrangement(current, paired))
+    }
+
+    /** Publish the combined bolt menu as one layout/visibility transaction. */
+    fun setBoltPosition(position: Int) {
+        val current = TrioSettings.from(preferences(), density)
+        applyRingAssignment(io.github.yixing233.hyperduo.TrioZones.withBoltPosition(current, position))
+    }
+
     fun setRingPartPosition(part: io.github.yixing233.hyperduo.TrioZones.Part, position: Int) {
         val current = TrioSettings.from(preferences(), density)
         // The choices a caller can pass are the arrangement's own cells, in the order
@@ -162,7 +174,11 @@ class SettingsRepository(context: Context) {
         // and the ring three, so the mapping from "choice number" to "zone" is read
         // from the same list rather than assumed to be "index - 1". Assuming it was
         // what wrote the capsule's left cell into the bottom zone.
-        val slots = if (current.trioStyle == Prefs.STYLE_CAPSULE) {
+        val slots = if (part == io.github.yixing233.hyperduo.TrioZones.Part.SIM_PAIR) {
+            listOf(io.github.yixing233.hyperduo.TrioZones.Zone.TOP,
+                io.github.yixing233.hyperduo.TrioZones.Zone.CENTRE,
+                io.github.yixing233.hyperduo.TrioZones.Zone.BOTTOM)
+        } else if (current.trioStyle == Prefs.STYLE_CAPSULE) {
             listOf(io.github.yixing233.hyperduo.TrioZones.Zone.TOP,
                 io.github.yixing233.hyperduo.TrioZones.Zone.LEFT,
                 io.github.yixing233.hyperduo.TrioZones.Zone.CENTRE,
@@ -179,6 +195,10 @@ class SettingsRepository(context: Context) {
             )
         } else {
             val next = current.copy()
+            if (part == io.github.yixing233.hyperduo.TrioZones.Part.SIM_PAIR
+                && current.ringZones.any { it.contains(Prefs.PART_SIM_PAIR) }) next.showMobile = false
+            if (part == io.github.yixing233.hyperduo.TrioZones.Part.SIM_1) next.showSim1 = false
+            if (part == io.github.yixing233.hyperduo.TrioZones.Part.SIM_2) next.showSim2 = false
             val id = io.github.yixing233.hyperduo.TrioZones.encodePart(part)
             next.ringZones = io.github.yixing233.hyperduo.TrioSettings.copyZones(current.ringZones)
             for (zone in next.ringZones.indices) {
@@ -271,6 +291,9 @@ class SettingsRepository(context: Context) {
     fun setTypeHideOnWifi(value: Boolean) =
         writeBoolean(Prefs.KEY_TYPE_HIDE_ON_WIFI, value)
     /** While charging the ring centre shows the percentage; see [Prefs.KEY_CHARGING_SHOWS_VALUE]. */
+    fun setPausedGrayAll(value: Boolean) =
+        writeBoolean(Prefs.KEY_PAUSED_GRAY_ALL, value)
+
     fun setChargingShowsValue(value: Boolean) =
         writeBoolean(Prefs.KEY_CHARGING_SHOWS_VALUE, value)
 
@@ -281,6 +304,32 @@ class SettingsRepository(context: Context) {
      * settings screen offers one row for them.
      */
     fun setDotScale(value: Int) = writeInt(Prefs.KEY_DOT_SCALE, value)
+    fun setSplitMode(value: Int) = writeInt(Prefs.KEY_SPLIT_MODE, value.coerceIn(Prefs.MIN_SPLIT_MODE, Prefs.MAX_SPLIT_MODE))
+    fun setSplitLink(value: Int) = writeInt(Prefs.KEY_SPLIT_LINK, value.coerceIn(Prefs.MIN_SPLIT_LINK, Prefs.MAX_SPLIT_LINK))
+    fun setSplitCap(value: Int) = writeInt(Prefs.KEY_SPLIT_CAP, value.coerceIn(Prefs.MIN_SPLIT_CAP, Prefs.MAX_SPLIT_CAP))
+    fun setPairShape(value: Int) = writeInt(Prefs.KEY_PAIR_SHAPE, value.coerceIn(Prefs.MIN_PAIR_SHAPE, Prefs.MAX_PAIR_SHAPE))
+    fun setPairMirror(value: Int) = writeInt(Prefs.KEY_PAIR_MIRROR, value.coerceIn(Prefs.MIN_PAIR_MIRROR, Prefs.MAX_PAIR_MIRROR))
+    fun setPairReverse(value: Int) = writeInt(Prefs.KEY_PAIR_REVERSE, value.coerceIn(Prefs.MIN_PAIR_REVERSE, Prefs.MAX_PAIR_REVERSE))
+    fun setPairSingle(value: Int) = writeInt(Prefs.KEY_PAIR_SINGLE, value.coerceIn(Prefs.MIN_PAIR_SINGLE, Prefs.MAX_PAIR_SINGLE))
+    fun setPairPitch(value: Int) = writeInt(Prefs.KEY_PAIR_PITCH, value.coerceIn(Prefs.MIN_PAIR_PITCH, Prefs.MAX_PAIR_PITCH))
+    fun setPairBend(value: Int) = writeInt(Prefs.KEY_PAIR_BEND, value.coerceIn(Prefs.MIN_PAIR_BEND, Prefs.MAX_PAIR_BEND))
+    fun setPairX(value: Int) = writeInt(Prefs.KEY_PAIR_X, value.coerceIn(Prefs.MIN_PAIR_X, Prefs.MAX_PAIR_X))
+    fun setPairY(value: Int) = writeInt(Prefs.KEY_PAIR_Y, value.coerceIn(Prefs.MIN_PAIR_Y, Prefs.MAX_PAIR_Y))
+    fun setSplitLeftDistance(value: Int) = writeInt(Prefs.KEY_SPLIT_LEFT_DISTANCE, value.coerceIn(Prefs.MIN_SPLIT_LEFT_DISTANCE, Prefs.MAX_SPLIT_LEFT_DISTANCE))
+    fun setSplitLeftBend(value: Int) = writeInt(Prefs.KEY_SPLIT_LEFT_BEND, value.coerceIn(Prefs.MIN_SPLIT_LEFT_BEND, Prefs.MAX_SPLIT_LEFT_BEND))
+    fun setSplitLeftHeight(value: Int) = writeInt(Prefs.KEY_SPLIT_LEFT_HEIGHT, value.coerceIn(Prefs.MIN_SPLIT_LEFT_HEIGHT, Prefs.MAX_SPLIT_LEFT_HEIGHT))
+    fun setSplitLeftTop(value: Int) = writeInt(Prefs.KEY_SPLIT_LEFT_TOP, value.coerceIn(Prefs.MIN_SPLIT_LEFT_TOP, Prefs.MAX_SPLIT_LEFT_TOP))
+    fun setSplitLeftBottom(value: Int) = writeInt(Prefs.KEY_SPLIT_LEFT_BOTTOM, value.coerceIn(Prefs.MIN_SPLIT_LEFT_BOTTOM, Prefs.MAX_SPLIT_LEFT_BOTTOM))
+    fun setSplitLeftY(value: Int) = writeInt(Prefs.KEY_SPLIT_LEFT_Y, value.coerceIn(Prefs.MIN_SPLIT_LEFT_Y, Prefs.MAX_SPLIT_LEFT_Y))
+    fun setSplitRightDistance(value: Int) = writeInt(Prefs.KEY_SPLIT_RIGHT_DISTANCE, value.coerceIn(Prefs.MIN_SPLIT_RIGHT_DISTANCE, Prefs.MAX_SPLIT_RIGHT_DISTANCE))
+    fun setSplitRightBend(value: Int) = writeInt(Prefs.KEY_SPLIT_RIGHT_BEND, value.coerceIn(Prefs.MIN_SPLIT_RIGHT_BEND, Prefs.MAX_SPLIT_RIGHT_BEND))
+    fun setSplitRightHeight(value: Int) = writeInt(Prefs.KEY_SPLIT_RIGHT_HEIGHT, value.coerceIn(Prefs.MIN_SPLIT_RIGHT_HEIGHT, Prefs.MAX_SPLIT_RIGHT_HEIGHT))
+    fun setSplitRightTop(value: Int) = writeInt(Prefs.KEY_SPLIT_RIGHT_TOP, value.coerceIn(Prefs.MIN_SPLIT_RIGHT_TOP, Prefs.MAX_SPLIT_RIGHT_TOP))
+    fun setSplitRightBottom(value: Int) = writeInt(Prefs.KEY_SPLIT_RIGHT_BOTTOM, value.coerceIn(Prefs.MIN_SPLIT_RIGHT_BOTTOM, Prefs.MAX_SPLIT_RIGHT_BOTTOM))
+    fun setSplitRightY(value: Int) = writeInt(Prefs.KEY_SPLIT_RIGHT_Y, value.coerceIn(Prefs.MIN_SPLIT_RIGHT_Y, Prefs.MAX_SPLIT_RIGHT_Y))
+    fun setSignalIconScale(value: Int) = writeInt(Prefs.KEY_SIGNAL_ICON_SCALE, value.coerceIn(Prefs.MIN_SIGNAL_ICON_SCALE, Prefs.MAX_SIGNAL_ICON_SCALE))
+    fun setSimStackGap(value: Int) = writeInt(Prefs.KEY_SIM_STACK_GAP,
+        value.coerceIn(Prefs.MIN_SIM_STACK_GAP, Prefs.MAX_SIM_STACK_GAP))
 
     /**
      * The out-of-ring order, nearest the battery first - see [Prefs.KEY_OUT_ORDER].
@@ -463,7 +512,33 @@ class SettingsRepository(context: Context) {
             prefs.putInt(Prefs.KEY_WIFI_SCALE, snapshot.wifiScale)
             prefs.putBoolean(Prefs.KEY_TYPE_HIDE_ON_WIFI, snapshot.typeHideOnWifi)
             prefs.putBoolean(Prefs.KEY_CHARGING_SHOWS_VALUE, snapshot.chargingShowsValue)
+            prefs.putBoolean(Prefs.KEY_PAUSED_GRAY_ALL, snapshot.pausedGrayAll)
             prefs.putInt(Prefs.KEY_DOT_SCALE, snapshot.dotScale)
+            prefs.putInt(Prefs.KEY_SPLIT_MODE, snapshot.splitMode)
+            prefs.putInt(Prefs.KEY_SPLIT_LINK, snapshot.splitLink)
+            prefs.putInt(Prefs.KEY_SPLIT_CAP, snapshot.splitCap)
+            prefs.putInt(Prefs.KEY_PAIR_SHAPE, snapshot.pairShape)
+            prefs.putInt(Prefs.KEY_PAIR_MIRROR, snapshot.pairMirror)
+            prefs.putInt(Prefs.KEY_PAIR_REVERSE, snapshot.pairReverse)
+            prefs.putInt(Prefs.KEY_PAIR_SINGLE, snapshot.pairSingle)
+            prefs.putInt(Prefs.KEY_PAIR_PITCH, snapshot.pairPitch)
+            prefs.putInt(Prefs.KEY_PAIR_BEND, snapshot.pairBend)
+            prefs.putInt(Prefs.KEY_PAIR_X, snapshot.pairX)
+            prefs.putInt(Prefs.KEY_PAIR_Y, snapshot.pairY)
+            prefs.putInt(Prefs.KEY_SPLIT_LEFT_DISTANCE, snapshot.splitLeftDistance)
+            prefs.putInt(Prefs.KEY_SPLIT_LEFT_BEND, snapshot.splitLeftBend)
+            prefs.putInt(Prefs.KEY_SPLIT_LEFT_HEIGHT, snapshot.splitLeftHeight)
+            prefs.putInt(Prefs.KEY_SPLIT_LEFT_TOP, snapshot.splitLeftTop)
+            prefs.putInt(Prefs.KEY_SPLIT_LEFT_BOTTOM, snapshot.splitLeftBottom)
+            prefs.putInt(Prefs.KEY_SPLIT_LEFT_Y, snapshot.splitLeftY)
+            prefs.putInt(Prefs.KEY_SPLIT_RIGHT_DISTANCE, snapshot.splitRightDistance)
+            prefs.putInt(Prefs.KEY_SPLIT_RIGHT_BEND, snapshot.splitRightBend)
+            prefs.putInt(Prefs.KEY_SPLIT_RIGHT_HEIGHT, snapshot.splitRightHeight)
+            prefs.putInt(Prefs.KEY_SPLIT_RIGHT_TOP, snapshot.splitRightTop)
+            prefs.putInt(Prefs.KEY_SPLIT_RIGHT_BOTTOM, snapshot.splitRightBottom)
+            prefs.putInt(Prefs.KEY_SPLIT_RIGHT_Y, snapshot.splitRightY)
+            prefs.putInt(Prefs.KEY_SIGNAL_ICON_SCALE, snapshot.signalIconScale)
+            prefs.putInt(Prefs.KEY_SIM_STACK_GAP, snapshot.simStackGap)
             prefs.putString(Prefs.KEY_OUT_ORDER, Prefs.encodeOutOrder(snapshot.outOrder))
 
             prefs.putBoolean(Prefs.KEY_DEBUG_LOG, current.getBoolean(Prefs.KEY_DEBUG_LOG, Prefs.DEF_DEBUG_LOG))

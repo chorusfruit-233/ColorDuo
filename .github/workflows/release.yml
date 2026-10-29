@@ -41,6 +41,9 @@ jobs:
         run: >-
           python3 scripts/ci/artifacts.py plan
           --version "$VERSION_NAME" --version-code "$VERSION_CODE"
+      - uses: ./.github/actions/android
+      - name: Layout editor controls
+        run: ./gradlew --no-daemon :app:testDebugUnitTest
       - name: Restore signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.COLORDUO_KEYSTORE_BASE64 }}
@@ -63,7 +66,6 @@ jobs:
           with open(os.environ['GITHUB_ENV'], 'a') as out:
               out.write(f'COLORDUO_KEYSTORE_PATH={key}\n')
           PY
-      - uses: ./.github/actions/android
       - name: Build signed release
         env:
           COLORDUO_KEYSTORE_PASSWORD: ${{ secrets.COLORDUO_KEYSTORE_PASSWORD }}
@@ -78,6 +80,10 @@ jobs:
         run: >-
           python3 scripts/ci/artifacts.py package --variant release
           --version "$VERSION_NAME" --version-code "$VERSION_CODE"
+      - name: Render layout reference
+        run: python3 scripts/ci/preview_layouts.py --output dist/layout-preview.png --mirror-output dist/mirror-preview.png
+      - name: Include device test guide
+        run: cp docs/PR7-REVIEW.md dist/DEVICE-TEST.md
       - name: Upload release bundle
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

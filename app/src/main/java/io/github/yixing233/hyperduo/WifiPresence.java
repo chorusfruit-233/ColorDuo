@@ -31,6 +31,9 @@ final class WifiPresence {
     private static boolean registered;
     private static volatile Boolean connected;
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
+    // ColorDuo reload lifecycle.
+    static { ColorOsReload.watch(MAIN); }
+    // End ColorDuo reload lifecycle.
     private static Runnable pendingRefresh;
     private static boolean watchdogStarted;
 
@@ -45,6 +48,9 @@ final class WifiPresence {
     static Boolean connectedSnapshot() { return connected; }
 
     static synchronized void start(final Context context) {
+        // ColorDuo reload lifecycle.
+        if (ColorOsReload.retiring) return;
+        // End ColorDuo reload lifecycle.
         if (!watchdogStarted) {
             watchdogStarted = true;
             // ROM broadcast/callback delivery is not always reliable. A bounded
@@ -52,6 +58,9 @@ final class WifiPresence {
             // never put framework IPC in the per-frame drawing path.
             MAIN.post(new Runnable() {
                 @Override public void run() {
+                    // ColorDuo reload lifecycle.
+                    if (ColorOsReload.retiring) return;
+                    // End ColorDuo reload lifecycle.
                     refresh(context);
                     MAIN.postDelayed(this, 3000L);
                 }
@@ -81,17 +90,22 @@ final class WifiPresence {
                 context.registerReceiver(receiver, filter);
             }
             registered = true;
+            // ColorDuo reload lifecycle.
+            ColorOsReload.watch(context, receiver, filter);
+            // End ColorDuo reload lifecycle.
             refresh(context);
             final ConnectivityManager cm = context.getSystemService(ConnectivityManager.class);
             if (cm != null) {
-                cm.registerNetworkCallback(new NetworkRequest.Builder()
-                        .addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build(),
-                        new ConnectivityManager.NetworkCallback() {
+                ConnectivityManager.NetworkCallback callback = new ConnectivityManager.NetworkCallback() {
                             @Override public void onAvailable(Network network) { scheduleRefresh(context); }
                             @Override public void onLost(Network network) { scheduleRefresh(context); }
                             @Override public void onCapabilitiesChanged(Network network,
                                     NetworkCapabilities capabilities) { scheduleRefresh(context); }
-                        });
+                        };
+                NetworkRequest request = new NetworkRequest.Builder()
+                        .addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build();
+                cm.registerNetworkCallback(request, callback);
+                ColorOsReload.watch(cm, callback, request);
             }
         } catch (RuntimeException ignored) {
             // Unknown remains on the existing ROM-compatible icon fallback.
@@ -101,6 +115,9 @@ final class WifiPresence {
     // Broadcast delivery may precede ConnectivityManager's connected snapshot.
     // Coalesce a delayed recheck; callbacks also catch connection completion.
     private static void scheduleRefresh(final Context context) {
+        // ColorDuo reload lifecycle.
+        if (ColorOsReload.retiring) return;
+        // End ColorDuo reload lifecycle.
         MAIN.post(new Runnable() {
             @Override public void run() {
                 refresh(context);
@@ -115,6 +132,9 @@ final class WifiPresence {
 
     @SuppressWarnings("deprecation")
     private static void refresh(Context context) {
+        // ColorDuo reload lifecycle.
+        if (ColorOsReload.retiring) return;
+        // End ColorDuo reload lifecycle.
         try {
             final WifiManager wifi = context.getSystemService(WifiManager.class);
             if (wifi == null) return;

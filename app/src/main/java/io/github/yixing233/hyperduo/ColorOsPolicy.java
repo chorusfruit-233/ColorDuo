@@ -84,11 +84,43 @@ final class ColorOsPolicy {
         Object mapped = nativeMember(model, "networkTypeTextModel", "getNetworkTypeTextModel");
         if (mapped != null) model = mapped;
         Object text = nativeMember(model, "networkTypeText", "getNetworkTypeText");
-        if (text == null) return "";
+        if (text instanceof CharSequence) return text.toString();
+        if (text == null) text = model;
         Object prefix = nativeMember(text, "prefix", "getPrefix");
         Object suffix = nativeMember(text, "suffix", "getSuffix");
         return (prefix instanceof CharSequence ? prefix.toString() : "")
                 + (suffix instanceof CharSequence ? suffix.toString() : "");
+    }
+
+    /** Android network/override constants, kept numeric so these rules run without Android. */
+    static String radioType(int displayNetwork, int override, int data, int voice) {
+        int network = data != 0 ? data : displayNetwork != 0 ? displayNetwork : voice;
+        if (displayNetwork != 0 && (data == 0 || data == displayNetwork)) {
+            if (override == 3) return "5G";       // NR_NSA
+            if (override == 5) return "5G+";      // NR_ADVANCED
+            if (override == 1 || override == 2) return "4G+"; // LTE_CA / LTE_ADVANCED_PRO
+        }
+        return switch (network) {
+            case 1 -> "G";
+            case 2 -> "E";
+            case 3, 5, 6, 12, 17 -> "3G";
+            case 4, 7 -> "1X";
+            case 8, 9, 10 -> "H";
+            case 15 -> "H+";
+            case 13 -> "4G";
+            case 19 -> "4G+";
+            case 20 -> "5G";
+            case 16 -> "G";
+            default -> "";
+        };
+    }
+
+    static String chooseNetworkType(String rendered, String mapped, String wrapper,
+                                    String cellular, String radio) {
+        for (String label : new String[] {rendered, mapped, wrapper, cellular, radio}) {
+            if (label != null && !label.isEmpty()) return label;
+        }
+        return "";
     }
 
     /** A cold repository must not suppress a working live connection or rendered Wi-Fi model. */
@@ -102,6 +134,12 @@ final class ColorOsPolicy {
     }
 
     private static boolean validWifiLevel(int level) { return level >= 0 && level <= 4; }
+
+    static boolean wifiPresent(Boolean connected, int level, Boolean rendered, boolean carrierMerged) {
+        if (carrierMerged) return false;
+        if (connected != null) return connected;
+        return level >= 0 || Boolean.TRUE.equals(rendered);
+    }
 
     /** ColorOS strips InnerClass annotations, so getSimpleName() is not a reliable type test. */
     static int wifiModelLevel(Class<?> activeType, Object model) {

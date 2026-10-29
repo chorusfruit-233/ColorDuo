@@ -3,6 +3,7 @@
 from pathlib import Path
 import subprocess
 import sys
+import re
 
 ROOT = Path(__file__).resolve().parent.parent
 UPSTREAM = "e9dffbcc8f65a5f3dc379c0b25ccdc0462a8a28d"
@@ -10,12 +11,15 @@ SOURCE = "app/src/main/java/io/github/yixing233/hyperduo/"
 # These files implement ROM/framework integration or the fork's update address.
 PLATFORM_FILES = {"HyperDuoModule.java", "WifiPresence.java", "ui/UpdateController.kt"}
 DUO_FILES = {
+    "TrioZones.java",             # Paired SIM placement and exclusivity, tested with rendered rows.
+    "Prefs.java", "TrioSettings.java", "ui/SettingsRepository.kt", "ui/ContentControls.kt", # Paused grayscale setting and transport.
     "TrioState.java",             # Explicit pause, service and default-data state.
     "TrioRenderer.java",          # Paused styling and automatic data-line order.
     "TrioGeometry.java",          # Text bands and openings fit readable battery digits.
     "TrioAppearance.java",        # Retain physical SIM identity in capsule bands.
     "TrioPreviewView.java",       # Preview the same paused rendering path.
     "ui/DrawingScreen.kt",        # Charging-paused preview scene.
+    "TrioHooks.java",            # Split-ring host measurement.
     "ui/PartControls.kt",         # Percentage range follows the actual rendered slot.
     "OutRingLayout.java",         # Recompute reserve after dropping optional readings.
 }
@@ -38,6 +42,10 @@ def git(*args):
 
 
 def normalize(name, data):
+    # ColorDuo reload lifecycle.
+    if name in {"TrioConfig.java", "BatteryPresence.java", "ClockTicker.java"}:
+        data = re.sub(rb"^[ \t]*// ColorDuo reload lifecycle\.\n.*?^[ \t]*// End ColorDuo reload lifecycle\.\n", b"", data, flags=re.M | re.S)
+    # End ColorDuo reload lifecycle.
     # Permit identity, hook dispatch/access and ROM input-unit normalization. No rendering, defaults,
     # layout, preview, signal-selection or settings-migration changes are permitted.
     if name == "Prefs.java":

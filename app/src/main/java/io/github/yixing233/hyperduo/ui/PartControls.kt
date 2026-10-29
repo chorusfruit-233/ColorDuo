@@ -81,7 +81,7 @@ internal enum class TrioSettingsPart(val part: TrioZones.Part?, val labelRes: In
          */
         fun of(part: TrioZones.Part?): TrioSettingsPart? = when (part) {
             null -> null
-            TrioZones.Part.SIM_1, TrioZones.Part.SIM_2 -> Mobile
+            TrioZones.Part.SIM_1, TrioZones.Part.SIM_2, TrioZones.Part.SIM_PAIR -> Mobile
             else -> entries.firstOrNull { it.part == part }
         }
     }
@@ -122,6 +122,8 @@ private const val WEIGHT_STEP = 100
  *   glyph as a whole rather than to one switchable piece. The drawing page's
  *   long-press dialog filters on this.
  */
+internal enum class SliderScope { Shared, SplitLeft, SplitRight, CapsuleStructure, PairedSignal }
+
 internal class SliderSpec(
     val group: GeometryGroup,
     val part: TrioZones.Part?,
@@ -145,6 +147,7 @@ internal class SliderSpec(
     val step: Int = 1,
     val suffix: String? = null,
     val editorOwner: TrioSettingsPart = TrioSettingsPart.Appearance,
+    val scope: SliderScope = SliderScope.Shared,
 )
 
 /**
@@ -167,6 +170,70 @@ internal fun geometrySliders(): List<SliderSpec> {
     val type = TrioZones.Part.TYPE
     val bolt = TrioZones.Part.BOLT
     return listOf(
+        SliderSpec(scope = SliderScope.PairedSignal, group = GeometryGroup.Type, part = mobile,
+            min = Prefs.MIN_PAIR_PITCH, max = Prefs.MAX_PAIR_PITCH, read = { it.pairPitch },
+            write = { r, v -> r.setPairPitch(v) }, titleRes = { R.string.pair_pitch_title },
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.slotted }, editorOwner = TrioSettingsPart.Mobile),
+        SliderSpec(scope = SliderScope.PairedSignal, group = GeometryGroup.Type, part = mobile,
+            min = Prefs.MIN_PAIR_BEND, max = Prefs.MAX_PAIR_BEND, read = { it.pairBend },
+            write = { r, v -> r.setPairBend(v) }, titleRes = { R.string.pair_bend_title },
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.slotted }, editorOwner = TrioSettingsPart.Mobile),
+        SliderSpec(scope = SliderScope.PairedSignal, group = GeometryGroup.Type, part = mobile,
+            min = Prefs.MIN_PAIR_X, max = Prefs.MAX_PAIR_X, read = { it.pairX },
+            write = { r, v -> r.setPairX(v) }, titleRes = { R.string.pair_x_title },
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.slotted }, editorOwner = TrioSettingsPart.Mobile),
+        SliderSpec(scope = SliderScope.PairedSignal, group = GeometryGroup.Type, part = mobile,
+            min = Prefs.MIN_PAIR_Y, max = Prefs.MAX_PAIR_Y, read = { it.pairY },
+            write = { r, v -> r.setPairY(v) }, titleRes = { R.string.pair_y_title },
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.slotted }, editorOwner = TrioSettingsPart.Mobile),
+        SliderSpec(scope = SliderScope.SplitLeft, group = GeometryGroup.Stroke, part = null,
+            min = Prefs.MIN_SPLIT_LEFT_DISTANCE, max = Prefs.MAX_SPLIT_LEFT_DISTANCE, read = { it.splitLeftDistance },
+            write = { r, v -> r.setSplitLeftDistance(v) }, titleRes = { R.string.split_left_distance_title },
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Appearance),
+        SliderSpec(scope = SliderScope.SplitLeft, group = GeometryGroup.Stroke, part = null,
+            min = Prefs.MIN_SPLIT_LEFT_BEND, max = Prefs.MAX_SPLIT_LEFT_BEND, read = { it.splitLeftBend },
+            write = { r, v -> r.setSplitLeftBend(v) }, titleRes = { R.string.split_left_bend_title },
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Appearance),
+        SliderSpec(scope = SliderScope.SplitLeft, group = GeometryGroup.Stroke, part = null,
+            min = Prefs.MIN_SPLIT_LEFT_HEIGHT, max = Prefs.MAX_SPLIT_LEFT_HEIGHT, read = { it.splitLeftHeight },
+            write = { r, v -> r.setSplitLeftHeight(v) }, titleRes = { R.string.split_left_height_title },
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Appearance),
+        SliderSpec(scope = SliderScope.SplitLeft, group = GeometryGroup.Stroke, part = null,
+            min = Prefs.MIN_SPLIT_LEFT_TOP, max = Prefs.MAX_SPLIT_LEFT_TOP, read = { it.splitLeftTop },
+            write = { r, v -> r.setSplitLeftTop(v) }, titleRes = { R.string.split_left_top_title },
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Appearance),
+        SliderSpec(scope = SliderScope.SplitLeft, group = GeometryGroup.Stroke, part = null,
+            min = Prefs.MIN_SPLIT_LEFT_BOTTOM, max = Prefs.MAX_SPLIT_LEFT_BOTTOM, read = { it.splitLeftBottom },
+            write = { r, v -> r.setSplitLeftBottom(v) }, titleRes = { R.string.split_left_bottom_title },
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Appearance),
+        SliderSpec(scope = SliderScope.SplitLeft, group = GeometryGroup.Stroke, part = null,
+            min = Prefs.MIN_SPLIT_LEFT_Y, max = Prefs.MAX_SPLIT_LEFT_Y, read = { it.splitLeftY },
+            write = { r, v -> r.setSplitLeftY(v) }, titleRes = { R.string.split_left_y_title },
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Appearance),
+        SliderSpec(scope = SliderScope.SplitRight, group = GeometryGroup.Stroke, part = null,
+            min = Prefs.MIN_SPLIT_RIGHT_DISTANCE, max = Prefs.MAX_SPLIT_RIGHT_DISTANCE, read = { it.splitRightDistance },
+            write = { r, v -> r.setSplitRightDistance(v) }, titleRes = { R.string.split_right_distance_title },
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Appearance),
+        SliderSpec(scope = SliderScope.SplitRight, group = GeometryGroup.Stroke, part = null,
+            min = Prefs.MIN_SPLIT_RIGHT_BEND, max = Prefs.MAX_SPLIT_RIGHT_BEND, read = { it.splitRightBend },
+            write = { r, v -> r.setSplitRightBend(v) }, titleRes = { R.string.split_right_bend_title },
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Appearance),
+        SliderSpec(scope = SliderScope.SplitRight, group = GeometryGroup.Stroke, part = null,
+            min = Prefs.MIN_SPLIT_RIGHT_HEIGHT, max = Prefs.MAX_SPLIT_RIGHT_HEIGHT, read = { it.splitRightHeight },
+            write = { r, v -> r.setSplitRightHeight(v) }, titleRes = { R.string.split_right_height_title },
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Appearance),
+        SliderSpec(scope = SliderScope.SplitRight, group = GeometryGroup.Stroke, part = null,
+            min = Prefs.MIN_SPLIT_RIGHT_TOP, max = Prefs.MAX_SPLIT_RIGHT_TOP, read = { it.splitRightTop },
+            write = { r, v -> r.setSplitRightTop(v) }, titleRes = { R.string.split_right_top_title },
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Appearance),
+        SliderSpec(scope = SliderScope.SplitRight, group = GeometryGroup.Stroke, part = null,
+            min = Prefs.MIN_SPLIT_RIGHT_BOTTOM, max = Prefs.MAX_SPLIT_RIGHT_BOTTOM, read = { it.splitRightBottom },
+            write = { r, v -> r.setSplitRightBottom(v) }, titleRes = { R.string.split_right_bottom_title },
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Appearance),
+        SliderSpec(scope = SliderScope.SplitRight, group = GeometryGroup.Stroke, part = null,
+            min = Prefs.MIN_SPLIT_RIGHT_Y, max = Prefs.MAX_SPLIT_RIGHT_Y, read = { it.splitRightY },
+            write = { r, v -> r.setSplitRightY(v) }, titleRes = { R.string.split_right_y_title },
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Appearance),
         SliderSpec(
             group = GeometryGroup.Text,
             part = TrioZones.Part.CLOCK,
@@ -193,7 +260,7 @@ internal fun geometrySliders(): List<SliderSpec> {
             enabled = { it.glyph },
             hints = { listOf(it.glyph to R.string.master_title) },
         ),
-        SliderSpec(
+        SliderSpec(scope = SliderScope.CapsuleStructure,
             group = GeometryGroup.Scale,
             part = null,
             min = Prefs.MIN_CAPSULE_NUDGE_X,
@@ -204,7 +271,7 @@ internal fun geometrySliders(): List<SliderSpec> {
             summaryRes = { R.string.capsule_nudge_left_dx_summary },
             enabled = { it.glyph && it.capsule },
         ),
-        SliderSpec(
+        SliderSpec(scope = SliderScope.CapsuleStructure,
             group = GeometryGroup.Scale,
             part = null,
             min = Prefs.MIN_CAPSULE_NUDGE,
@@ -215,7 +282,7 @@ internal fun geometrySliders(): List<SliderSpec> {
             summaryRes = { R.string.capsule_nudge_left_dy_summary },
             enabled = { it.glyph && it.capsule },
         ),
-        SliderSpec(
+        SliderSpec(scope = SliderScope.CapsuleStructure,
             group = GeometryGroup.Scale,
             part = null,
             // Mirrored span: the right cell leans right, so its travel is to the LEFT.
@@ -227,7 +294,7 @@ internal fun geometrySliders(): List<SliderSpec> {
             summaryRes = { R.string.capsule_nudge_right_dx_summary },
             enabled = { it.glyph && it.capsule },
         ),
-        SliderSpec(
+        SliderSpec(scope = SliderScope.CapsuleStructure,
             group = GeometryGroup.Scale,
             part = null,
             min = Prefs.MIN_CAPSULE_NUDGE,
@@ -242,7 +309,7 @@ internal fun geometrySliders(): List<SliderSpec> {
         // the shape that can change without changing its form: the caps keep their radius, the
         // height does not move, and every proportion the design states against the height is
         // untouched. This is what "make the capsule wider" means physically.
-        SliderSpec(
+        SliderSpec(scope = SliderScope.CapsuleStructure,
             group = GeometryGroup.Scale,
             part = null,
             min = Prefs.MIN_CAPSULE_LENGTH,
@@ -410,6 +477,19 @@ internal fun geometrySliders(): List<SliderSpec> {
          * still needs to set the size before turning them back on, which is the same rule
          * every other size row follows.
          */
+        SliderSpec(scope = SliderScope.PairedSignal,
+            group = GeometryGroup.Type,
+            part = mobile,
+            min = Prefs.MIN_SIM_STACK_GAP,
+            max = Prefs.MAX_SIM_STACK_GAP,
+            read = { it.simStackGap },
+            write = { r, v -> r.setSimStackGap(v) },
+            titleRes = { R.string.sim_stack_gap_title },
+            summaryRes = { R.string.sim_stack_gap_summary },
+            enabled = { it.glyph && it.slotted },
+            hints = { a -> listOf(a.glyph to R.string.master_title) },
+            suffix = "%",
+        ),
         SliderSpec(
             group = GeometryGroup.Type,
             part = mobile,
@@ -419,9 +499,24 @@ internal fun geometrySliders(): List<SliderSpec> {
             write = { r, v -> r.setDotScale(v) },
             titleRes = { R.string.dot_scale_title },
             summaryRes = { R.string.dot_scale_summary },
-            enabled = { it.glyph && it.ring },
+            enabled = { it.glyph && it.slotted },
             hints = { a ->
-                listOf(a.glyph to R.string.master_title, a.ring to R.string.trio_style_ring)
+                listOf(a.glyph to R.string.master_title)
+            },
+            suffix = "%",
+        ),
+        SliderSpec(
+            group = GeometryGroup.Type,
+            part = mobile,
+            min = Prefs.MIN_SIGNAL_ICON_SCALE,
+            max = Prefs.MAX_SIGNAL_ICON_SCALE,
+            read = { it.signalIconScale },
+            write = { r, v -> r.setSignalIconScale(v) },
+            titleRes = { R.string.signal_icon_scale_title },
+            summaryRes = { R.string.signal_icon_scale_summary },
+            enabled = { it.glyph && it.slotted },
+            hints = { a ->
+                listOf(a.glyph to R.string.master_title)
             },
             suffix = "%",
         ),
@@ -609,9 +704,7 @@ internal fun CapsuleContainerRows(
     update: ((SettingsRepository) -> Unit) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val specs = geometrySliders().filter {
-        it.part == null && it.editorOwner == TrioSettingsPart.Appearance
-    }
+    val specs = capsuleContainerSliders()
     if (specs.isEmpty()) {
         return
     }
@@ -630,19 +723,26 @@ internal fun CapsuleContainerRows(
     }
 }
 
-internal fun slidersForEditor(part: TrioSettingsPart): List<SliderSpec> = when (part) {
-    // "Appearance" holds no size rows any more: the capsule's length and the two cells'
-    // offsets size the CONTAINER, and are drawn under the layout that arranges it. What is
-    // left in that sheet is the role colours, which are not a size at all.
-    TrioSettingsPart.Appearance -> emptyList()
-    TrioSettingsPart.Battery, TrioSettingsPart.Readouts ->
-        geometrySliders().filter { it.part == null && it.editorOwner == part }
-    // Each card gets its own rows. For the signal card those are the out-of-ring readings'
-    // two sizes plus the in-ring dot size: the dots themselves have one shared geometry
-    // (both rows, both cards, one bead), so that row is shared rather than per-card, while
-    // the stacked reading the module draws itself does have a height and a margin.
-    else -> part.part?.let(::slidersForPart).orEmpty()
+internal fun capsuleContainerSliders(): List<SliderSpec> =
+    geometrySliders().filter { it.scope == SliderScope.CapsuleStructure }
+
+internal fun slidersForEditor(part: TrioSettingsPart, a: TrioAppearance): List<SliderSpec> {
+    val rows = when (part) {
+        TrioSettingsPart.Appearance, TrioSettingsPart.Battery, TrioSettingsPart.Readouts ->
+            geometrySliders().filter { it.part == null && it.editorOwner == part }
+        else -> part.part?.let(::slidersForPart).orEmpty()
+    }
+    return rows.filter { spec ->
+        when (spec.scope) {
+            SliderScope.Shared -> true
+            SliderScope.CapsuleStructure -> false // Its dedicated, scrollable sheet owns these.
+            SliderScope.SplitLeft -> a.ring && a.splitMode == 1
+            SliderScope.SplitRight -> a.ring && a.splitMode == 1 && a.splitLink == 0
+            SliderScope.PairedSignal -> a.slotted && !a.signalOutOfRing && a.hasRingPart(Prefs.PART_SIM_PAIR)
+        }
+    }
 }
+
 /**
  * The role colours a component's ink takes, so the dialog can offer them.
  *
@@ -687,8 +787,8 @@ internal fun PartSettingsSheet(
     ringSettings: TrioSettings = settings,
 ) {
     val a = TrioAppearance.of(settings)
-    val rows = slidersForEditor(part)
-    val controls = contentControlsFor(part)
+    val rows = slidersForEditor(part, a)
+    val controls = contentControlsFor(part, settings)
     val colors = if (part == TrioSettingsPart.Appearance || part == TrioSettingsPart.Battery) RoleColor.entries
         else part.part?.let(::roleColorsForPart).orEmpty()
     val configuration = LocalConfiguration.current

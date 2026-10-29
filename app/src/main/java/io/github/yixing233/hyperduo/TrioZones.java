@@ -126,7 +126,46 @@ public final class TrioZones {
         /** SIM 2's own row of four dots. */
         SIM_2,
         /** The capsule's fixed left clock, editable but not removable. */
-        CLOCK
+        CLOCK,
+        /** Two physical SIM rows placed together. */
+        SIM_PAIR
+    }
+
+    public static final int BOLT_POSITION_HIDDEN = 0, BOLT_POSITION_NATIVE = 1;
+
+    /** Positions in the same visual order as the settings menu. */
+    public static Zone[] boltPositionZones(int style) {
+        return style == Prefs.STYLE_CAPSULE
+                ? new Zone[] {Zone.TOP, Zone.LEFT, Zone.CENTRE, Zone.BOTTOM}
+                : new Zone[] {Zone.TOP, Zone.CENTRE, Zone.BOTTOM};
+    }
+
+    /** Hidden, native, then the arrangement's positions; old visibility values remain valid. */
+    public static int boltPosition(TrioSettings current) {
+        if (current == null || !current.showBolt) return BOLT_POSITION_HIDDEN;
+        Zone[] zones = boltPositionZones(current.trioStyle);
+        for (int i = 0; i < zones.length; i++) {
+            for (int part : current.ringZones[zones[i].ordinal()]) {
+                if (part == Prefs.PART_BOLT) return i + 2;
+            }
+        }
+        return BOLT_POSITION_NATIVE;
+    }
+
+    /** Update visibility and placement together, preserving every other priority entry. */
+    public static TrioSettings withBoltPosition(TrioSettings current, int position) {
+        if (current == null) return null;
+        Zone[] zones = boltPositionZones(current.trioStyle);
+        if (position < BOLT_POSITION_HIDDEN || position >= zones.length + 2) return current;
+        if (position >= 2) return withPiece(current, zones[position - 2].ordinal(), Part.BOLT);
+        TrioSettings next = current.copy();
+        next.showBolt = position == BOLT_POSITION_NATIVE;
+        next.ringZones = TrioSettings.copyZones(current.ringZones);
+        for (int zone = 0; zone < next.ringZones.length; zone++) {
+            next.ringZones[zone] = java.util.Arrays.stream(next.ringZones[zone])
+                    .filter(part -> part != Prefs.PART_BOLT).toArray();
+        }
+        return next;
     }
 
     // ------------------------------------------------------------------ bounds
@@ -715,6 +754,7 @@ public final class TrioZones {
         if (current == null || part == null) {
             return true;
         }
+        if (part == Part.SIM_PAIR) return ringAccepts(zone, part);
         return current.trioStyle != Prefs.STYLE_RING || ringAccepts(zone, part);
     }
 
@@ -789,6 +829,7 @@ public final class TrioZones {
             case MOBILE: return Prefs.PART_MOBILE;
             case SIM_1: return Prefs.PART_SIM_1;
             case SIM_2: return Prefs.PART_SIM_2;
+            case SIM_PAIR: return Prefs.PART_SIM_PAIR;
             case VALUE: return Prefs.PART_VALUE;
             case BOLT: return Prefs.PART_BOLT;
             case TYPE: return Prefs.PART_TYPE;
@@ -807,6 +848,7 @@ public final class TrioZones {
             case Prefs.PART_CLOCK: return Part.CLOCK;
             case Prefs.PART_SIM_1: return Part.SIM_1;
             case Prefs.PART_SIM_2: return Part.SIM_2;
+            case Prefs.PART_SIM_PAIR: return Part.SIM_PAIR;
             default: return null;
         }
     }
@@ -874,6 +916,41 @@ public final class TrioZones {
      * one write, so none of them can store a layout the renderer would then draw as a
      * smudge.
      */
+    /** Arrangement is encoded by placement, so settings and drawing have one source of truth. */
+    public static TrioSettings withSignalArrangement(TrioSettings current, boolean paired) {
+        if (current == null) return null;
+        if (paired) {
+            int zone=Zone.CENTRE.ordinal();
+            boolean alreadyPaired=false;
+            for (int z=0;z<current.ringZones.length;z++)
+                for (int part:current.ringZones[z]) if (part==Prefs.PART_SIM_PAIR) { zone=z; alreadyPaired=true; }
+            TrioSettings next=withPiece(current,zone,Part.SIM_PAIR);
+            if (alreadyPaired || current.showSim1 || current.showSim2) {
+                next.showSim1=current.showSim1;
+                next.showSim2=current.showSim2;
+            }
+            return next;
+        }
+        boolean wasPaired=false;
+        TrioSettings next=current.copy();
+        next.ringZones=TrioSettings.copyZones(current.ringZones);
+        for (int z=0;z<next.ringZones.length;z++) {
+            java.util.List<Integer> kept=new java.util.ArrayList<>();
+            for (int part:next.ringZones[z]) {
+                if (part==Prefs.PART_SIM_PAIR) wasPaired=true;
+                else kept.add(part);
+            }
+            next.ringZones[z]=kept.stream().mapToInt(Integer::intValue).toArray();
+        }
+        if (wasPaired) {
+            if (current.showSim1) next=withPiece(next,Zone.TOP.ordinal(),Part.SIM_1);
+            if (current.showSim2) next=withPiece(next,Zone.BOTTOM.ordinal(),Part.SIM_2);
+        }
+        next.showMobile=true;
+        next.signalMode=Prefs.SIGNAL_IN_RING;
+        return next;
+    }
+
     public static TrioSettings withPiece(TrioSettings current, int zone, Part want) {
         if (current == null || zone < 0 || zone >= Prefs.ZONE_COUNT) {
             return current;
@@ -895,7 +972,11 @@ public final class TrioZones {
             for (int existing : current.ringZones[z]) {
                 // Drop the id everywhere, then re-add it at the target's front: that single
                 // rule gives add, promote and move without three separate paths.
-                if (existing == id) {
+                if (existing == id
+                        || (want == Part.SIM_PAIR && Prefs.isSignalRow(existing))
+                        || ((want == Part.SIM_1 || want == Part.SIM_2)
+                            && (existing == Prefs.PART_SIM_PAIR || existing == Prefs.PART_MOBILE))
+                        || (want == Part.MOBILE && Prefs.isSignalRow(existing))) {
                     continue;
                 }
                 list.add(existing);
@@ -920,6 +1001,7 @@ public final class TrioZones {
         if (want == Part.MOBILE) next.showMobile = true;
         if (want == Part.SIM_1) { next.showMobile = true; next.showSim1 = true; }
         if (want == Part.SIM_2) { next.showMobile = true; next.showSim2 = true; }
+        if (want == Part.SIM_PAIR) { next.showMobile = true; next.showSim1 = true; next.showSim2 = true; next.signalMode = Prefs.SIGNAL_IN_RING; }
         if (want == Part.TYPE) next.mobileTypeMode = Prefs.MOBILE_TYPE_IN_RING;
         return next;
     }

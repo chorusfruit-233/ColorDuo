@@ -20,7 +20,7 @@
 2. 在 LSPosed 中启用 **ColorDuo**，作用域勾选 **系统界面（com.android.systemui）**。
 3. 重启 SystemUI 或手机，在绘图页添加所需组件。
 
-更新 APK 后需要重启 SystemUI；同签名覆盖安装保留配置。
+首次升级需重启 SystemUI；后续支持框架热重载，更新未生效时重启。同签名覆盖安装保留配置。
 
 ## 文档
 
