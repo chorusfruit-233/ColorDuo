@@ -16,6 +16,9 @@
 
 ## 安装
 
+[GitHub 签名测试构建](https://github.com/chorusfruit-233/ColorDuo/actions/runs/40902941541)已通过；[下载测试 ZIP](https://github.com/chorusfruit-233/ColorDuo/actions/runs/40902941541/artifacts/12910401624)，包含 APK、校验信息、本指南及布局参考图。APK 的提交为 `7697a9d`，正式签名指纹与 0.2.6 一致。
+
+
 测试包为 **0.3.3 / 10023**，使用本项目正式签名，可覆盖 0.2.6，保留配置。下载构建产物 ZIP，安装其中的 APK，然后重启一次 SystemUI 或手机。本轮不向模块仓发布，也不将测试草稿设为正式 Latest。
 
 ## 新布局
