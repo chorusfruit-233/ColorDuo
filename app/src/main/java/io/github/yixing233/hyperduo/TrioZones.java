@@ -131,6 +131,43 @@ public final class TrioZones {
         SIM_PAIR
     }
 
+    public static final int BOLT_POSITION_HIDDEN = 0, BOLT_POSITION_NATIVE = 1;
+
+    /** Positions in the same visual order as the settings menu. */
+    public static Zone[] boltPositionZones(int style) {
+        return style == Prefs.STYLE_CAPSULE
+                ? new Zone[] {Zone.TOP, Zone.LEFT, Zone.CENTRE, Zone.BOTTOM}
+                : new Zone[] {Zone.TOP, Zone.CENTRE, Zone.BOTTOM};
+    }
+
+    /** Hidden, native, then the arrangement's positions; old visibility values remain valid. */
+    public static int boltPosition(TrioSettings current) {
+        if (current == null || !current.showBolt) return BOLT_POSITION_HIDDEN;
+        Zone[] zones = boltPositionZones(current.trioStyle);
+        for (int i = 0; i < zones.length; i++) {
+            for (int part : current.ringZones[zones[i].ordinal()]) {
+                if (part == Prefs.PART_BOLT) return i + 2;
+            }
+        }
+        return BOLT_POSITION_NATIVE;
+    }
+
+    /** Update visibility and placement together, preserving every other priority entry. */
+    public static TrioSettings withBoltPosition(TrioSettings current, int position) {
+        if (current == null) return null;
+        Zone[] zones = boltPositionZones(current.trioStyle);
+        if (position < BOLT_POSITION_HIDDEN || position >= zones.length + 2) return current;
+        if (position >= 2) return withPiece(current, zones[position - 2].ordinal(), Part.BOLT);
+        TrioSettings next = current.copy();
+        next.showBolt = position == BOLT_POSITION_NATIVE;
+        next.ringZones = TrioSettings.copyZones(current.ringZones);
+        for (int zone = 0; zone < next.ringZones.length; zone++) {
+            next.ringZones[zone] = java.util.Arrays.stream(next.ringZones[zone])
+                    .filter(part -> part != Prefs.PART_BOLT).toArray();
+        }
+        return next;
+    }
+
     // ------------------------------------------------------------------ bounds
     //
     // The cut lines below are measured against the ink the pieces actually

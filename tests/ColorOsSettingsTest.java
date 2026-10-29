@@ -13,6 +13,7 @@ public final class ColorOsSettingsTest {
         signalIconScaleSettings();
         ellipticalSides();
         centreOwnershipAndBoltVisibility();
+        boltPositionSelection();
         TrioSettings fresh = TrioSettings.defaults();
         check(fresh.simStackGap==Prefs.DEF_SIM_STACK_GAP,"paired spacing has a stable upgrade default");
         TrioSettings stacked=fresh.copy();stacked.simStackGap=300;
@@ -340,6 +341,56 @@ public final class ColorOsSettingsTest {
         circle.splitLeftBend=0;
         side=new TrioGeometry.EllipseSide(TrioAppearance.of(circle),0);
         check(side.x(0)==side.x(.5f)&&side.x(1)==side.x(.5f),"zero bend degenerates into a straight line");
+    }
+
+    private static void boltPositionSelection() {
+        for (int style : new int[] {Prefs.STYLE_RING, Prefs.STYLE_CAPSULE}) {
+            TrioSettings empty = TrioSettings.defaults();
+            empty.enabled = true;
+            empty.trioStyle = style;
+            empty.chargingShowsValue = false;
+            for (int mode : new int[] {TrioZones.BOLT_POSITION_HIDDEN, TrioZones.BOLT_POSITION_NATIVE}) {
+                TrioSettings selected = TrioZones.withBoltPosition(empty, mode);
+                TrioAppearance a = TrioAppearance.of(selected);
+                check(TrioZones.boltPosition(selected) == mode, "empty layout retains the chosen bolt mode");
+                check(!a.drawsBolt(), "empty capsule cannot invent a module bolt in native or hidden mode");
+                check(a.hidesNativeBolt() == (mode == TrioZones.BOLT_POSITION_HIDDEN),
+                        "native and hidden modes have different system-icon ownership");
+                if (style == Prefs.STYLE_CAPSULE) check(!a.capsule(70, true, 3, "5G", 2).bolt,
+                        "legacy empty capsule fallback respects native and hidden choices");
+            }
+            TrioZones.Zone[] slots = TrioZones.boltPositionZones(style);
+            for (int i = 0; i < slots.length; i++) {
+                TrioSettings original = TrioZones.withPiece(empty, slots[i].ordinal(), TrioZones.Part.WIFI);
+                original = TrioZones.withPiece(original, slots[i].ordinal(), TrioZones.Part.VALUE);
+                int[][] previous = TrioSettings.copyZones(original.ringZones);
+                TrioSettings placed = TrioZones.withBoltPosition(original, i + 2);
+                check(Arrays.deepEquals(original.ringZones, previous), "bolt menu leaves its input snapshot intact");
+                check(placed.ringZones[slots[i].ordinal()][0] == Prefs.PART_BOLT,
+                        "the menu's displayed position is the actual zone");
+                check(TrioZones.boltPosition(placed) == i + 2, "position selection is read back consistently");
+                TrioAppearance a = TrioAppearance.of(placed);
+                check(a.drawsBolt() && a.hidesNativeBolt(), "placed module bolt suppresses the native duplicate");
+                int[] charging = style == Prefs.STYLE_RING ? a.ring(70, true, 3, "5G", 2).parts
+                        : a.capsule(70, true, 3, "5G", 2).parts;
+                int[] unplugged = style == Prefs.STYLE_RING ? a.ring(70, false, 3, "5G", 2).parts
+                        : a.capsule(70, false, 3, "5G", 2).parts;
+                check(charging[slots[i].ordinal()] == Prefs.PART_BOLT, "charging draws the bolt in the selected zone");
+                check(unplugged[slots[i].ordinal()] == Prefs.PART_VALUE, "unplugging restores the next priority entry");
+                for (int mode : new int[] {TrioZones.BOLT_POSITION_HIDDEN, TrioZones.BOLT_POSITION_NATIVE}) {
+                    TrioSettings selected = TrioZones.withBoltPosition(placed, mode);
+                    check(Arrays.deepEquals(selected.ringZones, previous), "hiding or releasing the bolt preserves all other entries");
+                    TrioSettings restored = TrioSettings.fromBundle(selected.toBundle());
+                    check(TrioZones.boltPosition(restored) == mode, "combined choice survives framework transport");
+                    check(!TrioAppearance.of(restored).drawsBolt(), "transport does not restore a removed module bolt");
+                }
+                TrioSettings hidden = placed.copy(); hidden.showBolt = false;
+                check(TrioZones.boltPosition(hidden) == TrioZones.BOLT_POSITION_HIDDEN,
+                        "legacy hidden values take precedence over a saved placement");
+            }
+            check(TrioZones.withBoltPosition(empty, -1) == empty, "invalid position cannot erase the layout");
+            check(TrioZones.withBoltPosition(empty, slots.length + 2) == empty, "unknown position cannot erase the layout");
+        }
     }
 
     private static void centreOwnershipAndBoltVisibility() {

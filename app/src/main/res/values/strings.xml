@@ -126,11 +126,11 @@
     <string name="show_value_title">显示电量数字</string>
     <string name="show_value_summary">在所选区域显示当前电池电量百分比。</string>
 
-    <string name="show_bolt_title">充电时显示闪电</string>
+    <string name="show_bolt_title">充电闪电</string>
     <string name="bolt_scale_placed_hint">组件排序里的充电闪电</string>
     <string name="bolt_scale_title">充电闪电大小</string>
     <string name="bolt_scale_summary">默认 %1$d%%，可调 %2$d–%3$d%%。</string>
-    <string name="show_bolt_summary">关闭后隐藏模块和系统的充电闪电；电量环仍通过颜色表示充电状态。</string>
+    <string name="show_bolt_summary">选择隐藏、系统原生或布局位置；电量环的充电颜色不受影响。</string>
     <string name="dot_scale_title">信号圆点粗细</string>
     <string name="dot_scale_summary">默认 %1$d%%，可调 %2$d–%3$d%%。调整圆点粗细；整体尺寸请使用“信号图标大小”。</string>
 
@@ -374,7 +374,7 @@
     <string name="option_on">开启</string>
     <string name="geometry_value_summary">默认 %1$d；范围 %2$d 至 %3$d</string>
     <string name="bolt_hidden">不显示</string>
-    <string name="bolt_visible">显示</string>
+    <string name="bolt_native">系统原生</string>
     <string name="signal_icon_scale_title">信号图标大小</string>
     <string name="signal_icon_scale_summary">默认 %1$d%%，可调 %2$d–%3$d%%。整体缩放圆点、点距、弯曲和双卡排距，位置偏移保持不变。</string>
 </resources>

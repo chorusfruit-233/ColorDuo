@@ -103,4 +103,30 @@ class LayoutControlsTest {
         val next = TrioZones.withSignalArrangement(old, true)
         assertEquals(listOf(Prefs.PART_SIM_PAIR), next.ringZones.flatMap { it.toList() }.filter { Prefs.isSignalRow(it) })
     }
+
+    @Test fun boltHasOneMenuWithHiddenNativeAndTheActualStylePositions() {
+        val ring = settings()
+        assertEquals(listOf(ContentControl.Bolt), contentControlsFor(TrioSettingsPart.Bolt, ring))
+        assertEquals(listOf(R.string.bolt_hidden, R.string.bolt_native,
+            R.string.drawing_hint_top, R.string.drawing_hint_centre, R.string.drawing_hint_bottom),
+            boltPositionOptions(ring))
+        val capsule = settings(Prefs.STYLE_CAPSULE)
+        assertEquals(listOf(ContentControl.Bolt), contentControlsFor(TrioSettingsPart.Bolt, capsule))
+        assertEquals(listOf(R.string.bolt_hidden, R.string.bolt_native,
+            R.string.drawing_hint_top, R.string.drawing_hint_left,
+            R.string.drawing_hint_right, R.string.drawing_hint_bottom), boltPositionOptions(capsule))
+    }
+
+    @Test fun boltMenuReadsLegacyHiddenStateAndRestoresPlacementInOneChoice() {
+        val old = TrioZones.withPiece(settings(Prefs.STYLE_CAPSULE),
+            TrioZones.Zone.LEFT.ordinal, TrioZones.Part.BOLT).apply { showBolt = false }
+        assertEquals(TrioZones.BOLT_POSITION_HIDDEN, TrioZones.boltPosition(old))
+        val placed = TrioZones.withBoltPosition(old, 3)
+        assertEquals(R.string.drawing_hint_left, boltPositionOptions(placed)[TrioZones.boltPosition(placed)])
+        assertTrue(TrioAppearance.of(placed).drawsBolt())
+        assertFalse(old.showBolt)
+        val native = TrioZones.withBoltPosition(placed, TrioZones.BOLT_POSITION_NATIVE)
+        assertEquals(R.string.bolt_native, boltPositionOptions(native)[TrioZones.boltPosition(native)])
+        assertFalse(TrioAppearance.of(native).hidesNativeBolt())
+    }
 }

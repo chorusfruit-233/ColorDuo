@@ -161,6 +161,12 @@ class SettingsRepository(context: Context) {
         applyRingAssignment(io.github.yixing233.hyperduo.TrioZones.withSignalArrangement(current, paired))
     }
 
+    /** Publish the combined bolt menu as one layout/visibility transaction. */
+    fun setBoltPosition(position: Int) {
+        val current = TrioSettings.from(preferences(), density)
+        applyRingAssignment(io.github.yixing233.hyperduo.TrioZones.withBoltPosition(current, position))
+    }
+
     fun setRingPartPosition(part: io.github.yixing233.hyperduo.TrioZones.Part, position: Int) {
         val current = TrioSettings.from(preferences(), density)
         // The choices a caller can pass are the arrangement's own cells, in the order

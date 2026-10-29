@@ -108,11 +108,11 @@
     <string name="show_value_title">Show battery number</string>
     <string name="show_value_summary">Shows the current battery percentage in the selected slot.</string>
 
-    <string name="show_bolt_title">Bolt while charging</string>
+    <string name="show_bolt_title">Charging bolt</string>
     <string name="bolt_scale_placed_hint">the charging bolt in the component order</string>
     <string name="bolt_scale_title">Charging bolt size</string>
     <string name="bolt_scale_summary">Default %1$d%%, range %2$d–%3$d%%.</string>
-    <string name="show_bolt_summary">Hide both module and system charging bolts when disabled. Battery ring charging colors remain active.</string>
+    <string name="show_bolt_summary">Hide the bolt, use the system icon, or place it in the layout. Charging ring colors remain active.</string>
     <string name="dot_scale_title">Signal dot thickness</string>
     <string name="dot_scale_summary">Default %1$d%%, range %2$d–%3$d%%. Adjusts dot thickness; use signal icon size for overall scaling.</string>
 
@@ -375,7 +375,7 @@
     <string name="option_on">On</string>
     <string name="geometry_value_summary">Default %1$d; range %2$d to %3$d</string>
     <string name="bolt_hidden">Hide</string>
-    <string name="bolt_visible">Show</string>
+    <string name="bolt_native">System icon</string>
     <string name="signal_icon_scale_title">Signal icon size</string>
     <string name="signal_icon_scale_summary">Default %1$d%%, range %2$d–%3$d%%. Scales dots, spacing, curvature and SIM row spacing together; position offsets stay unchanged.</string>
 </resources>

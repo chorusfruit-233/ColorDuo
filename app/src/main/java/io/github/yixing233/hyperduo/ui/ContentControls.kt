@@ -133,7 +133,7 @@ internal fun ContentControlRow(
         ContentControl.Value -> TrioZones.Part.VALUE
         // Not a position row: it is a lens over the centre, not a place for the number.
         ContentControl.ChargingShowsValue -> null
-        ContentControl.Bolt -> TrioZones.Part.BOLT
+        ContentControl.Bolt -> null // One combined visibility/position row below.
         ContentControl.Type -> TrioZones.Part.TYPE
         ContentControl.Clock -> TrioZones.Part.CLOCK
         else -> null
@@ -142,6 +142,10 @@ internal fun ContentControlRow(
     // the ring" are the same intention, so offering both made the user answer the same
     // question twice and made the two controls able to disagree (switch on, nothing placed,
     // no arcs). The row writes both facts in one go - see WifiPositionControl.
+    if (control == ContentControl.Bolt) {
+        BoltPositionControl(settings, update)
+        return
+    }
     if (control == ContentControl.Wifi) {
         WifiPositionControl(settings, ringSettings, update)
         return
@@ -232,9 +236,6 @@ internal fun ContentControlRow(
         // third state to choose between, so the old row is gone.
         ContentControl.DataSim -> ContentToggle(a.dataSimOnly, R.string.data_sim_only_title,
             null, master) { value -> update { it.setDataSimOnly(value) } }
-        // No bolt switch: a charger always reports itself, and where it does so is decided by
-        // placing the bolt in the layout like any other piece. A row here would be a second
-        // answer to the same question, able to contradict the list it describes.
         ContentControl.SignalLayout -> ContentChoice(
             if (a.hasRingPart(Prefs.PART_SIM_PAIR)) 1 else 0,
             R.string.signal_layout_title, null,
@@ -247,11 +248,7 @@ internal fun ContentControlRow(
         ContentControl.PairMirror -> ContentChoice(settings.pairMirror, R.string.pair_mirror_title, R.string.pair_mirror_summary, listOf(R.string.option_off, R.string.option_on), master) { v -> update { it.setPairMirror(v) } }
         ContentControl.PairReverse -> ContentChoice(settings.pairReverse, R.string.pair_reverse_title, null, listOf(R.string.option_off, R.string.option_on), master) { v -> update { it.setPairReverse(v) } }
         ContentControl.PairSingle -> ContentChoice(settings.pairSingle, R.string.pair_single_title, null, listOf(R.string.option_off, R.string.option_on), master) { v -> update { it.setPairSingle(v) } }
-        ContentControl.Bolt -> ContentChoice(if (settings.showBolt) 1 else 0,
-            R.string.show_bolt_title, R.string.show_bolt_summary,
-            listOf(R.string.bolt_hidden, R.string.bolt_visible), master) { value ->
-                update { it.setShowBolt(value == 1) }
-            }
+        ContentControl.Bolt -> Unit // Handled by the combined position row above.
         ContentControl.Type -> ContentChoice(a.typeMode, R.string.show_mobile_type_title,
             null,
             listOf(R.string.mobile_type_off, R.string.mobile_type_inside, R.string.mobile_type_outside),
@@ -274,6 +271,33 @@ internal fun ContentControlRow(
             }
         ContentControl.Clock -> Unit // Capsule time has a fixed slot.
     }
+}
+
+/** The actual menu used by both arrangements, with no separate visibility switch. */
+internal fun boltPositionOptions(settings: TrioSettings): List<Int> =
+    listOf(R.string.bolt_hidden, R.string.bolt_native) +
+        TrioZones.boltPositionZones(settings.trioStyle).map { zone ->
+            when (zone) {
+                TrioZones.Zone.TOP -> R.string.drawing_hint_top
+                TrioZones.Zone.LEFT -> R.string.drawing_hint_left
+                TrioZones.Zone.CENTRE -> if (settings.trioStyle == Prefs.STYLE_CAPSULE)
+                    R.string.drawing_hint_right else R.string.drawing_hint_centre
+                else -> R.string.drawing_hint_bottom
+            }
+        }
+
+@Composable
+private fun BoltPositionControl(
+    settings: TrioSettings,
+    update: ((SettingsRepository) -> Unit) -> Unit,
+) {
+    ContentChoice(
+        selected = TrioZones.boltPosition(settings),
+        title = R.string.ring_position_bolt,
+        summaryRes = R.string.show_bolt_summary,
+        options = boltPositionOptions(settings),
+        dependencies = listOf(settings.enabled to R.string.master_title),
+    ) { position -> update { it.setBoltPosition(position) } }
 }
 
 /**
