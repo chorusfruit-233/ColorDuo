@@ -1,6 +1,6 @@
 # PR #7 审查与实机测试
 
-范围为 [jahn2007 的 PR #7](https://github.com/chorusfruit-233/ColorDuo/pull/7)，原提交 `e295acb1ccfe351d628d5954585356e9d1e99c1d`。作者功能与审查、实机反馈修正已于 2026-10-29 一起合入 main，合并提交 `5acd26a`，版本为 0.3.5；关联的 [issue #8](https://github.com/chorusfruit-233/ColorDuo/issues/8) 已完成。0.3.3、0.3.4 保留为历史测试草稿；截至本次合并，正式 Latest 仍为 0.2.6。
+范围为 [jahn2007 的 PR #7](https://github.com/chorusfruit-233/ColorDuo/pull/7)，原提交 `e295acb1ccfe351d628d5954585356e9d1e99c1d`。作者功能与审查、实机反馈修正已于 2026-10-29 一起合入 main，合并提交 `5acd26a`，版本为 0.3.5；关联的 [issue #8](https://github.com/chorusfruit-233/ColorDuo/issues/8) 已完成。0.3.5 已于同日发布为正式 Latest；0.3.3、0.3.4 保留为历史测试草稿。
 
 ## 审查补充
 
@@ -16,10 +16,11 @@
 
 ## 安装
 
-测试包为 **0.3.5 / 10025**，使用本项目正式签名，可覆盖 0.2.6，保留配置。下载构建产物 ZIP，安装其中的 APK，然后重启一次 SystemUI 或手机。本轮不向模块仓发布，也不将测试草稿设为正式 Latest。
+正式版为 **0.3.5 / 10025**，使用本项目正式签名，可覆盖 0.2.6，保留配置。下载安装 APK 后重启一次 SystemUI 或手机。
 
-[下载已核验的 0.3.5 签名包](https://github.com/chorusfruit-233/ColorDuo/actions/runs/40939355551/artifacts/12925369177) · [构建记录](https://github.com/chorusfruit-233/ColorDuo/actions/runs/40939355551)。APK 对应合并提交 `5acd26a`，版本、正式签名及校验和均已核对。
+[下载 0.3.5 正式版](https://github.com/chorusfruit-233/ColorDuo/releases/tag/v0.3.5) · [构建记录](https://github.com/chorusfruit-233/ColorDuo/actions/runs/40939355551)。APK 对应合并提交 `5acd26a`，版本、正式签名及校验和均已核对。
 
+[模块仓正式版](https://github.com/Xposed-Modules-Repo/io.github.chorusfruit_233.colorduo/releases/tag/10025-0.3.5) 已同步为 Latest，两处 APK 字节一致，均不是 pre-release。
 
 ## 新布局
 
