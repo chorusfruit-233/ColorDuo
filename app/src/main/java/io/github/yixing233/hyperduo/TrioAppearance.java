@@ -254,6 +254,31 @@ public final class TrioAppearance {
      * are what makes the ring read as cut into segments rather than as a closed outline.
      */
     public final int dotScale;
+    public final int splitMode;
+    public final int splitLink;
+    public final int splitCap;
+    public final int pairShape;
+    public final int pairMirror;
+    public final int pairReverse;
+    public final int pairSingle;
+    public final int pairPitch;
+    public final int pairBend;
+    public final int pairX;
+    public final int pairY;
+    public final int splitLeftDistance;
+    public final int splitLeftBend;
+    public final int splitLeftHeight;
+    public final int splitLeftTop;
+    public final int splitLeftBottom;
+    public final int splitLeftY;
+    public final int splitRightDistance;
+    public final int splitRightBend;
+    public final int splitRightHeight;
+    public final int splitRightTop;
+    public final int splitRightBottom;
+    public final int splitRightY;
+    public final int signalIconScale;
+    public final int simStackGap;
     /**
      * The out-of-ring order, nearest the battery first - see {@link Prefs#KEY_OUT_ORDER}.
      *
@@ -288,10 +313,8 @@ public final class TrioAppearance {
         showSim2 = c.showSim2;
         dataSimOnly = c.dataSimOnly;
         value = c.showValue;
-        // The bolt is a PLACED piece like every other, not a switch of its own: a charger
-        // must show what it is doing, and what it shows is decided by where the bolt sits in
-        // the layout. A separate row could contradict the list it was meant to describe.
-        boltWanted = true;
+        // Visibility is independent of charging state and slot placement.
+        boltWanted = c.showBolt;
         centreValue = c.valueCentred && ring;
         typeMode = c.mobileTypeMode;
         typeInRing = c.mobileTypeMode == Prefs.MOBILE_TYPE_IN_RING;
@@ -332,6 +355,31 @@ public final class TrioAppearance {
         boltScale = c.boltScale;
         wifiScale = c.wifiScale;
         dotScale = c.dotScale;
+        splitMode = Prefs.clamp(c.splitMode, Prefs.MIN_SPLIT_MODE, Prefs.MAX_SPLIT_MODE);
+        splitLink = Prefs.clamp(c.splitLink, Prefs.MIN_SPLIT_LINK, Prefs.MAX_SPLIT_LINK);
+        splitCap = Prefs.clamp(c.splitCap, Prefs.MIN_SPLIT_CAP, Prefs.MAX_SPLIT_CAP);
+        pairShape = Prefs.clamp(c.pairShape, Prefs.MIN_PAIR_SHAPE, Prefs.MAX_PAIR_SHAPE);
+        pairMirror = Prefs.clamp(c.pairMirror, Prefs.MIN_PAIR_MIRROR, Prefs.MAX_PAIR_MIRROR);
+        pairReverse = Prefs.clamp(c.pairReverse, Prefs.MIN_PAIR_REVERSE, Prefs.MAX_PAIR_REVERSE);
+        pairSingle = Prefs.clamp(c.pairSingle, Prefs.MIN_PAIR_SINGLE, Prefs.MAX_PAIR_SINGLE);
+        pairPitch = Prefs.clamp(c.pairPitch, Prefs.MIN_PAIR_PITCH, Prefs.MAX_PAIR_PITCH);
+        pairBend = Prefs.clamp(c.pairBend, Prefs.MIN_PAIR_BEND, Prefs.MAX_PAIR_BEND);
+        pairX = Prefs.clamp(c.pairX, Prefs.MIN_PAIR_X, Prefs.MAX_PAIR_X);
+        pairY = Prefs.clamp(c.pairY, Prefs.MIN_PAIR_Y, Prefs.MAX_PAIR_Y);
+        splitLeftDistance = Prefs.clamp(c.splitLeftDistance, Prefs.MIN_SPLIT_LEFT_DISTANCE, Prefs.MAX_SPLIT_LEFT_DISTANCE);
+        splitLeftBend = Prefs.clamp(c.splitLeftBend, Prefs.MIN_SPLIT_LEFT_BEND, Prefs.MAX_SPLIT_LEFT_BEND);
+        splitLeftHeight = Prefs.clamp(c.splitLeftHeight, Prefs.MIN_SPLIT_LEFT_HEIGHT, Prefs.MAX_SPLIT_LEFT_HEIGHT);
+        splitLeftTop = Prefs.clamp(c.splitLeftTop, Prefs.MIN_SPLIT_LEFT_TOP, Prefs.MAX_SPLIT_LEFT_TOP);
+        splitLeftBottom = Prefs.clamp(c.splitLeftBottom, Prefs.MIN_SPLIT_LEFT_BOTTOM, Prefs.MAX_SPLIT_LEFT_BOTTOM);
+        splitLeftY = Prefs.clamp(c.splitLeftY, Prefs.MIN_SPLIT_LEFT_Y, Prefs.MAX_SPLIT_LEFT_Y);
+        splitRightDistance = Prefs.clamp(c.splitRightDistance, Prefs.MIN_SPLIT_RIGHT_DISTANCE, Prefs.MAX_SPLIT_RIGHT_DISTANCE);
+        splitRightBend = Prefs.clamp(c.splitRightBend, Prefs.MIN_SPLIT_RIGHT_BEND, Prefs.MAX_SPLIT_RIGHT_BEND);
+        splitRightHeight = Prefs.clamp(c.splitRightHeight, Prefs.MIN_SPLIT_RIGHT_HEIGHT, Prefs.MAX_SPLIT_RIGHT_HEIGHT);
+        splitRightTop = Prefs.clamp(c.splitRightTop, Prefs.MIN_SPLIT_RIGHT_TOP, Prefs.MAX_SPLIT_RIGHT_TOP);
+        splitRightBottom = Prefs.clamp(c.splitRightBottom, Prefs.MIN_SPLIT_RIGHT_BOTTOM, Prefs.MAX_SPLIT_RIGHT_BOTTOM);
+        splitRightY = Prefs.clamp(c.splitRightY, Prefs.MIN_SPLIT_RIGHT_Y, Prefs.MAX_SPLIT_RIGHT_Y);
+        signalIconScale = Prefs.clamp(c.signalIconScale, Prefs.MIN_SIGNAL_ICON_SCALE, Prefs.MAX_SIGNAL_ICON_SCALE);
+        simStackGap = Prefs.clamp(c.simStackGap, Prefs.MIN_SIM_STACK_GAP, Prefs.MAX_SIM_STACK_GAP);
         outOrder = c.outOrder == null
                 ? Prefs.OUT_DEFAULT_ORDER.clone() : c.outOrder.clone();
         typeWeight = c.typeWeight;
@@ -379,9 +427,9 @@ public final class TrioAppearance {
         // percentage switch, which was the only way to ask for "charging replaces the number";
         // now the user says it by placing the bolt, and the empty-layout fallback below still
         // reproduces the old look for an install that has never placed anything.
-        return hasRingPart(Prefs.PART_BOLT)
+        return boltWanted && (hasRingPart(Prefs.PART_BOLT)
                 || (capsule && hasCapsulePart(Prefs.PART_BOLT))
-                || (capsule && !anyPlacedInCapsule() && value);
+                || (capsule && !anyPlacedInCapsule() && value));
     }
     
     /** Whether the capsule's body holds this piece anywhere, left column included. */
@@ -469,7 +517,7 @@ public final class TrioAppearance {
      * exactly while this module is on <em>and</em> draws one of its own.
      */
     public boolean hidesNativeBolt() {
-        return glyph && drawsBolt();
+        return glyph && (!boltWanted || drawsBolt());
     }
 
     /** Whether the Wi-Fi arcs carry ink at this signal level. */
@@ -546,6 +594,8 @@ public final class TrioAppearance {
      * same signal twice.
      */
     public boolean signalDots() {
+        // Paired placement owns its rows through drawsSimPair, including its per-card switches.
+        if (slotted && hasRingPart(Prefs.PART_SIM_PAIR)) return false;
         if (signalOutOfRing) {
             return false;
         }
@@ -587,8 +637,17 @@ public final class TrioAppearance {
     }
 
     /** Whether either per-card row is drawn, which is what the hooks must ask. */
+    public boolean drawsSimPair() {
+        return mobile && (showSim1 || showSim2) && slotted && !signalOutOfRing && hasRingPart(Prefs.PART_SIM_PAIR);
+    }
+
+    /** Centre-to-centre pitch; at zero gap the bead edges touch. */
+    public float simStackPitch(float radius) {
+        return 8f * (1f + simStackGap / 100f);
+    }
+
     public boolean drawsAnySimRow() {
-        return drawsSim1() || drawsSim2();
+        return drawsSim1() || drawsSim2() || drawsSimPair();
     }
 
     /**
@@ -656,6 +715,8 @@ public final class TrioAppearance {
      * <p>A multiplier rather than a radius: the fitted radius already knows the opening's
      * room, and the user is asking to scale what is there, not to overrule the gap.
      */
+    public float signalIconScaleFactor() { return signalIconScale / 100f; }
+
     public float dotScaleFactor() {
         return Prefs.clamp(dotScale, Prefs.MIN_DOT_SCALE, Prefs.MAX_DOT_SCALE) / 100f;
     }
@@ -886,6 +947,7 @@ public final class TrioAppearance {
             // with something else in it would change the outline's shape as a side effect of
             // a preference about a number.
             if (charging && a.chargingShowsValue && level >= 0
+                    && parts[TrioZones.Zone.CENTRE.ordinal()] != Prefs.PART_SIM_PAIR
                     && parts[TrioZones.Zone.CENTRE.ordinal()] != Prefs.PART_VALUE) {
                 parts[TrioZones.Zone.CENTRE.ordinal()] = Prefs.PART_VALUE;
             }
@@ -1040,6 +1102,8 @@ public final class TrioAppearance {
             // from a layout even though the capsule has always drawn dots there: the rows came
             // from the mobile switch alone, so the user saw signal dots they could not move or
             // remove. See the Capsule class comment.
+            case Prefs.PART_SIM_PAIR:
+                return a.mobile && (a.showSim1 || a.showSim2) && !a.signalOutOfRing && a.slotted;
             case Prefs.PART_SIM_1:
                 return a.mobile && a.showSim1 && !a.signalOutOfRing && !a.rect;
             case Prefs.PART_SIM_2:
@@ -1271,7 +1335,7 @@ public final class TrioAppearance {
             // clock this class puts there for an untouched install is not. Getting that
             // distinction wrong is what made the cell ignore the list and draw the
             // clock whatever the user picked.
-            final boolean anyPlaced = anyPlacedExceptLeft(parts)
+            final boolean anyPlaced = a.hasRingPart(Prefs.PART_SIM_PAIR) || anyPlacedExceptLeft(parts)
                     || a.ringZones[TrioZones.Zone.LEFT.ordinal()].length > 0
                     || dotBands[TrioZones.Zone.TOP.ordinal()]
                     || dotBands[TrioZones.Zone.BOTTOM.ordinal()];
@@ -1341,7 +1405,7 @@ public final class TrioAppearance {
         /** Whether {@code id} is one of the two rows of level dots. */
         private static boolean isDotRow(int id) {
             return id == Prefs.PART_SIM_1 || id == Prefs.PART_SIM_2
-                    || id == Prefs.PART_MOBILE;
+                    || id == Prefs.PART_MOBILE || id == Prefs.PART_SIM_PAIR;
         }
 
         /** As {@link #anyPlaced}, ignoring the capsule's LEFT cell. */

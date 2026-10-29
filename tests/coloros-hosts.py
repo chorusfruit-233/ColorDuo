@@ -84,13 +84,17 @@ public final class ColorOsHostTest {
         static TrioAppearance appearance(){return appearance;}
     }
     static class TrioAppearance {
-        boolean capsule;
+        boolean capsule,ring=true;
+        int splitMode;
+        int signalIconScale=100;
+        boolean drawsSimPair(){return false;}
         int capsuleLength=100;
         boolean handsBackPercentage(){return false;}
         boolean hidesNativeBolt(){return false;}
         boolean hidesStatusClock(){return false;}
     }
     static class TrioGeometry {
+        static class SplitRing { SplitRing(TrioAppearance a){} float width(){return 240;} float height(){return 120;} }
         static void setCapsuleLength(int v){}
         static int capHostHeightPx(int v){return v;}
         static int capHostWidthPx(int v){return v*3;}
@@ -164,6 +168,12 @@ public final class ColorOsHostTest {
         check(keyguard.extra.parent==keyguard.meter.parent,"keyguard owns its own strip");
         check(notification.extra.parent==notification.meter,"notification ConstraintLayout reserves inside its meter");
         check(controls.extra.parent==controls.meter,"control-panel ConstraintLayout reserves inside its meter");
+        TrioConfig.appearance.splitMode=1;
+        main.applyInternal();
+        check(main.image.params.width==40,"split geometry reserves additional native row width");
+        TrioConfig.appearance.splitMode=0;
+        main.applyInternal();
+        check(main.image.params.width==24,"classic geometry returns to original row width");
         main.state.clock=true;
         main.applyInternal();
         check(main.clockContainer.visibility==View.GONE,"a frame that draws time hides the native clock");

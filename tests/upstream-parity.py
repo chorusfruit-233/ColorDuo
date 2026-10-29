@@ -11,6 +11,7 @@ SOURCE = "app/src/main/java/io/github/yixing233/hyperduo/"
 # These files implement ROM/framework integration or the fork's update address.
 PLATFORM_FILES = {"HyperDuoModule.java", "WifiPresence.java", "ui/UpdateController.kt"}
 DUO_FILES = {
+    "TrioZones.java",             # Paired SIM placement and exclusivity, tested with rendered rows.
     "Prefs.java", "TrioSettings.java", "ui/SettingsRepository.kt", "ui/ContentControls.kt", # Paused grayscale setting and transport.
     "TrioState.java",             # Explicit pause, service and default-data state.
     "TrioRenderer.java",          # Paused styling and automatic data-line order.
@@ -18,6 +19,7 @@ DUO_FILES = {
     "TrioAppearance.java",        # Retain physical SIM identity in capsule bands.
     "TrioPreviewView.java",       # Preview the same paused rendering path.
     "ui/DrawingScreen.kt",        # Charging-paused preview scene.
+    "TrioHooks.java",            # Split-ring host measurement.
     "ui/PartControls.kt",         # Percentage range follows the actual rendered slot.
     "OutRingLayout.java",         # Recompute reserve after dropping optional readings.
 }

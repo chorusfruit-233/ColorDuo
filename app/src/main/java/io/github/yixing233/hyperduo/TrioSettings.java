@@ -229,6 +229,32 @@ public final class TrioSettings {
      * reasoning is on {@link Prefs#KEY_DOT_SCALE}.
      */
     public int dotScale;
+    /** Clear distance between paired rows, as a percentage of bead diameter. */
+    public int splitMode;
+    public int splitLink;
+    public int splitCap;
+    public int pairShape;
+    public int pairMirror;
+    public int pairReverse;
+    public int pairSingle;
+    public int pairPitch;
+    public int pairBend;
+    public int pairX;
+    public int pairY;
+    public int splitLeftDistance;
+    public int splitLeftBend;
+    public int splitLeftHeight;
+    public int splitLeftTop;
+    public int splitLeftBottom;
+    public int splitLeftY;
+    public int splitRightDistance;
+    public int splitRightBend;
+    public int splitRightHeight;
+    public int splitRightTop;
+    public int splitRightBottom;
+    public int splitRightY;
+    public int signalIconScale;
+    public int simStackGap;
     /**
      * The out-of-ring order, nearest the battery first - see {@link Prefs#KEY_OUT_ORDER}.
      *
@@ -361,6 +387,31 @@ public final class TrioSettings {
         s.pausedGrayAll = Prefs.DEF_PAUSED_GRAY_ALL;
         s.fontPath = Prefs.DEF_FONT_PATH;
         s.dotScale = Prefs.DEF_DOT_SCALE;
+        s.splitMode = Prefs.DEF_SPLIT_MODE;
+        s.splitLink = Prefs.DEF_SPLIT_LINK;
+        s.splitCap = Prefs.DEF_SPLIT_CAP;
+        s.pairShape = Prefs.DEF_PAIR_SHAPE;
+        s.pairMirror = Prefs.DEF_PAIR_MIRROR;
+        s.pairReverse = Prefs.DEF_PAIR_REVERSE;
+        s.pairSingle = Prefs.DEF_PAIR_SINGLE;
+        s.pairPitch = Prefs.DEF_PAIR_PITCH;
+        s.pairBend = Prefs.DEF_PAIR_BEND;
+        s.pairX = Prefs.DEF_PAIR_X;
+        s.pairY = Prefs.DEF_PAIR_Y;
+        s.splitLeftDistance = Prefs.DEF_SPLIT_LEFT_DISTANCE;
+        s.splitLeftBend = Prefs.DEF_SPLIT_LEFT_BEND;
+        s.splitLeftHeight = Prefs.DEF_SPLIT_LEFT_HEIGHT;
+        s.splitLeftTop = Prefs.DEF_SPLIT_LEFT_TOP;
+        s.splitLeftBottom = Prefs.DEF_SPLIT_LEFT_BOTTOM;
+        s.splitLeftY = Prefs.DEF_SPLIT_LEFT_Y;
+        s.splitRightDistance = Prefs.DEF_SPLIT_RIGHT_DISTANCE;
+        s.splitRightBend = Prefs.DEF_SPLIT_RIGHT_BEND;
+        s.splitRightHeight = Prefs.DEF_SPLIT_RIGHT_HEIGHT;
+        s.splitRightTop = Prefs.DEF_SPLIT_RIGHT_TOP;
+        s.splitRightBottom = Prefs.DEF_SPLIT_RIGHT_BOTTOM;
+        s.splitRightY = Prefs.DEF_SPLIT_RIGHT_Y;
+        s.signalIconScale = Prefs.DEF_SIGNAL_ICON_SCALE;
+        s.simStackGap = Prefs.DEF_SIM_STACK_GAP;
         s.outOrder = Prefs.OUT_DEFAULT_ORDER.clone();
         s.typeWeight = Prefs.DEF_TYPE_WEIGHT;
         s.trackAlpha = Prefs.DEF_TRACK_ALPHA;
@@ -545,6 +596,32 @@ public final class TrioSettings {
         s.chargingShowsValue = p.getBoolean(Prefs.KEY_CHARGING_SHOWS_VALUE,
                 Prefs.DEF_CHARGING_SHOWS_VALUE);
         s.fontPath = readFontPath(p.getString(Prefs.KEY_FONT_PATH, Prefs.DEF_FONT_PATH));
+        s.splitMode = Prefs.clamp(p.getInt(Prefs.KEY_SPLIT_MODE, Prefs.DEF_SPLIT_MODE), Prefs.MIN_SPLIT_MODE, Prefs.MAX_SPLIT_MODE);
+        s.splitLink = Prefs.clamp(p.getInt(Prefs.KEY_SPLIT_LINK, Prefs.DEF_SPLIT_LINK), Prefs.MIN_SPLIT_LINK, Prefs.MAX_SPLIT_LINK);
+        s.splitCap = Prefs.clamp(p.getInt(Prefs.KEY_SPLIT_CAP, Prefs.DEF_SPLIT_CAP), Prefs.MIN_SPLIT_CAP, Prefs.MAX_SPLIT_CAP);
+        s.pairShape = Prefs.clamp(p.getInt(Prefs.KEY_PAIR_SHAPE, Prefs.DEF_PAIR_SHAPE), Prefs.MIN_PAIR_SHAPE, Prefs.MAX_PAIR_SHAPE);
+        s.pairMirror = Prefs.clamp(p.getInt(Prefs.KEY_PAIR_MIRROR, Prefs.DEF_PAIR_MIRROR), Prefs.MIN_PAIR_MIRROR, Prefs.MAX_PAIR_MIRROR);
+        s.pairReverse = Prefs.clamp(p.getInt(Prefs.KEY_PAIR_REVERSE, Prefs.DEF_PAIR_REVERSE), Prefs.MIN_PAIR_REVERSE, Prefs.MAX_PAIR_REVERSE);
+        s.pairSingle = Prefs.clamp(p.getInt(Prefs.KEY_PAIR_SINGLE, Prefs.DEF_PAIR_SINGLE), Prefs.MIN_PAIR_SINGLE, Prefs.MAX_PAIR_SINGLE);
+        s.pairPitch = Prefs.clamp(p.getInt(Prefs.KEY_PAIR_PITCH, Prefs.DEF_PAIR_PITCH), Prefs.MIN_PAIR_PITCH, Prefs.MAX_PAIR_PITCH);
+        s.pairBend = Prefs.clamp(p.getInt(Prefs.KEY_PAIR_BEND, Prefs.DEF_PAIR_BEND), Prefs.MIN_PAIR_BEND, Prefs.MAX_PAIR_BEND);
+        s.pairX = Prefs.clamp(p.getInt(Prefs.KEY_PAIR_X, Prefs.DEF_PAIR_X), Prefs.MIN_PAIR_X, Prefs.MAX_PAIR_X);
+        s.pairY = Prefs.clamp(p.getInt(Prefs.KEY_PAIR_Y, Prefs.DEF_PAIR_Y), Prefs.MIN_PAIR_Y, Prefs.MAX_PAIR_Y);
+        s.splitLeftDistance = Prefs.clamp(p.getInt(Prefs.KEY_SPLIT_LEFT_DISTANCE, Prefs.DEF_SPLIT_LEFT_DISTANCE), Prefs.MIN_SPLIT_LEFT_DISTANCE, Prefs.MAX_SPLIT_LEFT_DISTANCE);
+        s.splitLeftBend = Prefs.clamp(p.getInt(Prefs.KEY_SPLIT_LEFT_BEND, Prefs.DEF_SPLIT_LEFT_BEND), Prefs.MIN_SPLIT_LEFT_BEND, Prefs.MAX_SPLIT_LEFT_BEND);
+        s.splitLeftHeight = Prefs.clamp(p.getInt(Prefs.KEY_SPLIT_LEFT_HEIGHT, Prefs.DEF_SPLIT_LEFT_HEIGHT), Prefs.MIN_SPLIT_LEFT_HEIGHT, Prefs.MAX_SPLIT_LEFT_HEIGHT);
+        s.splitLeftTop = Prefs.clamp(p.getInt(Prefs.KEY_SPLIT_LEFT_TOP, Prefs.DEF_SPLIT_LEFT_TOP), Prefs.MIN_SPLIT_LEFT_TOP, Prefs.MAX_SPLIT_LEFT_TOP);
+        s.splitLeftBottom = Prefs.clamp(p.getInt(Prefs.KEY_SPLIT_LEFT_BOTTOM, Prefs.DEF_SPLIT_LEFT_BOTTOM), Prefs.MIN_SPLIT_LEFT_BOTTOM, Prefs.MAX_SPLIT_LEFT_BOTTOM);
+        s.splitLeftY = Prefs.clamp(p.getInt(Prefs.KEY_SPLIT_LEFT_Y, Prefs.DEF_SPLIT_LEFT_Y), Prefs.MIN_SPLIT_LEFT_Y, Prefs.MAX_SPLIT_LEFT_Y);
+        s.splitRightDistance = Prefs.clamp(p.getInt(Prefs.KEY_SPLIT_RIGHT_DISTANCE, Prefs.DEF_SPLIT_RIGHT_DISTANCE), Prefs.MIN_SPLIT_RIGHT_DISTANCE, Prefs.MAX_SPLIT_RIGHT_DISTANCE);
+        s.splitRightBend = Prefs.clamp(p.getInt(Prefs.KEY_SPLIT_RIGHT_BEND, Prefs.DEF_SPLIT_RIGHT_BEND), Prefs.MIN_SPLIT_RIGHT_BEND, Prefs.MAX_SPLIT_RIGHT_BEND);
+        s.splitRightHeight = Prefs.clamp(p.getInt(Prefs.KEY_SPLIT_RIGHT_HEIGHT, Prefs.DEF_SPLIT_RIGHT_HEIGHT), Prefs.MIN_SPLIT_RIGHT_HEIGHT, Prefs.MAX_SPLIT_RIGHT_HEIGHT);
+        s.splitRightTop = Prefs.clamp(p.getInt(Prefs.KEY_SPLIT_RIGHT_TOP, Prefs.DEF_SPLIT_RIGHT_TOP), Prefs.MIN_SPLIT_RIGHT_TOP, Prefs.MAX_SPLIT_RIGHT_TOP);
+        s.splitRightBottom = Prefs.clamp(p.getInt(Prefs.KEY_SPLIT_RIGHT_BOTTOM, Prefs.DEF_SPLIT_RIGHT_BOTTOM), Prefs.MIN_SPLIT_RIGHT_BOTTOM, Prefs.MAX_SPLIT_RIGHT_BOTTOM);
+        s.splitRightY = Prefs.clamp(p.getInt(Prefs.KEY_SPLIT_RIGHT_Y, Prefs.DEF_SPLIT_RIGHT_Y), Prefs.MIN_SPLIT_RIGHT_Y, Prefs.MAX_SPLIT_RIGHT_Y);
+        s.signalIconScale = Prefs.clamp(p.getInt(Prefs.KEY_SIGNAL_ICON_SCALE, Prefs.DEF_SIGNAL_ICON_SCALE), Prefs.MIN_SIGNAL_ICON_SCALE, Prefs.MAX_SIGNAL_ICON_SCALE);
+        s.simStackGap = Prefs.clamp(p.getInt(Prefs.KEY_SIM_STACK_GAP, Prefs.DEF_SIM_STACK_GAP),
+                Prefs.MIN_SIM_STACK_GAP, Prefs.MAX_SIM_STACK_GAP);
         s.dotScale = Prefs.clamp(
                 p.getInt(Prefs.KEY_DOT_SCALE, Prefs.DEF_DOT_SCALE),
                 Prefs.MIN_DOT_SCALE, Prefs.MAX_DOT_SCALE);
@@ -889,6 +966,31 @@ public final class TrioSettings {
         s.pausedGrayAll = pausedGrayAll;
         s.fontPath = fontPath;
         s.dotScale = dotScale;
+        s.splitMode = splitMode;
+        s.splitLink = splitLink;
+        s.splitCap = splitCap;
+        s.pairShape = pairShape;
+        s.pairMirror = pairMirror;
+        s.pairReverse = pairReverse;
+        s.pairSingle = pairSingle;
+        s.pairPitch = pairPitch;
+        s.pairBend = pairBend;
+        s.pairX = pairX;
+        s.pairY = pairY;
+        s.splitLeftDistance = splitLeftDistance;
+        s.splitLeftBend = splitLeftBend;
+        s.splitLeftHeight = splitLeftHeight;
+        s.splitLeftTop = splitLeftTop;
+        s.splitLeftBottom = splitLeftBottom;
+        s.splitLeftY = splitLeftY;
+        s.splitRightDistance = splitRightDistance;
+        s.splitRightBend = splitRightBend;
+        s.splitRightHeight = splitRightHeight;
+        s.splitRightTop = splitRightTop;
+        s.splitRightBottom = splitRightBottom;
+        s.splitRightY = splitRightY;
+        s.signalIconScale = signalIconScale;
+        s.simStackGap = simStackGap;
         s.outOrder = outOrder == null ? Prefs.OUT_DEFAULT_ORDER.clone() : outOrder.clone();
         s.typeWeight = typeWeight;
         s.trackAlpha = trackAlpha;
@@ -977,6 +1079,31 @@ public final class TrioSettings {
             case Prefs.KEY_PAUSED_GRAY_ALL: pausedGrayAll = src.pausedGrayAll; return true;
             case Prefs.KEY_CHARGING_SHOWS_VALUE: chargingShowsValue = src.chargingShowsValue; return true;
             case Prefs.KEY_FONT_PATH: fontPath = src.fontPath; return true;
+            case Prefs.KEY_SPLIT_MODE: splitMode = src.splitMode; return true;
+            case Prefs.KEY_SPLIT_LINK: splitLink = src.splitLink; return true;
+            case Prefs.KEY_SPLIT_CAP: splitCap = src.splitCap; return true;
+            case Prefs.KEY_PAIR_SHAPE: pairShape = src.pairShape; return true;
+            case Prefs.KEY_PAIR_MIRROR: pairMirror = src.pairMirror; return true;
+            case Prefs.KEY_PAIR_REVERSE: pairReverse = src.pairReverse; return true;
+            case Prefs.KEY_PAIR_SINGLE: pairSingle = src.pairSingle; return true;
+            case Prefs.KEY_PAIR_PITCH: pairPitch = src.pairPitch; return true;
+            case Prefs.KEY_PAIR_BEND: pairBend = src.pairBend; return true;
+            case Prefs.KEY_PAIR_X: pairX = src.pairX; return true;
+            case Prefs.KEY_PAIR_Y: pairY = src.pairY; return true;
+            case Prefs.KEY_SPLIT_LEFT_DISTANCE: splitLeftDistance = src.splitLeftDistance; return true;
+            case Prefs.KEY_SPLIT_LEFT_BEND: splitLeftBend = src.splitLeftBend; return true;
+            case Prefs.KEY_SPLIT_LEFT_HEIGHT: splitLeftHeight = src.splitLeftHeight; return true;
+            case Prefs.KEY_SPLIT_LEFT_TOP: splitLeftTop = src.splitLeftTop; return true;
+            case Prefs.KEY_SPLIT_LEFT_BOTTOM: splitLeftBottom = src.splitLeftBottom; return true;
+            case Prefs.KEY_SPLIT_LEFT_Y: splitLeftY = src.splitLeftY; return true;
+            case Prefs.KEY_SPLIT_RIGHT_DISTANCE: splitRightDistance = src.splitRightDistance; return true;
+            case Prefs.KEY_SPLIT_RIGHT_BEND: splitRightBend = src.splitRightBend; return true;
+            case Prefs.KEY_SPLIT_RIGHT_HEIGHT: splitRightHeight = src.splitRightHeight; return true;
+            case Prefs.KEY_SPLIT_RIGHT_TOP: splitRightTop = src.splitRightTop; return true;
+            case Prefs.KEY_SPLIT_RIGHT_BOTTOM: splitRightBottom = src.splitRightBottom; return true;
+            case Prefs.KEY_SPLIT_RIGHT_Y: splitRightY = src.splitRightY; return true;
+            case Prefs.KEY_SIGNAL_ICON_SCALE: signalIconScale = src.signalIconScale; return true;
+            case Prefs.KEY_SIM_STACK_GAP: simStackGap = src.simStackGap; return true;
             case Prefs.KEY_DOT_SCALE: dotScale = src.dotScale; return true;
             case Prefs.KEY_OUT_ORDER:
                 outOrder = src.outOrder == null
@@ -1124,6 +1251,32 @@ public final class TrioSettings {
         s.chargingShowsValue = bundle.getBoolean(Prefs.KEY_CHARGING_SHOWS_VALUE,
                 Prefs.DEF_CHARGING_SHOWS_VALUE);
         s.fontPath = readFontPath(bundle.getString(Prefs.KEY_FONT_PATH, Prefs.DEF_FONT_PATH));
+        s.splitMode = Prefs.clamp(bundle.getInt(Prefs.KEY_SPLIT_MODE, Prefs.DEF_SPLIT_MODE), Prefs.MIN_SPLIT_MODE, Prefs.MAX_SPLIT_MODE);
+        s.splitLink = Prefs.clamp(bundle.getInt(Prefs.KEY_SPLIT_LINK, Prefs.DEF_SPLIT_LINK), Prefs.MIN_SPLIT_LINK, Prefs.MAX_SPLIT_LINK);
+        s.splitCap = Prefs.clamp(bundle.getInt(Prefs.KEY_SPLIT_CAP, Prefs.DEF_SPLIT_CAP), Prefs.MIN_SPLIT_CAP, Prefs.MAX_SPLIT_CAP);
+        s.pairShape = Prefs.clamp(bundle.getInt(Prefs.KEY_PAIR_SHAPE, Prefs.DEF_PAIR_SHAPE), Prefs.MIN_PAIR_SHAPE, Prefs.MAX_PAIR_SHAPE);
+        s.pairMirror = Prefs.clamp(bundle.getInt(Prefs.KEY_PAIR_MIRROR, Prefs.DEF_PAIR_MIRROR), Prefs.MIN_PAIR_MIRROR, Prefs.MAX_PAIR_MIRROR);
+        s.pairReverse = Prefs.clamp(bundle.getInt(Prefs.KEY_PAIR_REVERSE, Prefs.DEF_PAIR_REVERSE), Prefs.MIN_PAIR_REVERSE, Prefs.MAX_PAIR_REVERSE);
+        s.pairSingle = Prefs.clamp(bundle.getInt(Prefs.KEY_PAIR_SINGLE, Prefs.DEF_PAIR_SINGLE), Prefs.MIN_PAIR_SINGLE, Prefs.MAX_PAIR_SINGLE);
+        s.pairPitch = Prefs.clamp(bundle.getInt(Prefs.KEY_PAIR_PITCH, Prefs.DEF_PAIR_PITCH), Prefs.MIN_PAIR_PITCH, Prefs.MAX_PAIR_PITCH);
+        s.pairBend = Prefs.clamp(bundle.getInt(Prefs.KEY_PAIR_BEND, Prefs.DEF_PAIR_BEND), Prefs.MIN_PAIR_BEND, Prefs.MAX_PAIR_BEND);
+        s.pairX = Prefs.clamp(bundle.getInt(Prefs.KEY_PAIR_X, Prefs.DEF_PAIR_X), Prefs.MIN_PAIR_X, Prefs.MAX_PAIR_X);
+        s.pairY = Prefs.clamp(bundle.getInt(Prefs.KEY_PAIR_Y, Prefs.DEF_PAIR_Y), Prefs.MIN_PAIR_Y, Prefs.MAX_PAIR_Y);
+        s.splitLeftDistance = Prefs.clamp(bundle.getInt(Prefs.KEY_SPLIT_LEFT_DISTANCE, Prefs.DEF_SPLIT_LEFT_DISTANCE), Prefs.MIN_SPLIT_LEFT_DISTANCE, Prefs.MAX_SPLIT_LEFT_DISTANCE);
+        s.splitLeftBend = Prefs.clamp(bundle.getInt(Prefs.KEY_SPLIT_LEFT_BEND, Prefs.DEF_SPLIT_LEFT_BEND), Prefs.MIN_SPLIT_LEFT_BEND, Prefs.MAX_SPLIT_LEFT_BEND);
+        s.splitLeftHeight = Prefs.clamp(bundle.getInt(Prefs.KEY_SPLIT_LEFT_HEIGHT, Prefs.DEF_SPLIT_LEFT_HEIGHT), Prefs.MIN_SPLIT_LEFT_HEIGHT, Prefs.MAX_SPLIT_LEFT_HEIGHT);
+        s.splitLeftTop = Prefs.clamp(bundle.getInt(Prefs.KEY_SPLIT_LEFT_TOP, Prefs.DEF_SPLIT_LEFT_TOP), Prefs.MIN_SPLIT_LEFT_TOP, Prefs.MAX_SPLIT_LEFT_TOP);
+        s.splitLeftBottom = Prefs.clamp(bundle.getInt(Prefs.KEY_SPLIT_LEFT_BOTTOM, Prefs.DEF_SPLIT_LEFT_BOTTOM), Prefs.MIN_SPLIT_LEFT_BOTTOM, Prefs.MAX_SPLIT_LEFT_BOTTOM);
+        s.splitLeftY = Prefs.clamp(bundle.getInt(Prefs.KEY_SPLIT_LEFT_Y, Prefs.DEF_SPLIT_LEFT_Y), Prefs.MIN_SPLIT_LEFT_Y, Prefs.MAX_SPLIT_LEFT_Y);
+        s.splitRightDistance = Prefs.clamp(bundle.getInt(Prefs.KEY_SPLIT_RIGHT_DISTANCE, Prefs.DEF_SPLIT_RIGHT_DISTANCE), Prefs.MIN_SPLIT_RIGHT_DISTANCE, Prefs.MAX_SPLIT_RIGHT_DISTANCE);
+        s.splitRightBend = Prefs.clamp(bundle.getInt(Prefs.KEY_SPLIT_RIGHT_BEND, Prefs.DEF_SPLIT_RIGHT_BEND), Prefs.MIN_SPLIT_RIGHT_BEND, Prefs.MAX_SPLIT_RIGHT_BEND);
+        s.splitRightHeight = Prefs.clamp(bundle.getInt(Prefs.KEY_SPLIT_RIGHT_HEIGHT, Prefs.DEF_SPLIT_RIGHT_HEIGHT), Prefs.MIN_SPLIT_RIGHT_HEIGHT, Prefs.MAX_SPLIT_RIGHT_HEIGHT);
+        s.splitRightTop = Prefs.clamp(bundle.getInt(Prefs.KEY_SPLIT_RIGHT_TOP, Prefs.DEF_SPLIT_RIGHT_TOP), Prefs.MIN_SPLIT_RIGHT_TOP, Prefs.MAX_SPLIT_RIGHT_TOP);
+        s.splitRightBottom = Prefs.clamp(bundle.getInt(Prefs.KEY_SPLIT_RIGHT_BOTTOM, Prefs.DEF_SPLIT_RIGHT_BOTTOM), Prefs.MIN_SPLIT_RIGHT_BOTTOM, Prefs.MAX_SPLIT_RIGHT_BOTTOM);
+        s.splitRightY = Prefs.clamp(bundle.getInt(Prefs.KEY_SPLIT_RIGHT_Y, Prefs.DEF_SPLIT_RIGHT_Y), Prefs.MIN_SPLIT_RIGHT_Y, Prefs.MAX_SPLIT_RIGHT_Y);
+        s.signalIconScale = Prefs.clamp(bundle.getInt(Prefs.KEY_SIGNAL_ICON_SCALE, Prefs.DEF_SIGNAL_ICON_SCALE), Prefs.MIN_SIGNAL_ICON_SCALE, Prefs.MAX_SIGNAL_ICON_SCALE);
+        s.simStackGap = Prefs.clamp(bundle.getInt(Prefs.KEY_SIM_STACK_GAP, Prefs.DEF_SIM_STACK_GAP),
+                Prefs.MIN_SIM_STACK_GAP, Prefs.MAX_SIM_STACK_GAP);
         s.dotScale = Prefs.clamp(
                 bundle.getInt(Prefs.KEY_DOT_SCALE, Prefs.DEF_DOT_SCALE),
                 Prefs.MIN_DOT_SCALE, Prefs.MAX_DOT_SCALE);
@@ -1230,6 +1383,31 @@ public final class TrioSettings {
         b.putBoolean(Prefs.KEY_PAUSED_GRAY_ALL, pausedGrayAll);
         b.putString(Prefs.KEY_FONT_PATH, fontPath);
         b.putInt(Prefs.KEY_DOT_SCALE, dotScale);
+        b.putInt(Prefs.KEY_SPLIT_MODE, splitMode);
+        b.putInt(Prefs.KEY_SPLIT_LINK, splitLink);
+        b.putInt(Prefs.KEY_SPLIT_CAP, splitCap);
+        b.putInt(Prefs.KEY_PAIR_SHAPE, pairShape);
+        b.putInt(Prefs.KEY_PAIR_MIRROR, pairMirror);
+        b.putInt(Prefs.KEY_PAIR_REVERSE, pairReverse);
+        b.putInt(Prefs.KEY_PAIR_SINGLE, pairSingle);
+        b.putInt(Prefs.KEY_PAIR_PITCH, pairPitch);
+        b.putInt(Prefs.KEY_PAIR_BEND, pairBend);
+        b.putInt(Prefs.KEY_PAIR_X, pairX);
+        b.putInt(Prefs.KEY_PAIR_Y, pairY);
+        b.putInt(Prefs.KEY_SPLIT_LEFT_DISTANCE, splitLeftDistance);
+        b.putInt(Prefs.KEY_SPLIT_LEFT_BEND, splitLeftBend);
+        b.putInt(Prefs.KEY_SPLIT_LEFT_HEIGHT, splitLeftHeight);
+        b.putInt(Prefs.KEY_SPLIT_LEFT_TOP, splitLeftTop);
+        b.putInt(Prefs.KEY_SPLIT_LEFT_BOTTOM, splitLeftBottom);
+        b.putInt(Prefs.KEY_SPLIT_LEFT_Y, splitLeftY);
+        b.putInt(Prefs.KEY_SPLIT_RIGHT_DISTANCE, splitRightDistance);
+        b.putInt(Prefs.KEY_SPLIT_RIGHT_BEND, splitRightBend);
+        b.putInt(Prefs.KEY_SPLIT_RIGHT_HEIGHT, splitRightHeight);
+        b.putInt(Prefs.KEY_SPLIT_RIGHT_TOP, splitRightTop);
+        b.putInt(Prefs.KEY_SPLIT_RIGHT_BOTTOM, splitRightBottom);
+        b.putInt(Prefs.KEY_SPLIT_RIGHT_Y, splitRightY);
+        b.putInt(Prefs.KEY_SIGNAL_ICON_SCALE, signalIconScale);
+        b.putInt(Prefs.KEY_SIM_STACK_GAP, simStackGap);
         b.putString(Prefs.KEY_OUT_ORDER, Prefs.encodeOutOrder(outOrder));
         b.putInt(Prefs.KEY_TYPE_WEIGHT, typeWeight);
         b.putInt(Prefs.KEY_TRACK_ALPHA, trackAlpha);
@@ -1353,6 +1531,31 @@ public final class TrioSettings {
                 // the settings row rebuild endlessly.
                 && java.util.Objects.equals(fontPath, s.fontPath)
                 && dotScale == s.dotScale
+                && splitMode == s.splitMode
+                && splitLink == s.splitLink
+                && splitCap == s.splitCap
+                && pairShape == s.pairShape
+                && pairMirror == s.pairMirror
+                && pairReverse == s.pairReverse
+                && pairSingle == s.pairSingle
+                && pairPitch == s.pairPitch
+                && pairBend == s.pairBend
+                && pairX == s.pairX
+                && pairY == s.pairY
+                && splitLeftDistance == s.splitLeftDistance
+                && splitLeftBend == s.splitLeftBend
+                && splitLeftHeight == s.splitLeftHeight
+                && splitLeftTop == s.splitLeftTop
+                && splitLeftBottom == s.splitLeftBottom
+                && splitLeftY == s.splitLeftY
+                && splitRightDistance == s.splitRightDistance
+                && splitRightBend == s.splitRightBend
+                && splitRightHeight == s.splitRightHeight
+                && splitRightTop == s.splitRightTop
+                && splitRightBottom == s.splitRightBottom
+                && splitRightY == s.splitRightY
+                && signalIconScale == s.signalIconScale
+                && simStackGap == s.simStackGap
                 && java.util.Arrays.equals(outOrder, s.outOrder)
                 && typeWeight == s.typeWeight
                 && trackAlpha == s.trackAlpha

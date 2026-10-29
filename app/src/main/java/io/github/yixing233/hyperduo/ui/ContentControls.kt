@@ -42,6 +42,13 @@ internal enum class ContentControl(val owner: TrioSettingsPart) {
     /** Master switch, then layout: both decide what exists at all. */
     Enabled(TrioSettingsPart.Appearance),
     Style(TrioSettingsPart.Appearance),
+    SplitMode(TrioSettingsPart.Appearance),
+    SplitLink(TrioSettingsPart.Appearance),
+    SplitCap(TrioSettingsPart.Appearance),
+    PairShape(TrioSettingsPart.Mobile),
+    PairMirror(TrioSettingsPart.Mobile),
+    PairReverse(TrioSettingsPart.Mobile),
+    PairSingle(TrioSettingsPart.Mobile),
     PausedGray(TrioSettingsPart.Appearance),
     // --- per component: its own switch ----------------------------------------
     Wifi(TrioSettingsPart.Wifi),
@@ -56,6 +63,7 @@ internal enum class ContentControl(val owner: TrioSettingsPart) {
      */
     Mobile(TrioSettingsPart.Mobile),
     DataSim(TrioSettingsPart.Mobile),
+    SimPair(TrioSettingsPart.Mobile),
     /**
      * The out-of-ring rendering: the module's own stacked reading, or MIUI's icon.
      *
@@ -146,7 +154,12 @@ internal fun ContentControlRow(
     if (control == ContentControl.Sim2 && a.slotted) {
         SignalCardPositionControl(TrioZones.Part.SIM_2, settings, update, enabled = signalInsideRing(a))
     }
+    if (control == ContentControl.SimPair) {
+        RingPositionControl(TrioZones.Part.SIM_PAIR, ringSettings, update)
+        return
+    }
     when (control) {
+        ContentControl.SimPair -> Unit
         ContentControl.Enabled -> ContentToggle(settings.enabled, R.string.master_title,
             null, emptyList()) { value -> update { it.setEnabled(value) } }
         ContentControl.Style -> {
@@ -208,7 +221,18 @@ internal fun ContentControlRow(
         // No bolt switch: a charger always reports itself, and where it does so is decided by
         // placing the bolt in the layout like any other piece. A row here would be a second
         // answer to the same question, able to contradict the list it describes.
-        ContentControl.Bolt -> Unit
+        ContentControl.SplitMode -> ContentChoice(settings.splitMode, R.string.split_mode_title, null, listOf(R.string.layout_classic, R.string.layout_split), master) { v -> update { it.setSplitMode(v) } }
+        ContentControl.SplitLink -> ContentChoice(settings.splitLink, R.string.split_link_title, null, listOf(R.string.option_off, R.string.option_on), master) { v -> update { it.setSplitLink(v) } }
+        ContentControl.SplitCap -> ContentChoice(settings.splitCap, R.string.split_cap_title, null, listOf(R.string.option_off, R.string.option_on), master) { v -> update { it.setSplitCap(v) } }
+        ContentControl.PairShape -> ContentChoice(settings.pairShape, R.string.pair_shape_title, null, listOf(R.string.dots_curved, R.string.dots_flat), master) { v -> update { it.setPairShape(v) } }
+        ContentControl.PairMirror -> ContentChoice(settings.pairMirror, R.string.pair_mirror_title, null, listOf(R.string.option_off, R.string.option_on), master) { v -> update { it.setPairMirror(v) } }
+        ContentControl.PairReverse -> ContentChoice(settings.pairReverse, R.string.pair_reverse_title, null, listOf(R.string.option_off, R.string.option_on), master) { v -> update { it.setPairReverse(v) } }
+        ContentControl.PairSingle -> ContentChoice(settings.pairSingle, R.string.pair_single_title, null, listOf(R.string.option_off, R.string.option_on), master) { v -> update { it.setPairSingle(v) } }
+        ContentControl.Bolt -> ContentChoice(if (settings.showBolt) 1 else 0,
+            R.string.show_bolt_title, R.string.show_bolt_summary,
+            listOf(R.string.bolt_hidden, R.string.bolt_visible), master) { value ->
+                update { it.setShowBolt(value == 1) }
+            }
         ContentControl.Type -> ContentChoice(a.typeMode, R.string.show_mobile_type_title,
             null,
             listOf(R.string.mobile_type_off, R.string.mobile_type_inside, R.string.mobile_type_outside),
@@ -405,7 +429,9 @@ private fun RingPositionControl(
     // list labelled it 涓嬮儴 - a piece sitting on the left reported itself as being at
     // the bottom. The order here is also the order the reader sees, so it has to match
     // the tab strip.
-    val slots = if (settings.trioStyle == Prefs.STYLE_CAPSULE) {
+    val slots = if (part == TrioZones.Part.SIM_PAIR) {
+        listOf(TrioZones.Zone.TOP, TrioZones.Zone.CENTRE, TrioZones.Zone.BOTTOM)
+    } else if (settings.trioStyle == Prefs.STYLE_CAPSULE) {
         listOf(TrioZones.Zone.TOP, TrioZones.Zone.LEFT, TrioZones.Zone.CENTRE,
             TrioZones.Zone.BOTTOM)
     } else {
@@ -428,6 +454,7 @@ private fun RingPositionControl(
         TrioZones.Part.MOBILE -> R.string.ring_position_mobile
         TrioZones.Part.SIM_1 -> R.string.ring_position_sim_1
         TrioZones.Part.SIM_2 -> R.string.ring_position_sim_2
+        TrioZones.Part.SIM_PAIR -> R.string.sim_pair_title
         TrioZones.Part.VALUE -> R.string.ring_position_value
         TrioZones.Part.BOLT -> R.string.ring_position_bolt
         TrioZones.Part.TYPE -> R.string.ring_position_type
@@ -449,7 +476,7 @@ private fun RingPositionControl(
         // A signal row cannot be put in the middle band - see [middleBlocked]. The row is
         // mostly used by pieces that have no such restriction, so the set is empty for them
         // and [ContentChoice] takes its plain path.
-        blockedIndices = middleBlocked(part),
+        blockedIndices = if (part == TrioZones.Part.SIM_PAIR) emptySet() else middleBlocked(part),
     ) { value ->
         update { it.setRingPartPosition(part, value) }
     }

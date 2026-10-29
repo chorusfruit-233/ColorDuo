@@ -126,7 +126,9 @@ public final class TrioZones {
         /** SIM 2's own row of four dots. */
         SIM_2,
         /** The capsule's fixed left clock, editable but not removable. */
-        CLOCK
+        CLOCK,
+        /** Two physical SIM rows placed together. */
+        SIM_PAIR
     }
 
     // ------------------------------------------------------------------ bounds
@@ -715,6 +717,7 @@ public final class TrioZones {
         if (current == null || part == null) {
             return true;
         }
+        if (part == Part.SIM_PAIR) return ringAccepts(zone, part);
         return current.trioStyle != Prefs.STYLE_RING || ringAccepts(zone, part);
     }
 
@@ -789,6 +792,7 @@ public final class TrioZones {
             case MOBILE: return Prefs.PART_MOBILE;
             case SIM_1: return Prefs.PART_SIM_1;
             case SIM_2: return Prefs.PART_SIM_2;
+            case SIM_PAIR: return Prefs.PART_SIM_PAIR;
             case VALUE: return Prefs.PART_VALUE;
             case BOLT: return Prefs.PART_BOLT;
             case TYPE: return Prefs.PART_TYPE;
@@ -807,6 +811,7 @@ public final class TrioZones {
             case Prefs.PART_CLOCK: return Part.CLOCK;
             case Prefs.PART_SIM_1: return Part.SIM_1;
             case Prefs.PART_SIM_2: return Part.SIM_2;
+            case Prefs.PART_SIM_PAIR: return Part.SIM_PAIR;
             default: return null;
         }
     }
@@ -895,7 +900,9 @@ public final class TrioZones {
             for (int existing : current.ringZones[z]) {
                 // Drop the id everywhere, then re-add it at the target's front: that single
                 // rule gives add, promote and move without three separate paths.
-                if (existing == id) {
+                if (existing == id
+                        || (want == Part.SIM_PAIR && (existing == Prefs.PART_SIM_1 || existing == Prefs.PART_SIM_2))
+                        || ((want == Part.SIM_1 || want == Part.SIM_2) && existing == Prefs.PART_SIM_PAIR)) {
                     continue;
                 }
                 list.add(existing);
@@ -920,6 +927,7 @@ public final class TrioZones {
         if (want == Part.MOBILE) next.showMobile = true;
         if (want == Part.SIM_1) { next.showMobile = true; next.showSim1 = true; }
         if (want == Part.SIM_2) { next.showMobile = true; next.showSim2 = true; }
+        if (want == Part.SIM_PAIR) { next.showMobile = true; next.showSim1 = true; next.showSim2 = true; next.signalMode = Prefs.SIGNAL_IN_RING; }
         if (want == Part.TYPE) next.mobileTypeMode = Prefs.MOBILE_TYPE_IN_RING;
         return next;
     }

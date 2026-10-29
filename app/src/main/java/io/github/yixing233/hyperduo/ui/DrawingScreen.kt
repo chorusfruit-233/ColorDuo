@@ -1699,6 +1699,7 @@ private fun occupantLabelRes(part: TrioZones.Part?): Int = when (part) {
     TrioZones.Part.TYPE -> R.string.drawing_occupant_type
     TrioZones.Part.SIM_1 -> R.string.drawing_occupant_sim_1
     TrioZones.Part.SIM_2 -> R.string.drawing_occupant_sim_2
+    TrioZones.Part.SIM_PAIR -> R.string.sim_pair_title
     TrioZones.Part.CLOCK -> R.string.drawing_occupant_clock
     null -> R.string.drawing_occupant_none
 }
@@ -1785,6 +1786,7 @@ private fun partSummaryRes(part: TrioZones.Part): Int = when (part) {
     TrioZones.Part.TYPE -> R.string.show_mobile_type_summary
     TrioZones.Part.SIM_1 -> R.string.show_sim_1_summary
     TrioZones.Part.SIM_2 -> R.string.show_sim_2_summary
+    TrioZones.Part.SIM_PAIR -> R.string.sim_pair_summary
     TrioZones.Part.CLOCK -> R.string.show_clock_summary
 }
 

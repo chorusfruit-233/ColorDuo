@@ -290,38 +290,13 @@ final class ColorOsHooks {
         int count = 0;
         // OEM/R8 builds can inline binder helpers. Filter framework writes by our exact child
         // instances too, so an inlined style update cannot leave a stale restoration snapshot.
-        count += hook(module, Refl.method(ImageView.class, "setImageDrawable", Drawable.class), chain -> {
-            Host owner = childOwner((View) chain.getThisObject());
-            if (owner == null || owner.image != chain.getThisObject()
-                    || owner.moduleWriting || owner.nativeDepth != 0) return chain.proceed();
-            Drawable drawable = (Drawable) chain.getArg(0);
-            if (drawable == owner.glyph) return chain.proceed();
-            owner.nativeDrawable = drawable;
-            if (!owner.active) return chain.proceed();
-            ViewGroup.LayoutParams current = owner.image.getLayoutParams();
-            if (current instanceof LinearLayout.LayoutParams
-                    && (current.width != owner.ownedWidth || current.height != owner.ownedHeight)) {
-                owner.nativeParams = new LinearLayout.LayoutParams((LinearLayout.LayoutParams) current);
-            }
-            Object result = chain.proceed(new Object[] {owner.glyph});
-            owner.enforceImageSize();
-            return result;
-        });
-        count += hook(module, Refl.method(ImageView.class, "setScaleType", ImageView.ScaleType.class), chain -> {
-            Host owner = childOwner((View) chain.getThisObject());
-            if (owner == null || owner.image != chain.getThisObject()
-                    || owner.moduleWriting || owner.nativeDepth != 0) return chain.proceed();
-            owner.nativeScaleType = (ImageView.ScaleType) chain.getArg(0);
-            return owner.active ? chain.proceed(new Object[] {ImageView.ScaleType.FIT_XY}) : chain.proceed();
-        });
-        count += hook(module, Refl.method(View.class, "setVisibility", int.class), chain -> {
-            View view = (View) chain.getThisObject();
-            Host owner = childOwner(view);
-            if (owner == null || owner.moduleWriting || owner.nativeDepth != 0) return chain.proceed();
-            owner.nativeVisibility.put(view, (Integer) chain.getArg(0));
-            Integer desired = owner.visibilityOverrides.get(view);
-            return owner.active && desired != null ? chain.proceed(new Object[] {desired}) : chain.proceed();
-        });
+        count += hook(module, Refl.method(ImageView.class, "setImageDrawable", Drawable.class), ColorOsHooks::writeDrawable);
+        count += hook(module, Refl.method(ImageView.class, "setScaleType", ImageView.ScaleType.class), ColorOsHooks::writeScaleType);
+        count += hook(module, Refl.method(View.class, "setVisibility", int.class), ColorOsHooks::writeVisibility);
+        count += hook(module, Refl.method(ImageView.class, "getDrawable"), ColorOsHooks::readDrawable);
+        count += hook(module, Refl.method(View.class, "getLayoutParams"), ColorOsHooks::readLayoutParams);
+        count += hook(module, Refl.method(View.class, "setLayoutParams", ViewGroup.LayoutParams.class), ColorOsHooks::writeLayoutParams);
+
         for (Method method : meterClass.getDeclaredMethods()) {
             String name = method.getName();
             if (name.equals("onFinishInflate") || name.equals("onAttachedToWindow")
@@ -339,9 +314,8 @@ final class ColorOsHooks {
             }
         }
 
-        // All binder writes happen against the native view state. Capture the result once the
-        // outermost binder call finishes, then put our drawable back. This also handles the old
-        // horizontal style, which uses a separate ProgressBar instead of battery_icon_view.
+        // Native binder reads use a restoration snapshot while writes keep the owned UI
+        // continuously installed. This includes the separate horizontal ProgressBar children.
         Class<?> binder = Refl.cls(BATTERY + "ui.binder.BatteryViewBinder", loader);
         if (binder != null) for (Method method : binder.getDeclaredMethods()) {
             if (!method.getName().startsWith("bind")) continue;
@@ -509,16 +483,85 @@ final class ColorOsHooks {
         });
     }
 
+    private static Object writeDrawable(XposedInterface.Chain chain) throws Throwable {
+        Host owner = childOwner((View) chain.getThisObject());
+        if (owner == null || owner.image != chain.getThisObject()
+                || owner.moduleWriting) return chain.proceed();
+        Drawable drawable = (Drawable) chain.getArg(0);
+        if (drawable == owner.glyph) return chain.proceed();
+        owner.nativeDrawable = drawable;
+        if (!owner.active) return chain.proceed();
+        ViewGroup.LayoutParams current = owner.image.getLayoutParams();
+        if (current instanceof LinearLayout.LayoutParams
+                && (current.width != owner.ownedWidth || current.height != owner.ownedHeight)) {
+            owner.nativeParams = new LinearLayout.LayoutParams((LinearLayout.LayoutParams) current);
+        }
+        Object result = chain.proceed(new Object[] {owner.glyph});
+        owner.enforceImageSize();
+        return result;
+    }
+
+    private static Object writeScaleType(XposedInterface.Chain chain) throws Throwable {
+        Host owner = childOwner((View) chain.getThisObject());
+        if (owner == null || owner.image != chain.getThisObject()
+                || owner.moduleWriting) return chain.proceed();
+        owner.nativeScaleType = (ImageView.ScaleType) chain.getArg(0);
+        return owner.active ? chain.proceed(new Object[] {ImageView.ScaleType.FIT_XY}) : chain.proceed();
+    }
+
+    private static Object writeVisibility(XposedInterface.Chain chain) throws Throwable {
+        View view = (View) chain.getThisObject();
+        Host owner = childOwner(view);
+        if (owner == null || owner.moduleWriting) return chain.proceed();
+        owner.nativeVisibility.put(view, (Integer) chain.getArg(0));
+        Integer desired = owner.visibilityOverrides.get(view);
+        return owner.active && desired != null ? chain.proceed(new Object[] {desired}) : chain.proceed();
+    }
+
+    /** Vendor binders may cast the native drawable; virtualize reads without displaying it. */
+    private static Object readDrawable(XposedInterface.Chain chain) throws Throwable {
+        Host owner=childOwner((View)chain.getThisObject());
+        if(owner!=null && owner.image==chain.getThisObject() && owner.active
+                && !owner.moduleWriting && owner.nativeDepth>0) return owner.nativeDrawable;
+        return chain.proceed();
+    }
+
+    private static Object readLayoutParams(XposedInterface.Chain chain) throws Throwable {
+        Host owner=childOwner((View)chain.getThisObject());
+        if(owner!=null && owner.image==chain.getThisObject() && owner.active
+                && !owner.moduleWriting && owner.nativeDepth>0 && owner.nativeParams!=null)
+            return new LinearLayout.LayoutParams(owner.nativeParams);
+        return chain.proceed();
+    }
+
+    private static Object writeLayoutParams(XposedInterface.Chain chain) throws Throwable {
+        Host owner=childOwner((View)chain.getThisObject());
+        if(owner==null || owner.image!=chain.getThisObject() || owner.moduleWriting || !owner.active
+                || !(chain.getArg(0) instanceof LinearLayout.LayoutParams)) return chain.proceed();
+        LinearLayout.LayoutParams requested=(LinearLayout.LayoutParams)chain.getArg(0);
+        owner.nativeParams=new LinearLayout.LayoutParams(requested);
+        LinearLayout.LayoutParams visible=new LinearLayout.LayoutParams(requested);
+        visible.width=owner.ownedWidth;visible.height=owner.ownedHeight;
+        return chain.proceed(new Object[]{visible});
+    }
+
     private static Object nativeUpdate(Host host, XposedInterface.Chain chain) throws Throwable {
         boolean outer = host.nativeDepth++ == 0;
-        if (outer) host.restoreBattery();
+        boolean retained=outer && host.active;
+        if(outer && !retained) host.restoreBattery();
         try {
             return chain.proceed();
         } finally {
             host.nativeDepth--;
             if (outer) {
                 try {
-                    host.capture();
+                    // Data/color updates keep the owned views continuously installed.
+                    // Only a genuine child replacement needs a new restoration snapshot.
+                    if(!retained || host.find("battery_icon_view")!=host.image) {
+                        if(retained) host.restoreBattery();
+                        host.image=null;host.nativeParams=null;
+                        host.capture();
+                    }
                     host.apply();
                 } catch (Throwable error) {
                     host.fail(error);
@@ -776,6 +819,10 @@ final class ColorOsHooks {
             params.height = appearance.capsule ? TrioGeometry.capHostHeightPx(height * 3 / 4) : height;
             params.width = appearance.capsule ? TrioGeometry.capHostWidthPx(height * 3 / 4)
                     : Math.round(24 * meter.getResources().getDisplayMetrics().density);
+            if (appearance.ring && (appearance.splitMode == 1 || appearance.drawsSimPair() || appearance.signalIconScale != 100)) {
+                TrioGeometry.SplitRing shape = new TrioGeometry.SplitRing(appearance);
+                params.width = Math.max(params.width, Math.round(height * shape.width()/shape.height()));
+            }
             ownedWidth = params.width;
             ownedHeight = params.height;
             if (image.getLayoutParams().width != params.width || image.getLayoutParams().height != params.height) {

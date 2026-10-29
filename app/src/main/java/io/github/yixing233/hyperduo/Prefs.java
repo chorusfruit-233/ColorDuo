@@ -259,10 +259,12 @@ public final class Prefs {
              */
             PART_SIM_1 = 7,
             /** SIM 2's own row of four dots; see {@link #PART_SIM_1}. */
-            PART_SIM_2 = 8;
+            PART_SIM_2 = 8,
+            /** Both physical SIM rows grouped in one opening. */
+            PART_SIM_PAIR = 9;
 
     /** The highest valid part id. */
-    public static final int PART_MAX = PART_SIM_2;
+    public static final int PART_MAX = PART_SIM_PAIR;
 
     /** How many parts there are, counting {@link #PART_NONE}. */
     public static final int PART_COUNT = PART_MAX + 1;
@@ -317,6 +319,7 @@ public final class Prefs {
      * @param id a {@code PART_*} id; {@link #PART_NONE} (a cleared band) is always allowed
      */
     public static boolean zoneAccepts(int zone, int id) {
+        if (id == PART_SIM_PAIR) return zone >= 0 && zone <= ZONE_BOTTOM;
         return !(zone == ZONE_CENTRE && isSignalRow(id));
     }
 
@@ -328,7 +331,7 @@ public final class Prefs {
      * horizontal row, and the only ones the notch geometry is designed around.
      */
     public static boolean isSignalRow(int id) {
-        return id == PART_MOBILE || id == PART_SIM_1 || id == PART_SIM_2;
+        return id == PART_MOBILE || id == PART_SIM_1 || id == PART_SIM_2 || id == PART_SIM_PAIR;
     }
 
     /**
@@ -375,7 +378,7 @@ public final class Prefs {
         int[] bottom = zones[ZONE_BOTTOM];
         boolean moved = false;
         for (int id : zones[ZONE_CENTRE]) {
-            if (!isSignalRow(id)) {
+            if (zoneAccepts(ZONE_CENTRE, id)) {
                 kept.add(id);
                 continue;
             }
@@ -1172,6 +1175,56 @@ public final class Prefs {
      * rectangle's columns are square, so neither has a bead to grow.
      */
     public static final String KEY_DOT_SCALE = "dot_scale";
+    public static final String KEY_SPLIT_MODE = "split_mode";
+    public static final int DEF_SPLIT_MODE = 0, MIN_SPLIT_MODE = 0, MAX_SPLIT_MODE = 1;
+    public static final String KEY_SPLIT_LINK = "split_link";
+    public static final int DEF_SPLIT_LINK = 1, MIN_SPLIT_LINK = 0, MAX_SPLIT_LINK = 1;
+    public static final String KEY_SPLIT_CAP = "split_cap";
+    public static final int DEF_SPLIT_CAP = 1, MIN_SPLIT_CAP = 0, MAX_SPLIT_CAP = 1;
+    public static final String KEY_PAIR_SHAPE = "pair_shape";
+    public static final int DEF_PAIR_SHAPE = 0, MIN_PAIR_SHAPE = 0, MAX_PAIR_SHAPE = 1;
+    public static final String KEY_PAIR_MIRROR = "pair_mirror";
+    public static final int DEF_PAIR_MIRROR = 0, MIN_PAIR_MIRROR = 0, MAX_PAIR_MIRROR = 1;
+    public static final String KEY_PAIR_REVERSE = "pair_reverse";
+    public static final int DEF_PAIR_REVERSE = 0, MIN_PAIR_REVERSE = 0, MAX_PAIR_REVERSE = 1;
+    public static final String KEY_PAIR_SINGLE = "pair_single";
+    public static final int DEF_PAIR_SINGLE = 0, MIN_PAIR_SINGLE = 0, MAX_PAIR_SINGLE = 1;
+    public static final String KEY_PAIR_PITCH = "pair_pitch";
+    public static final int DEF_PAIR_PITCH = 100, MIN_PAIR_PITCH = 50, MAX_PAIR_PITCH = 250;
+    public static final String KEY_PAIR_BEND = "pair_bend";
+    public static final int DEF_PAIR_BEND = 8, MIN_PAIR_BEND = -30, MAX_PAIR_BEND = 30;
+    public static final String KEY_PAIR_X = "pair_x";
+    public static final int DEF_PAIR_X = 0, MIN_PAIR_X = -40, MAX_PAIR_X = 40;
+    public static final String KEY_PAIR_Y = "pair_y";
+    public static final int DEF_PAIR_Y = 0, MIN_PAIR_Y = -40, MAX_PAIR_Y = 40;
+    public static final String KEY_SPLIT_LEFT_DISTANCE = "split_left_distance";
+    public static final int DEF_SPLIT_LEFT_DISTANCE = 10, MIN_SPLIT_LEFT_DISTANCE = 0, MAX_SPLIT_LEFT_DISTANCE = 80;
+    public static final String KEY_SPLIT_LEFT_BEND = "split_left_bend";
+    public static final int DEF_SPLIT_LEFT_BEND = 40, MIN_SPLIT_LEFT_BEND = 0, MAX_SPLIT_LEFT_BEND = 80;
+    public static final String KEY_SPLIT_LEFT_HEIGHT = "split_left_height";
+    public static final int DEF_SPLIT_LEFT_HEIGHT = 96, MIN_SPLIT_LEFT_HEIGHT = 20, MAX_SPLIT_LEFT_HEIGHT = 110;
+    public static final String KEY_SPLIT_LEFT_TOP = "split_left_top";
+    public static final int DEF_SPLIT_LEFT_TOP = 16, MIN_SPLIT_LEFT_TOP = 0, MAX_SPLIT_LEFT_TOP = 80;
+    public static final String KEY_SPLIT_LEFT_BOTTOM = "split_left_bottom";
+    public static final int DEF_SPLIT_LEFT_BOTTOM = 16, MIN_SPLIT_LEFT_BOTTOM = 0, MAX_SPLIT_LEFT_BOTTOM = 80;
+    public static final String KEY_SPLIT_LEFT_Y = "split_left_y";
+    public static final int DEF_SPLIT_LEFT_Y = 0, MIN_SPLIT_LEFT_Y = -40, MAX_SPLIT_LEFT_Y = 40;
+    public static final String KEY_SPLIT_RIGHT_DISTANCE = "split_right_distance";
+    public static final int DEF_SPLIT_RIGHT_DISTANCE = 10, MIN_SPLIT_RIGHT_DISTANCE = 0, MAX_SPLIT_RIGHT_DISTANCE = 80;
+    public static final String KEY_SPLIT_RIGHT_BEND = "split_right_bend";
+    public static final int DEF_SPLIT_RIGHT_BEND = 40, MIN_SPLIT_RIGHT_BEND = 0, MAX_SPLIT_RIGHT_BEND = 80;
+    public static final String KEY_SPLIT_RIGHT_HEIGHT = "split_right_height";
+    public static final int DEF_SPLIT_RIGHT_HEIGHT = 96, MIN_SPLIT_RIGHT_HEIGHT = 20, MAX_SPLIT_RIGHT_HEIGHT = 110;
+    public static final String KEY_SPLIT_RIGHT_TOP = "split_right_top";
+    public static final int DEF_SPLIT_RIGHT_TOP = 16, MIN_SPLIT_RIGHT_TOP = 0, MAX_SPLIT_RIGHT_TOP = 80;
+    public static final String KEY_SPLIT_RIGHT_BOTTOM = "split_right_bottom";
+    public static final int DEF_SPLIT_RIGHT_BOTTOM = 16, MIN_SPLIT_RIGHT_BOTTOM = 0, MAX_SPLIT_RIGHT_BOTTOM = 80;
+    public static final String KEY_SPLIT_RIGHT_Y = "split_right_y";
+    public static final int DEF_SPLIT_RIGHT_Y = 0, MIN_SPLIT_RIGHT_Y = -40, MAX_SPLIT_RIGHT_Y = 40;
+    public static final String KEY_SIGNAL_ICON_SCALE = "signal_icon_scale";
+    public static final int DEF_SIGNAL_ICON_SCALE = 100, MIN_SIGNAL_ICON_SCALE = 50, MAX_SIGNAL_ICON_SCALE = 200;
+    public static final String KEY_SIM_STACK_GAP = "sim_stack_gap";
+    public static final int DEF_SIM_STACK_GAP = 50, MIN_SIM_STACK_GAP = 0, MAX_SIM_STACK_GAP = 300;
     public static final String KEY_TYPE_WEIGHT = "type_weight";
     public static final String KEY_TRACK_ALPHA = "track_alpha";
 

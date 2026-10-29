@@ -989,7 +989,7 @@ final class TrioHooks {
                         final View view = (View) self;
                         try {
                             final TrioAppearance a = TrioConfig.appearance();
-                            if (!a.glyph || !a.capsule) {
+                            if (!a.glyph || (!a.capsule && !(a.ring && (a.splitMode == 1 || a.drawsSimPair() || a.signalIconScale != 100)))) {
                                 return result;
                             }
                             // Taken from the height MIUI just settled on rather
@@ -1003,12 +1003,13 @@ final class TrioHooks {
                             // last frame's length would reserve the old width and then draw
                             // a longer capsule inside it, clipped at the ends.
                             TrioGeometry.setCapsuleLength(a.capsuleLength);
-                            final int width = TrioGeometry.capHostWidthPx(height);
+                            final TrioGeometry.SplitRing split = a.ring ? new TrioGeometry.SplitRing(a) : null;
+                            final int width = split == null ? TrioGeometry.capHostWidthPx(height) : Math.round(height*split.width()/split.height());
                             // The two opening bands are added to the HEIGHT, after the width
                             // has been asked for the bare capsule. Width decides the drawing
                             // scale, so leaving it alone is what keeps the capsule the same
                             // size; the band is purely extra room above and below it.
-                            final int tall = TrioGeometry.capHostHeightPx(height);
+                            final int tall = split == null ? TrioGeometry.capHostHeightPx(height) : height;
                             final Method setter = sSetMeasuredDimension;
                             if (width > 0 && tall > 0
                                     && (width != view.getMeasuredWidth()

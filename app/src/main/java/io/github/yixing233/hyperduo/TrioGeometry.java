@@ -2016,4 +2016,132 @@ final class TrioGeometry {
      * extra glyphs (two bolts merge into an unreadable blob at that size).
      */
     static final int QUICK_CHARGE = 0xFFFFBA28;
+
+    /** Unscaled ink bounds of the legacy four-dot ring row, in design coordinates. */
+    static float[] signalRowBounds(int zone,TrioAppearance a) {
+        float radius=arcRowDotR(zone,a.ringStroke,78f-a.ringStroke,a.dotScaleFactor());
+        float half=Math.min((float)Math.toRadians(BEAD_SPAN_DEG/2),
+                Math.max(0,(float)Math.toRadians(GAP_WIDTH_DEG/2)-(radius+a.ringStroke/2f+1)/B_R));
+        float[] box={Float.MAX_VALUE,Float.MAX_VALUE,-Float.MAX_VALUE,-Float.MAX_VALUE};
+        for(int dot=0;dot<4;dot++) {
+            float angle=(dot-1.5f)/1.5f*half;
+            float x=zone==1 ? B_CX+(dot-1.5f)*radius*3 : B_CX+B_R*(float)Math.sin(angle);
+            float y=zone==1 ? ZONE_CY[zone] : B_CY+(zone==2?1:-1)*B_R*(float)Math.cos(angle);
+            box[0]=Math.min(box[0],x-radius);box[1]=Math.min(box[1],y-radius);
+            box[2]=Math.max(box[2],x+radius);box[3]=Math.max(box[3],y+radius);
+        }
+        return box;
+    }
+
+    /** A clipped half ellipse. Openings change the angle interval, never its conic. */
+    static final class EllipseSide {
+        final float cx,cy,rx,ry,start,sweep;
+        EllipseSide(TrioAppearance a,int side) {
+            boolean left=side==0 || a.splitLink==1;
+            rx=left?a.splitLeftBend:a.splitRightBend;
+            ry=(left?a.splitLeftHeight:a.splitRightHeight)/2f;
+            cy=B_CY+(left?a.splitLeftY:a.splitRightY);
+            cx=B_CX+(side==0?-1:1)*(left?a.splitLeftDistance:a.splitRightDistance);
+            float top=left?a.splitLeftTop:a.splitRightTop;
+            float bottom=left?a.splitLeftBottom:a.splitRightBottom;
+            // Zero bend is the intentional degenerate (straight) ellipse.
+            float topAngle=rx==0 ? (float)Math.PI/2 : (float)Math.acos(Math.min(.95f,top/(2*rx)));
+            float bottomAngle=rx==0 ? (float)Math.PI/2 : (float)Math.acos(Math.min(.95f,bottom/(2*rx)));
+            start=side==0 ? (float)Math.PI-bottomAngle : -topAngle;
+            sweep=topAngle+bottomAngle;
+        }
+        float x(float t){return cx+rx*(float)Math.cos(start+t*sweep);}
+        float y(float t){return cy+ry*(float)Math.sin(start+t*sweep);}
+        float edge(boolean top,int side,int cap,float stroke) {
+            float t=side==0 ? (top?1:0) : (top?0:1);
+            double angle=start+t*sweep;
+            float dx=rx*(float)Math.sin(angle),dy=ry*(float)Math.cos(angle);
+            float normal=cap==1 ? 1 : (float)(Math.abs(dx)/Math.max(1e-9,Math.hypot(dx,dy)));
+            return y(t)+(top?-1:1)*stroke/2f*normal;
+        }
+    }
+    private static float sideEdge(TrioAppearance a, boolean left, boolean top) {
+        int side=left?0:1;
+        return new EllipseSide(a,side).edge(top,side,a.splitCap,a.ringStroke);
+    }
+    static float sideTop(TrioAppearance a) {
+        return Math.min(sideEdge(a,true,true),sideEdge(a,a.splitLink==1,true));
+    }
+    static float sideBottom(TrioAppearance a) {
+        return Math.max(sideEdge(a,true,false),sideEdge(a,a.splitLink==1,false));
+    }
+
+    /** Independent sampled side paths. Progress is measured over actual ink length. */
+    static final class SplitRing {
+        static final int STEPS = 256;
+        final EllipseSide[] sides=new EllipseSide[2];
+        final float[] x = new float[2 * (STEPS + 1)], y = new float[x.length];
+        final float[] distance = new float[x.length];
+        float length, minX = INK_X, maxX = INK_X + INK_W;
+        float minY = INK_Y, maxY = INK_Y + INK_H;
+        SplitRing(TrioAppearance a) {
+            for (int side = 0; side < 2; side++) {
+                EllipseSide ellipse=sides[side]=new EllipseSide(a,side);
+                for (int n = 0; n <= STEPS; n++) {
+                    int index=side*(STEPS+1)+n;
+                    float t=n/(float)STEPS;
+                    x[index]=ellipse.x(t);
+                    y[index]=ellipse.y(t);
+                    if (n > 0) length += (float)Math.hypot(x[index]-x[index-1],y[index]-y[index-1]);
+                    distance[index] = length;
+                    float pad = a.ringStroke / 2f + 1;
+                    if (a.splitMode == 1) {
+                        minX=Math.min(minX,x[index]-pad); maxX=Math.max(maxX,x[index]+pad);
+                        minY=Math.min(minY,y[index]-pad); maxY=Math.max(maxY,y[index]+pad);
+                    }
+                }
+            }
+            includePair(a);
+            includeSingleRows(a);
+        }
+        void includePair(TrioAppearance a) {
+            if (!a.drawsSimPair()) return;
+            for (int z=0;z<3;z++) {
+                boolean placed=false;
+                for(int part:a.ringZones[z]) if(part==Prefs.PART_SIM_PAIR) placed=true;
+                if(!placed) continue;
+                float radius=4f*a.dotScaleFactor();
+                float pitch=a.simStackPitch(radius);
+                float cy=z==0 ? 12f+pitch/2 : z==2 ? 108f-pitch/2 : B_CY;
+                if(a.splitMode==1) {
+                    float low=Float.MAX_VALUE,high=-Float.MAX_VALUE;
+                    for(int row=0;row<2;row++)for(int dot=0;dot<4;dot++) {
+                        float t=(dot-1.5f)/1.5f;
+                        float bend=a.pairShape==1?0:a.pairBend*(1-t*t);
+                        if(a.pairMirror==1 && row==1)bend=-bend;
+                        float y=(row-.5f)*pitch+bend;
+                        low=Math.min(low,y-radius);high=Math.max(high,y+radius);
+                    }
+                    float scale=a.signalIconScaleFactor();
+                    cy=z==0 ? sideTop(a)-low*scale : z==2 ? sideBottom(a)-high*scale
+                            : (sideTop(a)+sideBottom(a)-(low+high)*scale)/2;
+                }
+                float rx=(18f*a.pairPitch/100f+radius)*a.signalIconScaleFactor();
+                float ry=(pitch/2+radius+(a.pairShape==1?0:Math.abs(a.pairBend)))*a.signalIconScaleFactor();
+                minX=Math.min(minX,B_CX+a.pairX-rx);maxX=Math.max(maxX,B_CX+a.pairX+rx);
+                minY=Math.min(minY,cy+a.pairY-ry);maxY=Math.max(maxY,cy+a.pairY+ry);
+            }
+        }
+        void includeSingleRows(TrioAppearance a) {
+            if(a.signalIconScale==100 || !a.mobile || a.signalOutOfRing)return;
+            for(int zone=0;zone<3;zone++) {
+                boolean placed=false;
+                for(int part:a.ringZones[zone])if(part==Prefs.PART_MOBILE
+                        || part==Prefs.PART_SIM_1&&a.showSim1 || part==Prefs.PART_SIM_2&&a.showSim2)placed=true;
+                if(!placed)continue;
+                float[] box=signalRowBounds(zone,a);float scale=a.signalIconScaleFactor();
+                float half=(box[3]-box[1])*scale/2,mid=(box[1]+box[3])/2;
+                if(a.splitMode==1)mid=zone==0?sideTop(a)+half:zone==2?sideBottom(a)-half:(sideTop(a)+sideBottom(a))/2;
+                minX=Math.min(minX,B_CX+(box[0]-B_CX)*scale);maxX=Math.max(maxX,B_CX+(box[2]-B_CX)*scale);
+                minY=Math.min(minY,mid-half);maxY=Math.max(maxY,mid+half);
+            }
+        }
+        float width() { return maxX-minX; }
+        float height() { return maxY-minY; }
+    }
 }
