@@ -98,6 +98,8 @@ final class ColorOsHooks {
 
     static boolean isInstalled() { return installed; }
 
+    static void drainRetiredCallbacks() { MAIN.removeCallbacksAndMessages(null); }
+
     /** Called on the main looper: leave only platform/SystemUI objects in the handoff. */
     static Map<String, Object> retire() {
         ColorOsReload.retiring = true;

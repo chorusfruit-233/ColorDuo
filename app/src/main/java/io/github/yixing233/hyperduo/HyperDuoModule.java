@@ -61,6 +61,12 @@ public final class HyperDuoModule extends XposedModule {
                 log(LOG_WARN, "hot reload refused: background work has not stopped; retry or restart SystemUI");
                 return false;
             }
+            // A worker can pass its publish guard just before retire() sets the flag.
+            // Drain its final main-looper work after join, before releasing the generation.
+            ColorOsReload.onMain(() -> {
+                ColorOsHooks.drainRetiredCallbacks();
+                return null;
+            });
             param.setSavedInstanceState(saved);
             return true;
         } catch (Exception failure) {

@@ -54,7 +54,7 @@ files = {
  static boolean isInstalled(){return installs>0;} static void install(Object module,ClassLoader loader){installs++;installedLoader=loader;}
  static java.util.Map<String,Object> retire(){ColorOsReload.retiring=true; ColorOsNetworkType.stop(); ColorOsReload.closeCallbacks();
  handed=new java.util.HashMap<>();handed.put("nativeView",new android.content.Context());return handed;}
- static boolean stopWorkers(){return stopped;} static void resume(java.util.Map<String,Object> state){
+ static void drainRetiredCallbacks(){} static boolean stopWorkers(){return stopped;} static void resume(java.util.Map<String,Object> state){
  if(state!=handed)throw new AssertionError("lost handoff");resumes++;}
  static void invalidateHosts(){repaints++;} }''',
 'io/github/yixing233/hyperduo/TrioHooks.java': 'package io.github.yixing233.hyperduo; class TrioHooks {static void install(Object m,ClassLoader l){} }',
