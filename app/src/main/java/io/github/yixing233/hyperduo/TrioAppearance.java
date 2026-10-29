@@ -641,9 +641,17 @@ public final class TrioAppearance {
         return mobile && (showSim1 || showSim2) && slotted && !signalOutOfRing && hasRingPart(Prefs.PART_SIM_PAIR);
     }
 
-    /** Centre-to-centre pitch; at zero gap the bead edges touch. */
+    /** Requested standard-diameter pitch, with room for the actual bead diameter. */
     public float simStackPitch(float radius) {
-        return 8f * (1f + simStackGap / 100f);
+        return Math.max(2f*radius,8f*(1f+simStackGap/100f));
+    }
+
+    /** Mirror each row about its own baseline, preserving physical SIM order and row spacing. */
+    public float simDotBend(int dot) {
+        if (pairShape == 1) return 0f;
+        float t=(dot-1.5f)/1.5f;
+        float bend=pairBend*(1f-t*t);
+        return pairMirror == 1 ? -bend : bend;
     }
 
     public boolean drawsAnySimRow() {

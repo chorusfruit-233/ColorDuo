@@ -76,6 +76,36 @@ public final class LayoutReference {
         Path output = Path.of(args[0]);
         Files.createDirectories(output.toAbsolutePath().getParent());
         ImageIO.write(board, "png", output.toFile());
+        if (args.length > 1) mirrorReference(Path.of(args[1]));
+    }
+
+    private static void mirrorReference(Path output) throws Exception {
+        BufferedImage board=new BufferedImage(800,650,BufferedImage.TYPE_INT_RGB);
+        Graphics2D g=board.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(new Color(0x111820));g.fillRect(0,0,800,650);
+        g.setColor(Color.WHITE);g.setFont(new Font("SansSerif",Font.BOLD,24));
+        g.drawString("Dot curves / vertical mirror",24,36);
+        g.setFont(new Font("SansSerif",Font.PLAIN,13));g.setColor(new Color(0xAAB8C8));
+        g.drawString("Production renderer; simulated readings. Every row flips; SIM order stays fixed.",24,61);
+        for(int cards=1;cards<=2;cards++)for(int mirror=0;mirror<=1;mirror++) {
+            TrioSettings settings=TrioSettings.defaults();settings.splitMode=1;
+            settings.signalMode=Prefs.SIGNAL_IN_RING;settings.showMobile=settings.showSim1=settings.showSim2=true;
+            settings.ringZones=Prefs.decodeLayout("3|9||");settings.pairBend=24;settings.pairMirror=mirror;
+            TrioState state=new TrioState();state.level=84;state.slotLevels=cards==1?new int[]{4,-1}:new int[]{4,2};
+            state.sims=cards;state.mobileService=DuoPolicy.Radio.AVAILABLE;
+            state.useTint=true;state.tintColor=0xfff3f7fe;
+            BufferedImage ink=new BufferedImage(270,180,BufferedImage.TYPE_INT_ARGB);
+            Graphics2D ig=ink.createGraphics();
+            TrioRenderer.drawState(new android.graphics.Canvas(ig),270,180,state,settings);ig.dispose();
+            int x=20+mirror*390,y=82+(cards-1)*278;
+            g.setColor(new Color(0x1C2733));g.fillRoundRect(x,y,370,258,16,16);
+            g.drawImage(ink,x+50,y+15,null);
+            g.setColor(Color.WHITE);g.setFont(new Font("SansSerif",Font.BOLD,18));
+            g.drawString((cards==1?"Single SIM":"Two SIMs")+" / mirror "+(mirror==0?"OFF":"ON"),x+20,y+222);
+        }
+        g.dispose();Files.createDirectories(output.toAbsolutePath().getParent());
+        ImageIO.write(board,"png",output.toFile());
     }
 }
 '''
@@ -84,7 +114,9 @@ public final class LayoutReference {
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
-    output = parser.parse_args().output.resolve()
+    parser.add_argument("--mirror-output", type=Path)
+    args = parser.parse_args()
+    output = args.output.resolve()
     with tempfile.TemporaryDirectory(prefix="colorduo-layouts-") as directory:
         classes = Path(directory)
         scene = classes / "LayoutReference.java"
@@ -95,7 +127,8 @@ def main():
         subprocess.run(["javac", "-encoding", "UTF-8", "-d", str(classes),
                         *map(str, sources), str(scene)], check=True)
         subprocess.run(["java", "-Djava.awt.headless=true", "-Xmx512m", "-cp", str(classes),
-                        "io.github.yixing233.hyperduo.LayoutReference", str(output)], check=True)
+                        "io.github.yixing233.hyperduo.LayoutReference", str(output),
+                        *([str(args.mirror_output.resolve())] if args.mirror_output else [])], check=True)
     print(output)
 
 

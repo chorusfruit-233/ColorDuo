@@ -76,6 +76,7 @@ public final class ColorOsRenderingTest {
         centrePairDuringCharging();
         splitDefaultTextClearance();
         capsulePairClockClearance();
+        mirroredPairRows();
         System.out.println("Capsule fill, live clock handoff and reachable percentage sizing passed: " + checks + " checks");
     }
 
@@ -133,6 +134,54 @@ public final class ColorOsRenderingTest {
                 check(clock.getMaxX()+.1<pairLeft,
                         "capsule centre pair reserves the clock's real ink: length="+length+", size="+size);
             }
+        }
+    }
+
+
+    private static void mirroredPairRows() {
+        TrioState state=new TrioState();state.level=84;state.mobileService=DuoPolicy.Radio.AVAILABLE;
+        for(int style:new int[]{Prefs.STYLE_RING,Prefs.STYLE_CAPSULE})
+        for(int zone:new int[]{0,1,2})for(int[] levels:new int[][]{{4,-1},{-1,2},{4,2}})
+        for(int reverse:new int[]{0,1}) {
+            state.slotLevels=levels;state.sims=levels[0]>=0&&levels[1]>=0?2:1;
+            TrioSettings off=pairedSettings(style,zone,50);off.pairBend=30;off.pairReverse=reverse;
+            off.splitMode=style==Prefs.STYLE_RING?1:0;
+            TrioSettings on=off.copy();on.pairMirror=1;
+            float[] a=new float[3],b=new float[3];
+            TrioRenderer.designTransform(480,400,TrioAppearance.of(off),a);
+            TrioRenderer.designTransform(480,400,TrioAppearance.of(on),b);
+            try(Frame before=new Frame();Frame after=new Frame()) {
+                TrioRenderer.drawState(before,480,400,state,off);
+                TrioRenderer.drawState(after,480,400,state,on);
+                check(before.circles.size()==state.sims*4&&after.circles.size()==state.sims*4,
+                        "mirroring never creates a missing SIM row");
+                check(before.circleColors.equals(after.circleColors),"mirroring retains each physical SIM's own level");
+                for(int row=0;row<state.sims;row++) {
+                    float[] p=designDot(before.circles.get(row*4),a),q=designDot(before.circles.get(row*4+1),a);
+                    float[] r=designDot(after.circles.get(row*4),b),t=designDot(after.circles.get(row*4+1),b);
+                    check(q[1]-p[1]>0&&Math.abs((q[1]-p[1])+(t[1]-r[1]))<.05,
+                            "every visible row flips its curvature, including a lone SIM1");
+                    check(Math.abs((q[0]-p[0])-(t[0]-r[0]))<.05&&Math.abs(p[2]-r[2])<.05,
+                            "mirror changes neither dot pitch nor diameter");
+                }
+                if(state.sims==2) {
+                    float rowPitch=designDot(after.circles.get(4),b)[1]-designDot(after.circles.get(0),b)[1];
+                    check((reverse==0?rowPitch:-rowPitch)>0,"mirror keeps the selected SIM order");
+                    for(int dot=0;dot<4;dot++) {
+                        float[] upper=designDot(after.circles.get(dot),b),lower=designDot(after.circles.get(dot+4),b);
+                        check(Math.abs((lower[1]-upper[1])-rowPitch)<.05,"mirrored rows remain parallel rather than crossing");
+                        check(Math.abs(rowPitch)+.05>=upper[2]+lower[2],"rows leave room for their actual bead diameter");
+                    }
+                }
+            }
+        }
+        state.slotLevels=new int[]{4,2};state.sims=2;
+        TrioSettings thick=pairedSettings(Prefs.STYLE_RING,1,0);thick.dotScale=200;thick.pairMirror=1;
+        float[] transform=new float[3];TrioRenderer.designTransform(480,400,TrioAppearance.of(thick),transform);
+        try(Frame frame=new Frame()) {
+            TrioRenderer.drawState(frame,480,400,state,thick);
+            float[] one=designDot(frame.circles.get(1),transform),two=designDot(frame.circles.get(5),transform);
+            check(Math.abs(two[1]-one[1])+.05>=one[2]+two[2],"zero requested gap still prevents thick rows overlapping");
         }
     }
 

@@ -701,9 +701,7 @@ public final class TrioRenderer {
                 int row=a.pairReverse==1?1-slot:slot;
                 float dy=one&&two || a.pairSingle==1 ? (row-.5f)*pitch : 0;
                 for(int dot=0;dot<4;dot++) {
-                    float t=(dot-1.5f)/1.5f;
-                    float bend=a.pairShape==1?0:a.pairBend*(1-t*t);
-                    if(a.pairMirror==1 && row==1)bend=-bend;
+                    float bend=a.simDotBend(dot);
                     low=Math.min(low,dy+bend-radius);high=Math.max(high,dy+bend+radius);
                 }
             }
@@ -724,9 +722,7 @@ public final class TrioRenderer {
             int row = a.pairReverse == 1 ? 1-slot : slot;
             float dy = one && two || a.pairSingle == 1 ? (row-.5f)*pitch : 0;
             for (int dot=0; dot<4; dot++) {
-                float t=(dot-1.5f)/1.5f;
-                float bend=a.pairShape == 1 ? 0 : a.pairBend*(1-t*t);
-                if (a.pairMirror == 1 && row == 1) bend=-bend;
+                float bend=a.simDotBend(dot);
                 FILL.setColor(dot < Math.min(4,levels[slot]) ? fg : withAlpha(fg,a.trackAlpha));
                 c.drawCircle(cx+a.pairX+(dot-1.5f)*12f*a.pairPitch/100f*scale,
                         cy+a.pairY+(dy+bend)*scale, radius*scale, FILL);

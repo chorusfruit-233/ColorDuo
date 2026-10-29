@@ -879,6 +879,41 @@ public final class TrioZones {
      * one write, so none of them can store a layout the renderer would then draw as a
      * smudge.
      */
+    /** Arrangement is encoded by placement, so settings and drawing have one source of truth. */
+    public static TrioSettings withSignalArrangement(TrioSettings current, boolean paired) {
+        if (current == null) return null;
+        if (paired) {
+            int zone=Zone.CENTRE.ordinal();
+            boolean alreadyPaired=false;
+            for (int z=0;z<current.ringZones.length;z++)
+                for (int part:current.ringZones[z]) if (part==Prefs.PART_SIM_PAIR) { zone=z; alreadyPaired=true; }
+            TrioSettings next=withPiece(current,zone,Part.SIM_PAIR);
+            if (alreadyPaired || current.showSim1 || current.showSim2) {
+                next.showSim1=current.showSim1;
+                next.showSim2=current.showSim2;
+            }
+            return next;
+        }
+        boolean wasPaired=false;
+        TrioSettings next=current.copy();
+        next.ringZones=TrioSettings.copyZones(current.ringZones);
+        for (int z=0;z<next.ringZones.length;z++) {
+            java.util.List<Integer> kept=new java.util.ArrayList<>();
+            for (int part:next.ringZones[z]) {
+                if (part==Prefs.PART_SIM_PAIR) wasPaired=true;
+                else kept.add(part);
+            }
+            next.ringZones[z]=kept.stream().mapToInt(Integer::intValue).toArray();
+        }
+        if (wasPaired) {
+            if (current.showSim1) next=withPiece(next,Zone.TOP.ordinal(),Part.SIM_1);
+            if (current.showSim2) next=withPiece(next,Zone.BOTTOM.ordinal(),Part.SIM_2);
+        }
+        next.showMobile=true;
+        next.signalMode=Prefs.SIGNAL_IN_RING;
+        return next;
+    }
+
     public static TrioSettings withPiece(TrioSettings current, int zone, Part want) {
         if (current == null || zone < 0 || zone >= Prefs.ZONE_COUNT) {
             return current;
@@ -901,8 +936,10 @@ public final class TrioZones {
                 // Drop the id everywhere, then re-add it at the target's front: that single
                 // rule gives add, promote and move without three separate paths.
                 if (existing == id
-                        || (want == Part.SIM_PAIR && (existing == Prefs.PART_SIM_1 || existing == Prefs.PART_SIM_2))
-                        || ((want == Part.SIM_1 || want == Part.SIM_2) && existing == Prefs.PART_SIM_PAIR)) {
+                        || (want == Part.SIM_PAIR && Prefs.isSignalRow(existing))
+                        || ((want == Part.SIM_1 || want == Part.SIM_2)
+                            && (existing == Prefs.PART_SIM_PAIR || existing == Prefs.PART_MOBILE))
+                        || (want == Part.MOBILE && Prefs.isSignalRow(existing))) {
                     continue;
                 }
                 list.add(existing);

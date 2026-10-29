@@ -523,7 +523,9 @@ private fun DrawingEditorCard(
             title = stringResource(R.string.capsule_container_title),
             onDismissRequest = { containerSheet = false },
         ) {
-            Column(modifier = Modifier.fillMaxWidth().padding(bottom = bottomInset)) {
+            Column(modifier = Modifier.fillMaxWidth()
+                .heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.72f).dp)
+                .verticalScroll(rememberScrollState()).padding(bottom = bottomInset)) {
                 CapsuleContainerRows(settings, update, Modifier.padding(horizontal = 4.dp))
             }
         }

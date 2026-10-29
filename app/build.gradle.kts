@@ -20,8 +20,8 @@ android {
         applicationId = "io.github.chorusfruit_233.colorduo"
         minSdk = 29
         targetSdk = 36
-        versionCode = tagVersionCode ?: 10023
-        versionName = tagVersionName ?: "0.3.3"
+        versionCode = tagVersionCode ?: 10024
+        versionName = tagVersionName ?: "0.3.4"
     }
 
     signingConfigs {
@@ -93,6 +93,7 @@ kotlin {
 }
 
 dependencies {
+    testImplementation("junit:junit:4.13.2")
     // Provided by the Xposed framework at runtime, never bundled.
     compileOnly("io.github.libxposed:api:102.0.0")
     // Needed by the settings app to talk to the framework service.

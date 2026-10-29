@@ -2124,9 +2124,7 @@ final class TrioGeometry {
                 if(a.splitMode==1) {
                     float low=Float.MAX_VALUE,high=-Float.MAX_VALUE;
                     for(int row=0;row<2;row++)for(int dot=0;dot<4;dot++) {
-                        float t=(dot-1.5f)/1.5f;
-                        float bend=a.pairShape==1?0:a.pairBend*(1-t*t);
-                        if(a.pairMirror==1 && row==1)bend=-bend;
+                        float bend=a.simDotBend(dot);
                         float y=(row-.5f)*pitch+bend;
                         low=Math.min(low,y-radius);high=Math.max(high,y+radius);
                     }
