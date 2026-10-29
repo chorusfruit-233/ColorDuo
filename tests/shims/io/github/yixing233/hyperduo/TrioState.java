@@ -27,6 +27,8 @@ final class TrioState {
     static String sClockText = "19:41";
 
     int level = 72;
+    boolean useTint;
+    int tintColor;
     boolean charging;
     boolean quickCharging;
     boolean chargingPaused;
@@ -42,6 +44,6 @@ final class TrioState {
     String mobileType = "";
 
     int foreground() {
-        return 0xFF000000;
+        return useTint ? tintColor : 0xFF000000;
     }
 }

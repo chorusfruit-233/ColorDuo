@@ -31,6 +31,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +39,8 @@ import java.util.Set;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import io.github.libxposed.api.XposedInterface;
 import io.github.libxposed.api.XposedModule;
@@ -72,6 +75,8 @@ final class ColorOsHooks {
     private static String lastBatterySample;
     private static String lastBatterySource;
     private static Handler batteryWorker;
+    private static HandlerThread batteryThread;
+    private static ExecutorService chargerWorker;
     private static boolean batteryRefreshQueued;
     private static ColorOsCharger charger;
     private static long nextSimPoll;
@@ -93,13 +98,93 @@ final class ColorOsHooks {
 
     static boolean isInstalled() { return installed; }
 
+    static void drainRetiredCallbacks() { MAIN.removeCallbacksAndMessages(null); }
+
+    /** Called on the main looper: leave only platform/SystemUI objects in the handoff. */
+    static Map<String, Object> retire() {
+        ColorOsReload.retiring = true;
+        MAIN.removeCallbacksAndMessages(null);
+        Map<String, Object> saved = new HashMap<>();
+        saved.put("settings", TrioConfig.get().toBundle());
+        saved.put("context", context);
+        saved.put("wifi", wifiFlow);
+        saved.put("wifiSample", new Object[] {renderedWifi.connected, renderedWifi.level,
+                renderedWifi.carrierMerged, renderedWifi.kind});
+        saved.put("battery", new Object[] {batteryLevelFlow, chargeFlow, savingFlow});
+        Map<Integer, Object[]> mobiles = new HashMap<>();
+        for (Map.Entry<Integer, Mobile> entry : MOBILES.entrySet()) {
+            Mobile m = entry.getValue();
+            mobiles.put(entry.getKey(), new Object[] {m.icon, m.type, m.cellularIcon,
+                    m.cellularType, m.iconGroup, m.inService, m.renderedType});
+        }
+        saved.put("mobiles", mobiles);
+        List<Object[]> meters = new ArrayList<>();
+        for (WeakReference<Host> reference : new ArrayList<>(HOSTS.values())) {
+            Host h = reference.get();
+            if (h == null) continue;
+            meters.add(new Object[] {h.meter, h.viewModel});
+            h.onViewDetachedFromWindow(h.meter);
+            h.meter.removeOnAttachStateChangeListener(h);
+            h.glyph.setCallback(null);
+        }
+        saved.put("meters", meters);
+        HOSTS.clear();
+        CHILDREN.clear();
+        ColorOsNetworkType.stop();
+        ColorOsReload.closeCallbacks();
+        return saved;
+    }
+
+    /** Do not approve unloading while vendor IPC or a sampler is still executing old code. */
+    static boolean stopWorkers() throws InterruptedException {
+        HandlerThread thread;
+        synchronized (ColorOsHooks.class) {
+            thread = batteryThread;
+            if (batteryWorker != null) batteryWorker.removeCallbacksAndMessages(null);
+            if (thread != null) thread.quit();
+        }
+        if (chargerWorker != null) chargerWorker.shutdownNow();
+        if (thread != null) thread.join(3000L);
+        boolean stopped = thread == null || !thread.isAlive();
+        return (chargerWorker == null || chargerWorker.awaitTermination(3, TimeUnit.SECONDS)) && stopped;
+    }
+
+    @SuppressWarnings("unchecked")
+    static void resume(Map<String, Object> saved) {
+        TrioConfig.restoreForReload((android.os.Bundle) saved.get("settings"));
+        wifiFlow = saved.get("wifi");
+        Object[] w = (Object[]) saved.get("wifiSample");
+        renderedWifi = new WifiSample((Boolean) w[0], (Integer) w[1], (Boolean) w[2], (String) w[3]);
+        Object[] b = (Object[]) saved.get("battery");
+        batteryLevelFlow = b[0]; chargeFlow = b[1]; savingFlow = b[2];
+        Map<Integer, Object[]> mobiles = (Map<Integer, Object[]>) saved.get("mobiles");
+        for (Map.Entry<Integer, Object[]> entry : mobiles.entrySet()) {
+            Object[] v = entry.getValue();
+            Mobile m = new Mobile();
+            m.icon = v[0]; m.type = v[1]; m.cellularIcon = v[2]; m.cellularType = v[3];
+            m.iconGroup = v[4]; m.inService = v[5]; m.renderedType = (String) v[6];
+            MOBILES.put(entry.getKey(), m);
+        }
+        Context oldContext = (Context) saved.get("context");
+        if (oldContext != null) start(oldContext);
+        for (Object[] pair : (List<Object[]>) saved.get("meters")) {
+            Host h = host((ViewGroup) pair[0]);
+            h.viewModel = pair[1];
+            h.capture();
+            h.apply();
+        }
+        invalidateHosts();
+    }
+
     /** Coalesce ColorOS reads off the main thread; the inherited MIUI path stays synchronous. */
     static synchronized boolean dispatchBatteryRefresh(Runnable refresh) {
+        if (ColorOsReload.retiring) return true;
         if (!installed) return false;
         if (batteryWorker == null) {
             HandlerThread thread = new HandlerThread("ColorDuo-battery",
                     android.os.Process.THREAD_PRIORITY_BACKGROUND);
             thread.start();
+            batteryThread = thread;
             batteryWorker = new Handler(thread.getLooper());
         }
         if (Looper.myLooper() == batteryWorker.getLooper()) return false;
@@ -114,6 +199,7 @@ final class ColorOsHooks {
     }
 
     static boolean dispatchBatteryPublish(Runnable publish) {
+        if (ColorOsReload.retiring) return true;
         if (!installed || Looper.myLooper() == Looper.getMainLooper()) return false;
         MAIN.post(publish);
         return true;
@@ -187,15 +273,16 @@ final class ColorOsHooks {
             throw new IllegalStateException("ColorOS battery/status bar classes unavailable");
         }
         TrioHooks.useLogger(module);
-        charger = new ColorOsCharger(new ColorOsChargerClient(loader),
-                Executors.newSingleThreadExecutor(task -> {
+        chargerWorker = Executors.newSingleThreadExecutor(task -> {
                     Thread thread = new Thread(() -> {
                         android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
                         task.run();
                     }, "ColorDuo-charger");
                     thread.setDaemon(true);
                     return thread;
-                }), SystemClock::elapsedRealtime);
+                });
+        charger = new ColorOsCharger(new ColorOsChargerClient(loader),
+                chargerWorker, SystemClock::elapsedRealtime);
         installed = true;
         TrioConfig.install(module);
         TrioConfig.addListener(ColorOsHooks::invalidateHosts);
@@ -333,7 +420,8 @@ final class ColorOsHooks {
         if (method == null) return 0;
         try {
             method.setAccessible(true);
-            module.hook(method).setId("colorduo:" + method.toGenericString()).intercept(callback);
+            module.hook(method).setId("colorduo:" + method.toGenericString()).intercept(chain ->
+                    ColorOsReload.retiring ? chain.proceed() : callback.intercept(chain));
             return 1;
         } catch (Throwable error) {
             TrioHooks.log(TrioHooks.LOG_WARN, "ColorOS skip " + method.getName() + ": " + error);
@@ -352,10 +440,16 @@ final class ColorOsHooks {
                 Mobile mobile = captureMobileModel(chain.getThisObject(), wrapper);
                 if (mobile != null) {
                     if (wrapper) mobile.renderedType = null;
-                    if (chain.getArgs().size() > 2) {
-                        Object interactor = chain.getArg(2);
-                        mobile.iconGroup = Refl.callByName(interactor, "getNetworkTypeIconGroup");
-                        mobile.inService = Refl.callByName(interactor, "isInService");
+                    // Kotlin/R8 constructor parameter order differs across firmware.
+                    for (Object interactor : chain.getArgs()) {
+                        Object group = ColorOsPolicy.nativeMember(interactor,
+                                "networkTypeIconGroup", "getNetworkTypeIconGroup");
+                        if (group != null) {
+                            mobile.iconGroup = group;
+                            mobile.inService = ColorOsPolicy.nativeMember(interactor,
+                                    "isInService", "isInService");
+                            break;
+                        }
                     }
                 }
                 invalidateHosts();
@@ -461,7 +555,9 @@ final class ColorOsHooks {
     }
 
     static void invalidateHosts() {
+        if (ColorOsReload.retiring) return;
         MAIN.post(() -> {
+            if (ColorOsReload.retiring) return;
             if (refreshQueued) return;
             refreshQueued = true;
             MAIN.post(() -> {
@@ -472,6 +568,7 @@ final class ColorOsHooks {
     }
 
     private static void refreshHosts() {
+        if (ColorOsReload.retiring) return;
         ClockTicker.refreshNow();
         for (WeakReference<Host> reference : new ArrayList<>(HOSTS.values())) {
             Host host = reference.get();
@@ -492,6 +589,7 @@ final class ColorOsHooks {
         tickerStarted = true;
         MAIN.post(new Runnable() {
             @Override public void run() {
+                if (ColorOsReload.retiring) return;
                 boolean interactive = true;
                 PowerManager power = context.getSystemService(PowerManager.class);
                 if (power != null) interactive = power.isInteractive();
@@ -558,18 +656,12 @@ final class ColorOsHooks {
             return current == null ? value(cellularIcon) : current;
         }
 
-        String networkType() {
-            if (Boolean.FALSE.equals(value(inService))) return "";
-            String current = renderedType;
-            if (current != null && !current.isEmpty()) return current;
-            // The native binder can hide RAT text because mobile data/Wi-Fi is in use.
-            // Supply its mapped identity before that visibility filter; upstream's own
-            // settings and layout still decide whether ColorDuo draws it.
-            String mapped = ColorOsPolicy.networkType(value(iconGroup));
-            if (!mapped.isEmpty()) return mapped;
-            if (current != null) return current;
-            Object model = value(type);
-            return ColorOsPolicy.networkType(model == null ? value(cellularType) : model);
+        String networkType(String radio) {
+            // Empty binder text is a visibility decision, not evidence that the RAT is unknown.
+            return ColorOsPolicy.chooseNetworkType(renderedType,
+                    ColorOsPolicy.networkType(value(iconGroup)),
+                    ColorOsPolicy.networkType(value(type)),
+                    ColorOsPolicy.networkType(value(cellularType)), radio);
         }
     }
 
@@ -649,6 +741,7 @@ final class ColorOsHooks {
         }
 
         void apply() {
+            if (ColorOsReload.retiring) return;
             boolean previous = moduleWriting;
             moduleWriting = true;
             try { applyInternal(); }
@@ -800,8 +893,8 @@ final class ColorOsHooks {
                     ? repository.carrierMerged : nativeSample.carrierMerged;
             state.wifiLevel = ColorOsPolicy.wifiLevel(connected, TrioState.sWifiLevel,
                     nativeSample.connected, nativeSample.level, repository.level, carrierMerged);
-            state.wifiPresent = !carrierMerged && (state.wifiLevel >= 0
-                    || Boolean.TRUE.equals(connected) || Boolean.TRUE.equals(nativeSample.connected));
+            state.wifiPresent = ColorOsPolicy.wifiPresent(connected, state.wifiLevel,
+                    nativeSample.connected, carrierMerged);
             if (TrioConfig.debugLog()) {
                 String note = "ColorOS wifi: connected=" + connected
                         + " rendered=" + nativeSample.kind + "/" + nativeSample.level
@@ -826,6 +919,7 @@ final class ColorOsHooks {
             state.mobileLevel = -1;
             state.mobileType = "";
             ColorOsRadio.Sample radio = RADIO_SAMPLER.sample(context, now);
+            ColorOsNetworkType.sync(context, radio.subscriptions);
             state.dataSlot = radio.dataSlot;
             state.mobileService = radio.radio;
             if (radio.radio == DuoPolicy.Radio.AIRPLANE || radio.radio == DuoPolicy.Radio.NO_SIM) {
@@ -857,7 +951,8 @@ final class ColorOsHooks {
                     if (DuoPolicy.hasNotice(radio.services[slot])) state.slotLevels[slot] = 0;
                     if (id == dataId || (dataId < 0 && state.mobileLevel < 0)) {
                         state.mobileLevel = state.slotLevels[slot];
-                        state.mobileType = mobile == null ? "" : mobile.networkType();
+                        String radioType = ColorOsNetworkType.read(id);
+                        state.mobileType = mobile == null ? radioType : mobile.networkType(radioType);
                         if (state.dataSlot < 0) state.dataSlot = slot;
                         if (state.mobileService == DuoPolicy.Radio.UNKNOWN && mobile != null) {
                             Object service = value(mobile.inService);

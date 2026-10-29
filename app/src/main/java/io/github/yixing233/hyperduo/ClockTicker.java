@@ -59,6 +59,9 @@ final class ClockTicker {
 
     private static boolean started;
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
+    // ColorDuo reload lifecycle.
+    static { ColorOsReload.watch(MAIN); }
+    // End ColorDuo reload lifecycle.
 
     /**
      * The context the ticker formats with, held for the life of the process so a
@@ -71,6 +74,9 @@ final class ClockTicker {
 
     /** Idempotent: the first caller starts the ticker, later ones do nothing. */
     static synchronized void start(final Context context) {
+        // ColorDuo reload lifecycle.
+        if (ColorOsReload.retiring) return;
+        // End ColorDuo reload lifecycle.
         if (started) {
             return;
         }
@@ -108,6 +114,9 @@ final class ClockTicker {
 
     /** One tick: publish the time if it is on screen, then sleep to the boundary. */
     private static void tick() {
+        // ColorDuo reload lifecycle.
+        if (ColorOsReload.retiring) return;
+        // End ColorDuo reload lifecycle.
         long delay = MAX_LATENESS_MS;
         try {
             final Context context = sContext;

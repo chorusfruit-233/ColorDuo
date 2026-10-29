@@ -271,6 +271,9 @@ class SettingsRepository(context: Context) {
     fun setTypeHideOnWifi(value: Boolean) =
         writeBoolean(Prefs.KEY_TYPE_HIDE_ON_WIFI, value)
     /** While charging the ring centre shows the percentage; see [Prefs.KEY_CHARGING_SHOWS_VALUE]. */
+    fun setPausedGrayAll(value: Boolean) =
+        writeBoolean(Prefs.KEY_PAUSED_GRAY_ALL, value)
+
     fun setChargingShowsValue(value: Boolean) =
         writeBoolean(Prefs.KEY_CHARGING_SHOWS_VALUE, value)
 
@@ -463,6 +466,7 @@ class SettingsRepository(context: Context) {
             prefs.putInt(Prefs.KEY_WIFI_SCALE, snapshot.wifiScale)
             prefs.putBoolean(Prefs.KEY_TYPE_HIDE_ON_WIFI, snapshot.typeHideOnWifi)
             prefs.putBoolean(Prefs.KEY_CHARGING_SHOWS_VALUE, snapshot.chargingShowsValue)
+            prefs.putBoolean(Prefs.KEY_PAUSED_GRAY_ALL, snapshot.pausedGrayAll)
             prefs.putInt(Prefs.KEY_DOT_SCALE, snapshot.dotScale)
             prefs.putString(Prefs.KEY_OUT_ORDER, Prefs.encodeOutOrder(snapshot.outOrder))
 

@@ -42,6 +42,7 @@ internal enum class ContentControl(val owner: TrioSettingsPart) {
     /** Master switch, then layout: both decide what exists at all. */
     Enabled(TrioSettingsPart.Appearance),
     Style(TrioSettingsPart.Appearance),
+    PausedGray(TrioSettingsPart.Appearance),
     // --- per component: its own switch ----------------------------------------
     Wifi(TrioSettingsPart.Wifi),
     /**
@@ -183,6 +184,11 @@ internal fun ContentControlRow(
             dependencies = master + (a.mobile to R.string.show_mobile_title) +
                 (signalInsideRing(a) to R.string.ring_position_mobile),
         ) { value -> update { it.setShowSim2(value) } }
+        ContentControl.PausedGray -> ContentChoice(if (settings.pausedGrayAll) 1 else 0,
+            R.string.paused_gray_title, R.string.paused_gray_summary,
+            listOf(R.string.paused_gray_ring, R.string.paused_gray_all), master) { value ->
+                update { it.setPausedGrayAll(value == 1) }
+            }
         ContentControl.Value -> ContentToggle(a.value, R.string.show_value_title,
             null,
             master) { value -> update { it.setShowValue(value) } }

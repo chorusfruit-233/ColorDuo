@@ -25,6 +25,19 @@ public final class ColorOsPolicyTest {
         check(ColorOsPolicy.networkType(new NetworkTypeModel(new NetworkTypeText("5G", null))).equals("5G"),
                 "missing suffix does not print null");
         check(ColorOsPolicy.networkType("LTE").equals("LTE"), "plain text is accepted");
+        check(ColorOsPolicy.networkType(new NetworkTypeText("5G", "+")).equals("5G+"),
+                "a direct native text model is accepted without an extra wrapper");
+        check(ColorOsPolicy.chooseNetworkType("", "", "", "", "5G").equals("5G"),
+                "disconnected Wi-Fi and cold native flows still expose the registered RAT");
+        check(ColorOsPolicy.chooseNetworkType("", "", "4G+", "3G", "4G").equals("4G+"),
+                "empty binder text must not stop fallback through the wrapper flow");
+        check(ColorOsPolicy.chooseNetworkType("5GA", "4G+", "", "", "5G").equals("5GA"),
+                "preserve carrier-specific native display text ahead of generic telephony");
+        check(ColorOsPolicy.radioType(13, 3, 13, 0).equals("5G"), "NSA over LTE is 5G");
+        check(ColorOsPolicy.radioType(13, 5, 13, 0).equals("5G+"), "advanced NR override");
+        check(ColorOsPolicy.radioType(13, 3, 3, 0).equals("3G"), "stale override cannot mask a RAT change");
+        check(ColorOsPolicy.radioType(0, 0, 0, 13).equals("4G"), "voice registration when data is off");
+        check(ColorOsPolicy.radioType(0, 0, 0, 0).isEmpty(), "unknown never fabricates service");
         check(ColorOsPolicy.networkType(new NetworkTypeModel(null)).isEmpty(), "explicit native clearing is retained");
         check(ColorOsPolicy.networkType(null).isEmpty(), "missing model clears the label");
         check(ColorOsPolicy.networkType(new Object()).isEmpty(), "unknown models do not print a debug toString");
@@ -42,6 +55,10 @@ public final class ColorOsPolicyTest {
                 "the native rendered level takes precedence over cached repository strength");
         equal(-1, ColorOsPolicy.wifiLevel(false, 4, true, 4, 4, false),
                 "turning off Wi-Fi clears stale connected models and cached RSSI");
+        check(!ColorOsPolicy.wifiPresent(false, -1, true, false),
+                "a stale rendered Active cannot keep hiding RAT text after platform disconnect");
+        check(ColorOsPolicy.wifiPresent(true, -1, false, false),
+                "a connected network hides RAT even before its strength arrives");
         equal(2, ColorOsPolicy.wifiLevel(null, -1, true, 2, -1, false),
                 "native rendering works when framework queries are unavailable");
         equal(-1, ColorOsPolicy.wifiLevel(null, -1, false, -1, 4, false),

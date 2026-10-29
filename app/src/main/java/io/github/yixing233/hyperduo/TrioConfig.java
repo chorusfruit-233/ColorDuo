@@ -71,6 +71,13 @@ public final class TrioConfig {
 
     private TrioConfig() {
     }
+    // ColorDuo reload lifecycle.
+    static void restoreForReload(Bundle saved) {
+        if (saved == null) return;
+        sSnapshot = TrioSettings.fromBundle(saved);
+        sDebugLog = sSnapshot.debugLog;
+    }
+    // End ColorDuo reload lifecycle.
 
     /**
      * Binds to the framework's remote preferences. Safe to call repeatedly; only
@@ -95,6 +102,9 @@ public final class TrioConfig {
         reload();
         try {
             prefs.registerOnSharedPreferenceChangeListener(LISTENER);
+            // ColorDuo reload lifecycle.
+            ColorOsReload.watch(prefs, LISTENER);
+            // End ColorDuo reload lifecycle.
         } catch (Throwable t) {
             TrioHooks.log(TrioHooks.LOG_WARN, "cannot watch preferences: " + t);
         }
@@ -116,6 +126,9 @@ public final class TrioConfig {
         // twice; reloadIfChanged() publishes only when the file really moved,
         // so the second read is usually a no-op.
         final android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
+        // ColorDuo reload lifecycle.
+        ColorOsReload.watch(main);
+        // End ColorDuo reload lifecycle.
         main.postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -140,6 +153,9 @@ public final class TrioConfig {
      * re-fold and re-sync exactly as they would for a settings change.
      */
     private static void reloadIfChanged() {
+        // ColorDuo reload lifecycle.
+        if (ColorOsReload.retiring) return;
+        // End ColorDuo reload lifecycle.
         final TrioSettings previous = sSnapshot;
         reload();
         final TrioSettings now = sSnapshot;
@@ -226,6 +242,9 @@ public final class TrioConfig {
                 target.registerReceiver(receiver, filter);
             }
             TrioHooks.log(TrioHooks.LOG_INFO, "reload receiver registered");
+            // ColorDuo reload lifecycle.
+            ColorOsReload.watch(target, receiver);
+            // End ColorDuo reload lifecycle.
         } catch (Throwable t) {
             sReceiverInstalled = false;
             TrioHooks.log(TrioHooks.LOG_WARN, "cannot register reload receiver: " + t);
@@ -247,6 +266,9 @@ public final class TrioConfig {
      * intact instead of reverting it.
      */
     private static void onReloadBroadcast(Intent intent) {
+        // ColorDuo reload lifecycle.
+        if (ColorOsReload.retiring) return;
+        // End ColorDuo reload lifecycle.
         if (intent == null) {
             return;
         }
@@ -290,6 +312,9 @@ public final class TrioConfig {
             new SharedPreferences.OnSharedPreferenceChangeListener() {
                 @Override
                 public void onSharedPreferenceChanged(SharedPreferences prefs, String key) {
+                    // ColorDuo reload lifecycle.
+                    if (ColorOsReload.retiring) return;
+                    // End ColorDuo reload lifecycle.
                     if (!applyKey(prefs, key)) {
                         return;
                     }

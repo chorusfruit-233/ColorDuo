@@ -328,4 +328,8 @@
     <string name="font_applied">已应用字体 %1$s</string>
     <string name="font_not_a_font">这个文件不是字体（只支持 .ttf / .otf），已忽略</string>
     <string name="font_failed">字体安装失败，请重试</string>
+    <string name="paused_gray_title">连接电源但未充电时的灰度范围</string>
+    <string name="paused_gray_summary">适用于充电暂停、旁路供电等状态，不影响正常充电。</string>
+    <string name="paused_gray_ring">仅电量环</string>
+    <string name="paused_gray_all">全部图标</string>
 </resources>
