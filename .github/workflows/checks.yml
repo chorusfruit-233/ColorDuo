@@ -26,6 +26,8 @@ jobs:
         run: python3 tests/duo-policy.py
       - name: ColorOS ownership and signals
         run: sh tests/coloros-policy.sh
+      - name: Telephony fallback and API 102 reload lifecycle
+        run: python3 tests/coloros-reload.py
       - name: Ring rendering and settings
         run: sh tests/coloros-settings.sh
       - name: Battery units and power rendering

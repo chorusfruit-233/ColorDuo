@@ -42,11 +42,17 @@ final class BatteryPresence {
     private static boolean registered;
     private static boolean watchdogStarted;
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
+    // ColorDuo reload lifecycle.
+    static { ColorOsReload.watch(MAIN); }
+    // End ColorDuo reload lifecycle.
     private static Runnable pendingRefresh;
 
     private BatteryPresence() {}
 
     static synchronized void start(final Context context) {
+        // ColorDuo reload lifecycle.
+        if (ColorOsReload.retiring) return;
+        // End ColorDuo reload lifecycle.
         if (!watchdogStarted) {
             watchdogStarted = true;
             // ROM broadcast delivery is not always reliable, and the temperature
@@ -55,6 +61,9 @@ final class BatteryPresence {
             // never put framework IPC in the per-frame drawing path.
             MAIN.post(new Runnable() {
                 @Override public void run() {
+                    // ColorDuo reload lifecycle.
+                    if (ColorOsReload.retiring) return;
+                    // End ColorDuo reload lifecycle.
                     refresh(context);
                     MAIN.postDelayed(this, 3000L);
                 }
@@ -83,6 +92,9 @@ final class BatteryPresence {
                 context.registerReceiver(receiver, filter);
             }
             registered = true;
+            // ColorDuo reload lifecycle.
+            ColorOsReload.watch(context, receiver);
+            // End ColorDuo reload lifecycle.
             refresh(context);
         } catch (RuntimeException ignored) {
             // A ROM that refuses the registration leaves the readouts on their
@@ -94,6 +106,9 @@ final class BatteryPresence {
     // settled, so the frame after it is re-read once. The same coalescer serves
     // a burst of deliveries.
     private static void scheduleRefresh(final Context context) {
+        // ColorDuo reload lifecycle.
+        if (ColorOsReload.retiring) return;
+        // End ColorDuo reload lifecycle.
         MAIN.post(new Runnable() {
             @Override public void run() {
                 refresh(context);
@@ -107,6 +122,9 @@ final class BatteryPresence {
     }
 
     private static void refresh(Context context) {
+        // ColorDuo reload lifecycle.
+        if (ColorOsReload.retiring) return;
+        // End ColorDuo reload lifecycle.
         if (ColorOsHooks.dispatchBatteryRefresh(() -> refresh(context))) return;
         try {
             final Intent battery = context.registerReceiver(null,

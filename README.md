@@ -20,7 +20,7 @@
 2. 在 LSPosed 中启用 **ColorDuo**，作用域勾选 **系统界面（com.android.systemui）**。
 3. 重启 SystemUI 或手机，在绘图页添加所需组件。
 
-更新 APK 后需要重启 SystemUI；同签名覆盖安装保留配置。
+从旧版首次升级需要重启一次 SystemUI；此后 ColorOS 适配器支持 API 102 的 APK 自动热重载（需要框架支持）。同签名覆盖安装保留配置。
 
 ## 文档
 

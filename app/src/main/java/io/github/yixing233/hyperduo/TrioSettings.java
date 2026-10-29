@@ -210,6 +210,8 @@ public final class TrioSettings {
     public boolean typeHideOnWifi;
     /** While charging the ring centre shows the percentage; see {@link Prefs#KEY_CHARGING_SHOWS_VALUE}. */
     public boolean chargingShowsValue;
+    /** False: gray only the battery ring. True: gray the complete paused glyph. */
+    public boolean pausedGrayAll;
     /**
      * Absolute path of the user's font file, or "" for the system face.
      *
@@ -259,7 +261,8 @@ public final class TrioSettings {
      * view away entirely, and turning either on brings back the same view with
      * only the requested segment drawn.
      */
-    public boolean perfTemp;
+    public boolean perfTemp;
+
     /** Drops the temperature unless charging; see {@link Prefs#KEY_PERF_TEMP_CHARGING_ONLY}. */
     public boolean perfTempChargingOnly;
 
@@ -356,6 +359,7 @@ public final class TrioSettings {
         s.wifiScale = Prefs.DEF_WIFI_SCALE;
         s.typeHideOnWifi = Prefs.DEF_TYPE_HIDE_ON_WIFI;
         s.chargingShowsValue = Prefs.DEF_CHARGING_SHOWS_VALUE;
+        s.pausedGrayAll = Prefs.DEF_PAUSED_GRAY_ALL;
         s.fontPath = Prefs.DEF_FONT_PATH;
         s.dotScale = Prefs.DEF_DOT_SCALE;
         s.outOrder = Prefs.OUT_DEFAULT_ORDER.clone();
@@ -538,6 +542,7 @@ public final class TrioSettings {
                 Prefs.MIN_WIFI_SCALE, Prefs.MAX_WIFI_SCALE);
         s.typeHideOnWifi = p.getBoolean(Prefs.KEY_TYPE_HIDE_ON_WIFI,
                 Prefs.DEF_TYPE_HIDE_ON_WIFI);
+        s.pausedGrayAll = p.getBoolean(Prefs.KEY_PAUSED_GRAY_ALL, Prefs.DEF_PAUSED_GRAY_ALL);
         s.chargingShowsValue = p.getBoolean(Prefs.KEY_CHARGING_SHOWS_VALUE,
                 Prefs.DEF_CHARGING_SHOWS_VALUE);
         s.fontPath = readFontPath(p.getString(Prefs.KEY_FONT_PATH, Prefs.DEF_FONT_PATH));
@@ -882,6 +887,7 @@ public final class TrioSettings {
         s.wifiScale = wifiScale;
         s.typeHideOnWifi = typeHideOnWifi;
         s.chargingShowsValue = chargingShowsValue;
+        s.pausedGrayAll = pausedGrayAll;
         s.fontPath = fontPath;
         s.dotScale = dotScale;
         s.outOrder = outOrder == null ? Prefs.OUT_DEFAULT_ORDER.clone() : outOrder.clone();
@@ -969,6 +975,7 @@ public final class TrioSettings {
             case Prefs.KEY_BOLT_SCALE: boltScale = src.boltScale; return true;
             case Prefs.KEY_WIFI_SCALE: wifiScale = src.wifiScale; return true;
             case Prefs.KEY_TYPE_HIDE_ON_WIFI: typeHideOnWifi = src.typeHideOnWifi; return true;
+            case Prefs.KEY_PAUSED_GRAY_ALL: pausedGrayAll = src.pausedGrayAll; return true;
             case Prefs.KEY_CHARGING_SHOWS_VALUE: chargingShowsValue = src.chargingShowsValue; return true;
             case Prefs.KEY_FONT_PATH: fontPath = src.fontPath; return true;
             case Prefs.KEY_DOT_SCALE: dotScale = src.dotScale; return true;
@@ -1114,6 +1121,7 @@ public final class TrioSettings {
                 Prefs.MIN_WIFI_SCALE, Prefs.MAX_WIFI_SCALE);
         s.typeHideOnWifi = bundle.getBoolean(Prefs.KEY_TYPE_HIDE_ON_WIFI,
                 Prefs.DEF_TYPE_HIDE_ON_WIFI);
+        s.pausedGrayAll = bundle.getBoolean(Prefs.KEY_PAUSED_GRAY_ALL, Prefs.DEF_PAUSED_GRAY_ALL);
         s.chargingShowsValue = bundle.getBoolean(Prefs.KEY_CHARGING_SHOWS_VALUE,
                 Prefs.DEF_CHARGING_SHOWS_VALUE);
         s.fontPath = readFontPath(bundle.getString(Prefs.KEY_FONT_PATH, Prefs.DEF_FONT_PATH));
@@ -1220,6 +1228,7 @@ public final class TrioSettings {
         b.putInt(Prefs.KEY_WIFI_SCALE, wifiScale);
         b.putBoolean(Prefs.KEY_TYPE_HIDE_ON_WIFI, typeHideOnWifi);
         b.putBoolean(Prefs.KEY_CHARGING_SHOWS_VALUE, chargingShowsValue);
+        b.putBoolean(Prefs.KEY_PAUSED_GRAY_ALL, pausedGrayAll);
         b.putString(Prefs.KEY_FONT_PATH, fontPath);
         b.putInt(Prefs.KEY_DOT_SCALE, dotScale);
         b.putString(Prefs.KEY_OUT_ORDER, Prefs.encodeOutOrder(outOrder));
@@ -1235,7 +1244,8 @@ public final class TrioSettings {
      * {@code TrioConfig}, which must not notify the listeners (and re-fold every
      * container) when the delayed read saw the same values the first one did -
      * but a full comparison is also what a snapshot type ought to answer.
-     */
+     */
+
     /**
      * Normalises a stored font path to a non-null string.
      *
@@ -1337,6 +1347,7 @@ public final class TrioSettings {
                 && wifiScale == s.wifiScale
                 && typeHideOnWifi == s.typeHideOnWifi
                 && chargingShowsValue == s.chargingShowsValue
+                && pausedGrayAll == s.pausedGrayAll
                 // Objects.equals, not ==: the font path is the one reference-typed
                 // field here, and == would compare identities. Two snapshots built
                 // from the same stored path hold different String instances, so a

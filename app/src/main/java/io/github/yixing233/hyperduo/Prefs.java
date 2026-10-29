@@ -1144,6 +1144,9 @@ public final class Prefs {
      */
     public static final String KEY_CHARGING_SHOWS_VALUE = "charging_shows_value";
     public static final boolean DEF_CHARGING_SHOWS_VALUE = false;
+
+    public static final String KEY_PAUSED_GRAY_ALL = "paused_gray_all";
+    public static final boolean DEF_PAUSED_GRAY_ALL = false;
     public static final boolean DEF_TYPE_HIDE_ON_WIFI = false;
     /**
      * Size of the ring's level-dot rows, as a percentage of the bead the stroke implies.

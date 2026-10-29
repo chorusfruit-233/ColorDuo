@@ -405,7 +405,7 @@ public final class TrioRenderer {
             // Keep the charging layout and bolt, with a neutral paused-charge appearance.
             charging = true;
             quickCharging = false;
-            fg = DuoPolicy.pausedColor(fg);
+            if (cfg.pausedGrayAll) fg = DuoPolicy.pausedColor(fg);
         }
         // Resolve what is on screen once, here, from the single rule source. The
         // layout methods below read positions off it instead of re-deriving the
@@ -459,7 +459,7 @@ public final class TrioRenderer {
             canvas.drawColor(0, PorterDuff.Mode.CLEAR);
         }
 
-        final int role = chargingPaused ? fg : roleColor(appearance, level, charging, powerSave, low, fg);
+        final int role = chargingPaused ? DuoPolicy.pausedColor(fg) : roleColor(appearance, level, charging, powerSave, low, fg);
 
         // A slot with no reading counts as absent, so a single-SIM device - or a
         // poll that has not answered yet - is not mistaken for a second SIM.

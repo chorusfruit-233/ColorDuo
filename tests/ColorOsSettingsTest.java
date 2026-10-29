@@ -10,6 +10,15 @@ import java.util.Arrays;
 public final class ColorOsSettingsTest {
     public static void main(String[] args) {
         TrioSettings fresh = TrioSettings.defaults();
+        check(!fresh.pausedGrayAll, "paused charge defaults to battery ring only");
+        TrioSettings paused = fresh.copy();
+        paused.pausedGrayAll = true;
+        check(!paused.equals(fresh), "grayscale preference participates in change detection");
+        check(paused.copy().pausedGrayAll, "grayscale preference survives snapshots");
+        check(TrioSettings.fromBundle(paused.toBundle()).pausedGrayAll, "grayscale preference survives reload transport");
+        check(fresh.applyKeyFrom(paused, Prefs.KEY_PAUSED_GRAY_ALL) && fresh.pausedGrayAll,
+                "remote single-key updates apply the preference");
+        fresh.pausedGrayAll = false;
         for (int[] zone : fresh.ringZones) check(zone.length == 0, "upstream starts with empty component zones");
         check(!fresh.showSim1 && !fresh.showSim2, "per-card rows are opt-in upstream");
         check(!TrioAppearance.of(fresh).foldsMobile(), "unplaced signal remains native");

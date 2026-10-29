@@ -18,6 +18,8 @@ public final class ColorOsRenderingTest {
         final Graphics2D graphics;
         final List<Float> arcs = new ArrayList<>();
         final List<Integer> pathColors = new ArrayList<>();
+        final List<Integer> arcColors = new ArrayList<>();
+        final List<Integer> textColors = new ArrayList<>();
         final List<String> texts = new ArrayList<>();
         final List<java.awt.geom.Rectangle2D> textBounds = new ArrayList<>();
         float textSize;
@@ -26,6 +28,7 @@ public final class ColorOsRenderingTest {
         private Frame(Graphics2D graphics) { super(graphics); this.graphics = graphics; }
         @Override public void drawArc(RectF oval, float start, float sweep, boolean center, Paint paint) {
             arcs.add(sweep);
+            arcColors.add(paint.getColor());
             super.drawArc(oval, start, sweep, center, paint);
         }
         @Override public void drawPath(Path path, Paint paint) {
@@ -34,6 +37,7 @@ public final class ColorOsRenderingTest {
         }
         @Override public void drawText(String text, float x, float y, Paint paint) {
             texts.add(text);
+            textColors.add(paint.getColor());
             textSize = paint.getTextSize();
             android.graphics.Rect ink = new android.graphics.Rect();
             paint.getTextBounds(text, 0, text.length(), ink);
@@ -51,7 +55,63 @@ public final class ColorOsRenderingTest {
         clockHandoff();
         readableDefaults();
         percentageSlider();
+        wifiTypeHandoff();
+        pausedGrayscale();
         System.out.println("Capsule fill, live clock handoff and reachable percentage sizing passed: " + checks + " checks");
+    }
+
+    private static void pausedGrayscale() {
+        TrioSettings settings = TrioSettings.defaults();
+        settings.mobileTypeMode = Prefs.MOBILE_TYPE_IN_RING;
+        settings.typeHideOnWifi = false;
+        settings.ringZones = Prefs.decodeLayout("1|5|7");
+        TrioState state = new TrioState();
+        state.level = 70;
+        state.mobileType = "5G";
+        state.useTint = true;
+        state.tintColor = 0xff44ccff;
+        state.chargingPaused = true;
+        try (Frame ring = new Frame(); Frame all = new Frame()) {
+            TrioRenderer.drawState(ring, 480, 400, state, settings);
+            settings.pausedGrayAll = true;
+            TrioRenderer.drawState(all, 480, 400, state, settings);
+            check(ring.arcColors.contains(DuoPolicy.pausedColor(state.tintColor)), "paused battery arc is gray");
+            check(ring.textColors.contains(state.tintColor), "ring-only preference retains network text color");
+            check(!all.textColors.contains(state.tintColor)
+                    && all.textColors.contains(DuoPolicy.pausedColor(state.tintColor)), "all-icons preference grays network text");
+        }
+        state.chargingPaused = false;
+        state.charging = true;
+        try (Frame ring = new Frame(); Frame all = new Frame()) {
+            settings.pausedGrayAll = false;
+            TrioRenderer.drawState(ring, 480, 400, state, settings);
+            settings.pausedGrayAll = true;
+            TrioRenderer.drawState(all, 480, 400, state, settings);
+            check(ring.arcColors.equals(all.arcColors) && ring.textColors.equals(all.textColors),
+                    "grayscale range never changes normal charging");
+        }
+    }
+
+    private static void wifiTypeHandoff() {
+        TrioSettings settings = TrioSettings.defaults();
+        settings.trioStyle = Prefs.STYLE_RING;
+        settings.mobileTypeMode = Prefs.MOBILE_TYPE_IN_RING;
+        settings.showWifi = true;
+        settings.typeHideOnWifi = true;
+        settings.ringZones = Prefs.decodeLayout("|1,5||");
+        TrioState state = new TrioState();
+        state.level = 70;
+        state.mobileType = "5G";
+        state.mobileService = DuoPolicy.Radio.AVAILABLE;
+        for (boolean connected : new boolean[] {true, false, true, false}) {
+            state.wifiPresent = connected;
+            state.wifiLevel = connected ? 3 : -1;
+            try (Frame frame = new Frame()) {
+                TrioRenderer.drawState(frame, 480, 400, state, settings);
+                boolean typeDrawn = String.join("", frame.texts).contains("5G");
+                check(typeDrawn == !connected, "middle Wi-Fi/RAT priority follows connection: " + connected);
+            }
+        }
     }
 
     private static void fullCapsule() throws Exception {

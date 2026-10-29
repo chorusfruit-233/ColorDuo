@@ -329,4 +329,8 @@
     <string name="font_applied">Applied %1$s</string>
     <string name="font_not_a_font">That file is not a font (only .ttf / .otf), ignored</string>
     <string name="font_failed">Could not install the font, please try again</string>
+    <string name="paused_gray_title">Grayscale while plugged in but not charging</string>
+    <string name="paused_gray_summary">Applies to paused charging and bypass power, without affecting normal charging.</string>
+    <string name="paused_gray_ring">Battery ring only</string>
+    <string name="paused_gray_all">All icons</string>
 </resources>
