@@ -6,7 +6,7 @@ trap 'rm -rf "$test_classes"' EXIT HUP INT TERM
 test_sources=$(mktemp)
 trap 'rm -rf "$test_classes"; rm -f "$test_sources"' EXIT HUP INT TERM
 find tests/shims -name '*.java' > "$test_sources"
-for name in Prefs TrioSettings TrioAppearance TrioGeometry TrioZones TrioRenderer DuoPolicy; do
+for name in Prefs TrioSettings TrioAppearance TrioGeometry TrioZones TrioSizing TrioRenderer DuoPolicy; do
     printf '%s\n' "app/src/main/java/io/github/yixing233/hyperduo/$name.java" >> "$test_sources"
 done
 printf '%s\n' tests/ColorOsSettingsTest.java >> "$test_sources"

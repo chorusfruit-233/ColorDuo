@@ -76,7 +76,49 @@ public final class LayoutReference {
         Path output = Path.of(args[0]);
         Files.createDirectories(output.toAbsolutePath().getParent());
         ImageIO.write(board, "png", output.toFile());
-        if (args.length > 1) mirrorReference(Path.of(args[1]));
+        if (args.length > 1 && !args[1].isEmpty()) mirrorReference(Path.of(args[1]));
+        if (args.length > 2 && !args[2].isEmpty()) sizeReference(Path.of(args[2]));
+    }
+
+
+    private static void sizeReference(Path output) throws Exception {
+        BufferedImage board=new BufferedImage(1200,1390,BufferedImage.TYPE_INT_RGB);
+        Graphics2D g=board.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,RenderingHints.VALUE_ANTIALIAS_ON);
+        g.setColor(new Color(0x101820));g.fillRect(0,0,1200,1390);
+        g.setColor(Color.WHITE);g.setFont(new Font("SansSerif",Font.BOLD,25));
+        g.drawString("ColorDuo / size reference",24,37);
+        g.setFont(new Font("SansSerif",Font.PLAIN,14));g.setColor(new Color(0xB8C7D6));
+        g.drawString("Production renderer. Density 2.0; simulated 40dp surface. Not a phone screenshot.",24,65);
+        g.drawString("Left: actual pixel size. Right: 2x magnified for inspection.",24,88);
+        String[] names={"Classic / 100%", "Classic / 150%", "Large battery preset / 150%",
+                "Capsule / 100%", "Capsule large preset / 150%", "300% request / constrained"};
+        for(int index=0;index<6;index++) {
+            TrioSettings s=TrioSettings.defaults();s.enabled=true;
+            s.trioStyle=index>=3&&index<5?Prefs.STYLE_CAPSULE:Prefs.STYLE_RING;
+            s.ringZones=Prefs.decodeLayout(s.trioStyle==Prefs.STYLE_CAPSULE?"1,5|3|9|6":"1,5|3|9|");
+            s.showWifi=s.showMobile=s.showSim1=s.showSim2=s.showValue=true;
+            s.signalMode=Prefs.SIGNAL_IN_RING;s.mobileTypeMode=Prefs.MOBILE_TYPE_IN_RING;
+            if(index==1)s.glyphScale=150;
+            if(index==2||index==4)s=TrioZones.readableLayout(s);
+            if(index==5)s.glyphScale=300;
+            TrioState state=new TrioState();state.level=84;state.mobileType="5G";
+            state.slotLevels=new int[]{4,2};state.sims=2;state.mobileService=DuoPolicy.Radio.AVAILABLE;
+            state.useTint=true;state.tintColor=0xfff4f8ff;state.wifiPresent=true;state.wifiLevel=3;
+            TrioSizing.Metrics m=TrioSizing.measure(TrioAppearance.of(s),2f,80,300);
+            BufferedImage icon=new BufferedImage(m.width,m.height,BufferedImage.TYPE_INT_ARGB);
+            Graphics2D ig=icon.createGraphics();
+            TrioRenderer.drawSizedState(new android.graphics.Canvas(ig),m.width,m.height,state,s,m.scale,false);ig.dispose();
+            int y=108+index*210;
+            g.setColor(new Color(0x1C2B39));g.fillRoundRect(16,y,1168,190,12,12);
+            g.drawImage(icon,260+(250-m.width)/2,y+(190-m.height)/2,null);
+            g.drawImage(icon,580+(600-m.width*2)/2,y+(190-m.height*2)/2,m.width*2,m.height*2,null);
+            g.setColor(Color.WHITE);g.setFont(new Font("SansSerif",Font.BOLD,15));g.drawString(names[index],28,y+29);
+            g.setColor(new Color(0xAEBFD0));g.setFont(new Font("SansSerif",Font.PLAIN,13));
+            g.drawString(Math.round(m.effectivePercent)+"% effective; "+m.width+" x "+m.height+"px",28,y+55);
+        }
+        g.dispose();Files.createDirectories(output.toAbsolutePath().getParent());
+        ImageIO.write(board,"png",output.toFile());
     }
 
     private static void mirrorReference(Path output) throws Exception {
@@ -115,6 +157,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--mirror-output", type=Path)
+    parser.add_argument("--size-output", type=Path)
     args = parser.parse_args()
     output = args.output.resolve()
     with tempfile.TemporaryDirectory(prefix="colorduo-layouts-") as directory:
@@ -123,12 +166,13 @@ def main():
         scene.write_text(SCENES)
         sources = sorted((ROOT / "tests/shims").rglob("*.java"))
         sources += [SOURCE / f"{name}.java" for name in (
-            "Prefs", "TrioSettings", "TrioAppearance", "TrioGeometry", "TrioZones", "TrioRenderer", "DuoPolicy")]
+            "Prefs", "TrioSettings", "TrioAppearance", "TrioGeometry", "TrioZones", "TrioSizing", "TrioRenderer", "DuoPolicy")]
         subprocess.run(["javac", "-encoding", "UTF-8", "-d", str(classes),
                         *map(str, sources), str(scene)], check=True)
         subprocess.run(["java", "-Djava.awt.headless=true", "-Xmx512m", "-cp", str(classes),
                         "io.github.yixing233.hyperduo.LayoutReference", str(output),
-                        *([str(args.mirror_output.resolve())] if args.mirror_output else [])], check=True)
+                        str(args.mirror_output.resolve()) if args.mirror_output else "",
+                        str(args.size_output.resolve()) if args.size_output else ""], check=True)
     print(output)
 
 

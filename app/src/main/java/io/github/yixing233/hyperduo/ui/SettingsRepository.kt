@@ -125,7 +125,12 @@ class SettingsRepository(context: Context) {
     }
 
     /** Publish one layout edit as a single local/remote transaction and one broadcast. */
-    fun applyRingAssignment(next: TrioSettings) {
+    fun applyRingAssignment(next: TrioSettings) = publishLayout(next, false)
+
+    /** Preset and undo include their geometry in the same local/remote transaction. */
+    fun applyReadabilityLayout(next: TrioSettings) = publishLayout(next, true)
+
+    private fun publishLayout(next: TrioSettings, includeGeometry: Boolean) {
         // The arrangement being written is the snapshot's own, not the stored one: the caller
         // built `next` for a specific style, and a layout written under the wrong key would
         // show up in the other arrangement on the next style switch.
@@ -141,6 +146,10 @@ class SettingsRepository(context: Context) {
             e.putBoolean(Prefs.styledKey(Prefs.KEY_SHOW_SIM_1, style), next.showSim1)
             e.putBoolean(Prefs.styledKey(Prefs.KEY_SHOW_SIM_2, style), next.showSim2)
             e.putInt(Prefs.styledKey(Prefs.KEY_MOBILE_TYPE_MODE, style), next.mobileTypeMode)
+            if (includeGeometry) {
+                e.putInt(Prefs.KEY_GLYPH_SCALE, next.glyphScale)
+                e.putInt(Prefs.KEY_VALUE_SIZE, next.valueSize)
+            }
         }
         val editor = preferences().edit()
         write(editor)

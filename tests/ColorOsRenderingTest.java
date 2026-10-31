@@ -62,6 +62,7 @@ public final class ColorOsRenderingTest {
     }
 
     public static void main(String[] args) throws Exception {
+        physicalSizing();
         fullCapsule();
         clockHandoff();
         readableDefaults();
@@ -633,6 +634,56 @@ public final class ColorOsRenderingTest {
     private static float[] designDot(float[] dot, float[] transform) {
         return new float[]{(dot[0]-transform[1])/transform[0],(dot[1]-transform[2])/transform[0],dot[2]/transform[0]};
     }
+    private static void physicalSizing() {
+        for(int style:new int[]{Prefs.STYLE_RING,Prefs.STYLE_CAPSULE})
+        for(float density:new float[]{1.5f,2f,3f,4f}) {
+            TrioSettings s=TrioSettings.defaults();s.enabled=true;s.trioStyle=style;
+            s=TrioZones.withPiece(s,1,TrioZones.Part.VALUE);
+            TrioState state=new TrioState();state.level=84;state.useTint=true;state.tintColor=0xffffffff;
+            double initial=0, initialInk=0;
+            for(int percent:new int[]{100,150,200,300}) {
+                s.glyphScale=percent;
+                TrioSizing.Metrics m=TrioSizing.measure(TrioAppearance.of(s),density,2000,3000);
+                check(!m.limited,"unbounded physical scale remains available");
+                if(percent==100) initial=m.scale;
+                check(Math.abs(m.scale/initial-percent/100.0)<.001,"overall scaling is applied exactly once");
+                try(Frame frame=new Frame(new BufferedImage(m.width,m.height,BufferedImage.TYPE_INT_ARGB).createGraphics())) {
+                    TrioRenderer.drawSizedState(frame,m.width,m.height,state,s,m.scale,false);
+                    double height=frame.textBounds.get(0).getHeight();
+                    if(percent==100) initialInk=height;
+                    check(Math.abs(height/initialInk-percent/100.0)<.01,
+                            "actual painted digits enlarge by the requested percentage without double scaling");
+                    check(frame.texts.contains("84"),"physical-size renderer paints the configured percentage");
+                    for(java.awt.geom.Rectangle2D ink:frame.textBounds)
+                        check(ink.getMinX()>=-1 && ink.getMinY()>=-1 && ink.getMaxX()<=m.width+1 && ink.getMaxY()<=m.height+1,
+                                "measured physical host contains the actual text");
+                }
+            }
+            s.glyphScale=150;
+            s=TrioZones.withPiece(s,2,TrioZones.Part.SIM_PAIR);
+            TrioSizing.Metrics before=TrioSizing.measure(TrioAppearance.of(s),density,2000,3000);
+            s.signalIconScale=200;s.simStackGap=300;s.pairBend=30;
+            TrioSizing.Metrics after=TrioSizing.measure(TrioAppearance.of(s),density,2000,3000);
+            check(Math.abs(before.scale-after.scale)<.0001,"larger signal does not shrink battery text when space exists");
+            check(after.height>=before.height && after.width>=before.width,"signal growth reserves additional host space");
+            s.glyphScale=300;
+            int capacity=Math.round(24*density);
+            TrioSizing.Metrics bounded=TrioSizing.measure(TrioAppearance.of(s),density,capacity,2000);
+            check(bounded.limited && bounded.height<=capacity,"surface-height limit is explicit and respected");
+            TrioSizing.Bounds bounds=TrioSizing.bounds(TrioAppearance.of(s));
+            check(bounds.height*bounded.scale<=capacity+.01,"limited scale fits the actual full ink bounds");
+            float[] granted=new float[3];
+            check(TrioSizing.transform(18,12,TrioAppearance.of(s),bounded.scale,granted),
+                    "a temporarily smaller vendor drawable still has a transform");
+            check(bounds.width*granted[0]<=18.01 && bounds.height*granted[0]<=12.01,
+                    "the final drawable bounds cannot crop a larger requested scale");
+            TrioSizing.Metrics narrow=TrioSizing.measure(TrioAppearance.of(s),density,2000,30);
+            check(narrow.limited && narrow.width<=30,"horizontal space is bounded too");
+            s.glyphScale=300;
+            check(TrioSettings.fromBundle(s.toBundle()).glyphScale==300,"300 percent survives framework transport");
+        }
+    }
+
     private static void wholeSignalScale() {
         TrioState state=new TrioState();state.level=70;state.slotLevels=new int[]{4,2};
         state.mobileService=DuoPolicy.Radio.AVAILABLE;

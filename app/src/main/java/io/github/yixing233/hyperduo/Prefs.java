@@ -67,20 +67,8 @@ public final class Prefs {
      * Overall size of the trio glyph, as a percentage of the size the host box
      * already implies.
      *
-     * <p><em>Shrink-only</em> - the range stops at 100 - because the bar's own
-     * box is the limit: MIUI measures the battery icon at
-     * {@code battery_meter_width} x {@code status_bar_icon_height} (28dp by 20dp
-     * on the test device) and the glyph is fitted inside it. Asking for more than
-     * the box holds cannot make the box grow, so the only honest thing a
-     * percentage above 100 could do is draw past the view's bounds, and whether
-     * that is clipped is MIUI's decision rather than this module's.
-     *
-     * <p>A percentage rather than a dp: the drawing already scales to whatever
-     * box it is handed, so the setting that means anything is "how much of that
-     * fit to use". A dp size would have to be converted back into a share of a
-     * box the module does not own.
-     *
-     * <p>A brand-new key with a brand-new name.
+     * <p>60..300. ColorOS reserves the measured pixel bounds and applies this scale
+     * once; each surface limits the effective size to its available space.
      */
     public static final String KEY_GLYPH_SCALE = "glyph_scale_pct";
     public static final String KEY_SHOW_WIFI = "show_wifi";
@@ -1804,12 +1792,11 @@ public final class Prefs {
     /**
      * The glyph-size span, in percent of the fit the host box implies.
      *
-     * <p>60..100: the ceiling is the box - see {@link #KEY_GLYPH_SCALE} for why
-     * growing past it was refused - and 60 is as small as the glyph goes while
-     * the level dots and the ring stroke are still separable at status-bar size.
+     * <p>60..300; the effective size is constrained by the current SystemUI surface.
+     * Values through 100 retain their stored meaning.
      */
     public static final int MIN_GLYPH_SCALE = 60;
-    public static final int MAX_GLYPH_SCALE = 100;
+    public static final int MAX_GLYPH_SCALE = 300;
     /**
      * The performance-readout size span, in percent of the size the adaptive fit
      * settles on.

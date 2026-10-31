@@ -59,6 +59,7 @@ public final class ColorOsHostTest {
     }
     static class LinearLayout extends ViewGroup {
         static class LayoutParams extends ViewGroup.LayoutParams {
+            int gravity;
             LayoutParams(int w,int h){super(w,h);}
             LayoutParams(LayoutParams p){this(p.width,p.height);}
         }
@@ -76,10 +77,11 @@ public final class ColorOsHostTest {
     static class TrioRenderer {
         static boolean drawsClock(State state,TrioAppearance appearance){return state.clock;}
     }
-    static class Config { boolean enabled=true; }
+    static class Config { boolean enabled=true; int glyphScale=100; }
     static class TrioConfig {
         static Config config=new Config();
         static TrioAppearance appearance=new TrioAppearance();
+        static boolean debugLog(){return false;}
         static Config get(){return config;}
         static TrioAppearance appearance(){return appearance;}
     }
@@ -92,6 +94,20 @@ public final class ColorOsHostTest {
         boolean handsBackPercentage(){return false;}
         boolean hidesNativeBolt(){return false;}
         boolean hidesStatusClock(){return false;}
+    }
+    static class TrioSizing {
+        static class Metrics {
+            int width,height;float scale=1,effectivePercent=100;boolean limited;
+            Metrics(int width,int height){this.width=width;this.height=height;}
+        }
+    }
+    static class ColorOsSizing {
+        boolean released;
+        TrioSizing.Metrics measure(ViewGroup meter,View image,TrioAppearance a){
+            released=false;
+            return new TrioSizing.Metrics(a.splitMode==1?40:24,20);
+        }
+        void release(){released=true;}
     }
     static class TrioGeometry {
         static class SplitRing { SplitRing(TrioAppearance a){} float width(){return 240;} float height(){return 120;} }
@@ -132,6 +148,9 @@ public final class ColorOsHostTest {
         ColorOsReadings extra;
         View clockContainer=new View();
         int nativeDepth,ownedWidth,ownedHeight;
+        float ownedScale;
+        final ColorOsSizing sizing=new ColorOsSizing();
+        String lastSizeNote;
         boolean active,failed,logged;
         final boolean main;
         Host(boolean main,boolean constraintParent){
@@ -191,6 +210,7 @@ public final class ColorOsHostTest {
         check(!controls.active&&controls.image.drawable==controls.nativeDrawable,"detached host restores native drawing");
         check(controls.image.params.width==18&&controls.image.params.height==16,"native dimensions are restored");
         check(controls.image.scale==ImageView.ScaleType.CENTER,"native scale type is restored");
+        check(controls.sizing.released,"detached hosts release ancestor clipping");
         controls.meter.attached=true;
         controls.applyInternal();
         check(controls.active,"reattached control panel reclaims its own glyph");
@@ -210,6 +230,6 @@ with tempfile.TemporaryDirectory(prefix="colorduo-hosts-") as directory:
     fixture.write_text(harness)
     compiler=[shutil.which("javac")] if shutil.which("javac") else ["java","-m","jdk.compiler/com.sun.tools.javac.Main"]
     subprocess.run(compiler+["-encoding","UTF-8","-d",directory,str(SOURCE/"ColorOsLayout.java"),
-                             str(ROOT/"tests/ColorOsLayoutTest.java"),str(fixture)],check=True)
+                             str(ROOT/"tests/ColorOsLayoutTest.java"),str(ROOT/"tests/shims/android/view/Gravity.java"),str(fixture)],check=True)
     for test in ("ColorOsLayoutTest","ColorOsHostTest"):
         subprocess.run(["java","-cp",directory,"io.github.yixing233.hyperduo."+test],check=True)

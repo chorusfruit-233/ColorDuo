@@ -16,6 +16,32 @@ class LayoutControlsTest {
         signalMode = Prefs.SIGNAL_IN_RING
     }
 
+    @Test fun overallScaleControlAllowsThreeHundredPercent() {
+        val s = settings()
+        val a = TrioAppearance.of(s)
+        val row = geometrySliders().single { it.titleRes(a) == R.string.glyph_scale_title }
+        assertEquals(60, row.min)
+        assertEquals(300, row.maxFor(a))
+        assertEquals(100, s.glyphScale)
+    }
+
+    @Test fun readablePresetIsExplicitAndKeepsTheInputForUndo() {
+        for (style in listOf(Prefs.STYLE_RING, Prefs.STYLE_CAPSULE)) {
+            val old = settings(style).apply { showBolt = false }
+            val saved = old.copy()
+            val next = TrioZones.readableLayout(old)
+            assertTrue(old == saved)
+            assertEquals(150, next.glyphScale)
+            assertArrayEquals(intArrayOf(Prefs.PART_VALUE), next.ringZones[TrioZones.Zone.CENTRE.ordinal])
+            assertTrue(next.showSim1 && next.showSim2 && next.showValue)
+            assertFalse(next.showBolt)
+            assertEquals(if (style == Prefs.STYLE_CAPSULE) 48 else 52, next.valueSize)
+            if (style == Prefs.STYLE_CAPSULE)
+                assertArrayEquals(intArrayOf(Prefs.PART_CLOCK), next.ringZones[TrioZones.Zone.LEFT.ordinal])
+            assertEquals(100, saved.glyphScale)
+        }
+    }
+
     @Test fun capsuleStructureContainsOnlyItsFiveEditableParameters() {
         val a = TrioAppearance.of(settings(Prefs.STYLE_CAPSULE))
         val rows = capsuleContainerSliders()

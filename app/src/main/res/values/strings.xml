@@ -377,4 +377,10 @@
     <string name="bolt_native">系统原生</string>
     <string name="signal_icon_scale_title">信号图标大小</string>
     <string name="signal_icon_scale_summary">默认 %1$d%%，可调 %2$d–%3$d%%。整体缩放圆点、点距、弯曲和双卡排距，位置偏移保持不变。</string>
+    <string name="readability_size_limit">实际大小受各页面可用空间限制；到达边界后不再继续放大。</string>
+    <string name="readability_actual_preview">实际尺寸参考</string>
+    <string name="readability_actual_hint">按当前 DPI 绘制的模拟数据；真实状态栏以所在页面的可用空间为准。上方大图用于编辑。</string>
+    <string name="readability_apply">应用大字电量布局</string>
+    <string name="readability_undo">撤销预设</string>
+    <string name="readability_preset_hint" formatted="false">150% 整体尺寸、电量居中；会替换当前样式的组件排序，可立即撤销。</string>
 </resources>

@@ -78,6 +78,36 @@ public final class TrioPreviewView extends View {
     /** Fraction of the shorter edge left empty around the glyph. */
     private float inset = 0.06f;
 
+    private int physicalHeightLimit;
+    private final TrioState physicalState = new TrioState(this);
+
+    /** Zero restores the enlarged editor; positive values use actual density pixels. */
+    public void setPhysicalHeightLimit(int pixels) {
+        if(physicalHeightLimit!=pixels) { physicalHeightLimit=pixels;invalidate(); }
+    }
+
+    private void drawPhysical(Canvas canvas,int width,int height) {
+        TrioAppearance a=TrioAppearance.of(settings);
+        TrioSizing.Metrics m=TrioSizing.measure(a,getResources().getDisplayMetrics().density,
+                Math.min(height,physicalHeightLimit),width);
+        physicalState.level=level;
+        physicalState.charging=charging;
+        physicalState.quickCharging=quickCharging;
+        physicalState.chargingPaused=chargingPaused;
+        physicalState.powerSave=powerSave;physicalState.low=low;
+        physicalState.wifiPresent=wifiLevel>=0;physicalState.wifiLevel=wifiLevel;
+        physicalState.mobileLevel=mobileLevel;physicalState.slotLevels=slotLevels;
+        physicalState.sims=0;
+        if(slotLevels!=null) for(int signal:slotLevels) if(signal>=0) physicalState.sims++;
+        physicalState.mobileType=mobileType;
+        physicalState.useTint=true;physicalState.tintColor=foreground;
+        int save=canvas.save();
+        canvas.translate((width-m.width)/2f,(height-m.height)/2f);
+        TrioRenderer.drawSizedState(canvas,m.width,m.height,physicalState,settings,m.scale,false);
+        canvas.restoreToCount(save);
+    }
+
+
     /** Draws the out-of-ring label on its own instead of the glyph. */
     private boolean outTypeOnly;
 
@@ -360,6 +390,10 @@ public final class TrioPreviewView extends View {
             canvas.drawRect(0f, 0f, w, h, background);
         }
 
+        if(physicalHeightLimit>0) {
+            drawPhysical(canvas,w,h);
+            return;
+        }
         final float pad = Math.min(w, h) * inset;
         final int innerW = Math.round(w - 2f * pad);
         final int innerH = Math.round(h - 2f * pad);

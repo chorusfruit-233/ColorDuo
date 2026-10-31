@@ -314,7 +314,7 @@ public final class TrioSettings {
     public int perfWeight;
     /**
      * Overall size of the trio glyph, as a percentage of the fit the host box
-     * implies. Shrink-only; see {@link Prefs#KEY_GLYPH_SCALE}.
+     * implies. ColorOS measures a larger host for values above 100; see {@link Prefs#KEY_GLYPH_SCALE}.
      */
     public int glyphScale;
     /** Interior cell nudges, in design units; see Prefs.KEY_CAPSULE_LEFT_DX. */

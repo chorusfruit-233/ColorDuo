@@ -54,6 +54,7 @@ class BindingTest {
     }
     static class LinearLayout {
         static class LayoutParams extends ViewGroup.LayoutParams {
+            int gravity;
             LayoutParams(int w,int h){super(w,h);}
             LayoutParams(LayoutParams p){super(p.width,p.height);}
         }
@@ -166,4 +167,5 @@ class BindingTest {
 with tempfile.TemporaryDirectory(prefix='colorduo-binding-') as tmp:
     source = Path(tmp) / 'BindingTest.java'
     source.write_text(harness, encoding='utf-8')
-    subprocess.run(['java', str(source)], check=True)
+    subprocess.run(['javac', '-encoding', 'UTF-8', '-d', str(source.parent), str(ROOT/'tests/shims/android/view/Gravity.java'), str(source)], check=True)
+    subprocess.run(['java', '-cp', str(source.parent), source.stem], check=True)

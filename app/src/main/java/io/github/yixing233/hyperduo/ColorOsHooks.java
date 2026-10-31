@@ -607,6 +607,7 @@ final class ColorOsHooks {
         owner.nativeParams=new LinearLayout.LayoutParams(requested);
         LinearLayout.LayoutParams visible=new LinearLayout.LayoutParams(requested);
         visible.width=owner.ownedWidth;visible.height=owner.ownedHeight;
+        visible.gravity=android.view.Gravity.CENTER_VERTICAL;
         return chain.proceed(new Object[]{visible});
     }
 
@@ -794,6 +795,9 @@ final class ColorOsHooks {
         boolean moduleWriting;
         int ownedWidth;
         int ownedHeight;
+        float ownedScale;
+        final ColorOsSizing sizing = new ColorOsSizing();
+        String lastSizeNote;
         long nextSignalSample;
         String lastWifiNote;
         String lastWifiHandoff;
@@ -879,14 +883,20 @@ final class ColorOsHooks {
             active = true;
             TrioAppearance appearance = TrioConfig.appearance();
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(nativeParams);
-            int height = Math.round(20 * meter.getResources().getDisplayMetrics().density);
-            TrioGeometry.setCapsuleLength(appearance.capsuleLength);
-            params.height = appearance.capsule ? TrioGeometry.capHostHeightPx(height * 3 / 4) : height;
-            params.width = appearance.capsule ? TrioGeometry.capHostWidthPx(height * 3 / 4)
-                    : Math.round(24 * meter.getResources().getDisplayMetrics().density);
-            if (appearance.ring && (appearance.splitMode == 1 || appearance.drawsSimPair() || appearance.signalIconScale != 100)) {
-                TrioGeometry.SplitRing shape = new TrioGeometry.SplitRing(appearance);
-                params.width = Math.max(params.width, Math.round(height * shape.width()/shape.height()));
+            TrioSizing.Metrics dimensions = sizing.measure(meter,image,appearance);
+            params.height = dimensions.height;
+            params.width = dimensions.width;
+            params.gravity = android.view.Gravity.CENTER_VERTICAL;
+            ownedScale = dimensions.scale;
+            if (TrioConfig.debugLog()) {
+                String note = "ColorOS size: requested=" + TrioConfig.get().glyphScale
+                        + " effective=" + Math.round(dimensions.effectivePercent)
+                        + " width=" + dimensions.width + " height=" + dimensions.height
+                        + " limited=" + dimensions.limited;
+                if (!note.equals(lastSizeNote)) {
+                    lastSizeNote = note;
+                    TrioHooks.log(TrioHooks.LOG_INFO,note);
+                }
             }
             ownedWidth = params.width;
             ownedHeight = params.height;
@@ -938,6 +948,7 @@ final class ColorOsHooks {
                     LinearLayout.LayoutParams fixed = new LinearLayout.LayoutParams(nativeParams);
                     fixed.width = ownedWidth;
                     fixed.height = ownedHeight;
+                    fixed.gravity = android.view.Gravity.CENTER_VERTICAL;
                     image.setLayoutParams(fixed);
                 }
             } finally { moduleWriting = previous; }
@@ -951,6 +962,7 @@ final class ColorOsHooks {
         }
 
         void restoreBatteryInternal() {
+            sizing.release();
             if (active && image != null) {
                 image.setImageDrawable(nativeDrawable);
                 image.setScaleType(nativeScaleType);
@@ -1210,8 +1222,8 @@ final class ColorOsHooks {
                         getBounds().right, getBounds().bottom, layerPaint);
                 canvas.translate(getBounds().left, getBounds().top);
                 canvas.clipRect(0, 0, getBounds().width(), getBounds().height());
-                TrioRenderer.drawState(canvas, getBounds().width(), getBounds().height(),
-                        host.state, TrioConfig.get());
+                TrioRenderer.drawSizedState(canvas, getBounds().width(), getBounds().height(),
+                        host.state, TrioConfig.get(), host.ownedScale, true);
             } catch (Throwable error) {
                 host.failed = true;
                 MAIN.post(() -> host.fail(error));

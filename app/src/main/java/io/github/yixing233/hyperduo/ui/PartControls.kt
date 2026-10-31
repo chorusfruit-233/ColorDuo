@@ -913,7 +913,7 @@ internal fun PartSettingsSheet(
 
 /** One size row, rendered from its spec. Shared by the page and this dialog. */
 @Composable
-private fun SliderRow(
+internal fun SliderRow(
     spec: SliderSpec,
     settings: TrioSettings,
     update: ((SettingsRepository) -> Unit) -> Unit,

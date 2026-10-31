@@ -330,6 +330,16 @@ public final class TrioRenderer {
                 s.mobileService == DuoPolicy.Radio.REGISTERING);
     }
 
+    /** Draw a frame using the exact scale already measured for its SystemUI host. */
+    static void drawSizedState(Canvas canvas,int w,int h,TrioState s,TrioSettings cfg,
+                               float scale,boolean clear) {
+        if(w<=0 || h<=0 || s==null || cfg==null || scale<=0) return;
+        drawInto(canvas,w,h,s.level,s.charging,s.quickCharging,s.powerSave,s.low,
+                s.wifiPresent?s.wifiLevel:-1,s.mobileLevel,s.slotLevels,s.mobileType,
+                s.foreground(),cfg,clear,s.wifiPresent,s.dataSlot,s.chargingPaused,
+                s.mobileService==DuoPolicy.Radio.REGISTERING,scale);
+    }
+
     /**
      * Renders the glyph into any canvas of the given size. Kept free of
      * {@link View} so the settings app can preview the exact same drawing code
@@ -397,6 +407,16 @@ public final class TrioRenderer {
                                  int wifiLevel, int mobileLevel, int[] slotLevels, String mobileType,
                                  int fg, TrioSettings cfg, boolean clearWhenDone,
                                  boolean wifiConnected, int dataSlot, boolean chargingPaused, boolean radioMuted) {
+        drawInto(canvas,w,h,level,charging,quickCharging,powerSave,low,wifiLevel,mobileLevel,
+                slotLevels,mobileType,fg,cfg,clearWhenDone,wifiConnected,dataSlot,chargingPaused,radioMuted,0f);
+    }
+
+    private static void drawInto(Canvas canvas, int w, int h, int level, boolean charging,
+                                 boolean quickCharging, boolean powerSave, boolean low,
+                                 int wifiLevel, int mobileLevel, int[] slotLevels, String mobileType,
+                                 int fg, TrioSettings cfg, boolean clearWhenDone,
+                                 boolean wifiConnected, int dataSlot, boolean chargingPaused, boolean radioMuted,
+                                 float physicalScale) {
         if (w <= 0 || h <= 0 || cfg == null) {
             return;
         }
@@ -436,7 +456,9 @@ public final class TrioRenderer {
         // hit-test with - is precisely how a hot spot drifts off the thing it
         // names. See designTransform.
         final float[] transform = new float[3];
-        if (!designTransform(w, h, appearance, transform)) {
+        if (!(physicalScale>0
+                ? TrioSizing.transform(w,h,appearance,physicalScale,transform)
+                : designTransform(w,h,appearance,transform))) {
             return;
         }
         final float scale = transform[0];
@@ -2269,66 +2291,9 @@ public final class TrioRenderer {
         if (w <= 0 || h <= 0 || appearance == null || out == null || out.length < 3) {
             return false;
         }
-        final boolean rect = appearance.rect;
-        // The overall-size setting is applied to the fit rather than to the design
-        // units: the glyph's whole geometry is expressed in one 120x120 box, so
-        // scaling the fit scales every stroke, arc and digit by the same factor
-        // and the translate keeps it centred. Doing it anywhere else - a second
-        // canvas.scale around the layout calls, say - would scale the stroke
-        // widths differently from the radii and the glyph would come apart.
-        final TrioGeometry.SplitRing split = appearance.ring && (appearance.splitMode == 1 || appearance.drawsSimPair() || appearance.signalIconScale != 100)
-                ? new TrioGeometry.SplitRing(appearance) : null;
-        float capMinX=TrioGeometry.CAP_INK_X, capMaxX=capMinX+TrioGeometry.capInkW();
-        float capMinY=TrioGeometry.CAP_INK_TOP, capMaxY=TrioGeometry.CAP_INK_BOTTOM;
-        if (appearance.capsule && appearance.drawsSimPair()) {
-            float radius=4f*appearance.dotScaleFactor();
-            float pitch=appearance.simStackPitch(radius);
-            float rx=(18f*appearance.pairPitch/100f+radius)*appearance.signalIconScaleFactor();
-            float ry=(pitch/2+radius+(appearance.pairShape==1?0:Math.abs(appearance.pairBend)))*appearance.signalIconScaleFactor();
-            for(int z=0;z<3;z++) {
-                boolean placed=false;
-                for(int part:appearance.ringZones[z]) if(part==Prefs.PART_SIM_PAIR)placed=true;
-                if(!placed)continue;
-                float cy=z==0 ? TrioGeometry.capDotTopY()+pitch/2 : z==2
-                        ? TrioGeometry.capDotBottomY()-pitch/2
-                        : TrioGeometry.capInteriorCy(appearance.ringStroke*TrioGeometry.CAP_STROKE_RATIO)+appearance.capsuleRightDy;
-                float cx=z==1 ? TrioGeometry.capPairCx(appearance.ringStroke*TrioGeometry.CAP_STROKE_RATIO,appearance)
-                        +appearance.capsuleRightDx : TrioGeometry.capDotCx();
-                capMinX=Math.min(capMinX,cx+appearance.pairX-rx);capMaxX=Math.max(capMaxX,cx+appearance.pairX+rx);
-                capMinY=Math.min(capMinY,cy+appearance.pairY-ry);capMaxY=Math.max(capMaxY,cy+appearance.pairY+ry);
-            }
-        }
-        if(appearance.capsule && appearance.signalDots()) {
-            float scale=appearance.signalIconScaleFactor();
-            float radius=TrioGeometry.CAP_DOT_R*appearance.dotScaleFactor()*scale;
-            float rx=TrioGeometry.CAP_DOT_PITCH*1.5f*scale+radius;
-            capMinX=Math.min(capMinX,TrioGeometry.capDotCx()-rx);capMaxX=Math.max(capMaxX,TrioGeometry.capDotCx()+rx);
-            capMinY=Math.min(capMinY,TrioGeometry.capDotTopY()-radius);
-            capMaxY=Math.max(capMaxY,TrioGeometry.capDotBottomY()+radius);
-        }
-        final float scale = (split != null ? inkScale(w,h,split.width(),split.height())
-                : appearance.capsule ? inkScale(w,h,capMaxX-capMinX,capMaxY-capMinY)
-                : inkScale(w,h,appearance.style)) * appearance.glyphFit();
-        if (scale <= 0f) {
-            return false;
-        }
-        out[0] = scale;
-        if (split != null) {
-            out[1] = (w-split.width()*scale)/2f-split.minX*scale;
-            out[2] = (h-split.height()*scale)/2f-split.minY*scale;
-        } else if (appearance.capsule) {
-            out[1]=(w-(capMaxX-capMinX)*scale)/2f-capMinX*scale;
-            out[2]=(h-(capMaxY-capMinY)*scale)/2f-capMinY*scale;
-        } else if (rect) {
-            out[1] = (w - TrioGeometry.RECT_INK_W * scale) / 2f
-                    - TrioGeometry.RECT_INK_X * scale;
-            out[2] = (h - TrioGeometry.RECT_INK_H * scale) / 2f
-                    - TrioGeometry.RECT_INK_Y * scale;
-        } else {
-            out[1] = (w - TrioGeometry.INK_W * scale) / 2f - TrioGeometry.INK_X * scale;
-            out[2] = (h - TrioGeometry.INK_H * scale) / 2f - TrioGeometry.INK_Y * scale;
-        }
-        return true;
+        TrioSizing.Bounds bounds=TrioSizing.bounds(appearance);
+        float scale=inkScale(w,h,bounds.width,bounds.height)*Math.min(1f,appearance.glyphFit());
+        return TrioSizing.transform(w,h,appearance,scale,out);
     }
 
     /**

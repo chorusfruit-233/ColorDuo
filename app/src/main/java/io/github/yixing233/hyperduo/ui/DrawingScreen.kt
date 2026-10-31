@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
@@ -387,6 +388,8 @@ private fun DrawingEditorCard(
                 onEditBattery = { editing = TrioSettingsPart.Battery },
                 modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
             )
+
+            DrawingReadabilityControls(settings,scene,dark,update)
 
             // The capsule container's shape, under Quick Edit because that is where the style
             // tiles are: picking the capsule and then sizing it are the same decision, and the
@@ -1612,6 +1615,55 @@ private fun OrderButton(
  * current lambda; one captured at composition would close over an older snapshot
  * and flip a switch based on what was on screen several edits ago.
  */
+@Composable
+private fun DrawingReadabilityControls(
+    settings: TrioSettings,
+    scene: PreviewScene,
+    dark: Boolean,
+    update: ((SettingsRepository) -> Unit) -> Unit,
+) {
+    val a=TrioAppearance.of(settings)
+    val density=LocalDensity.current
+    val inset=WindowInsets.statusBars.getTop(density)
+    val height=if(inset>0) inset else with(density) { 32.dp.roundToPx() }
+    var previous by remember(settings.trioStyle) { mutableStateOf<TrioSettings?>(null) }
+    val scale=geometrySliders().first { it.titleRes(a)==R.string.glyph_scale_title }
+    SliderRow(scale,settings,update)
+    Text(stringResource(R.string.readability_size_limit),
+        style=MiuixTheme.textStyles.footnote2,
+        color=MiuixTheme.colorScheme.onSurfaceVariantSummary)
+    Text(stringResource(R.string.readability_actual_preview),style=MiuixTheme.textStyles.subtitle)
+    AndroidView(
+        modifier=Modifier.fillMaxWidth().height(72.dp).clip(RoundedCornerShape(12.dp)),
+        factory={ context -> TrioPreviewView(context).also {
+            it.setPhysicalHeightLimit(height)
+            applyPreviewState(it,settings,scene,dark)
+        } },
+        update={ view ->
+            view.setPhysicalHeightLimit(height)
+            applyPreviewState(view,settings,scene,dark)
+        },
+    )
+    Text(stringResource(R.string.readability_actual_hint),
+        style=MiuixTheme.textStyles.footnote2,
+        color=MiuixTheme.colorScheme.onSurfaceVariantSummary)
+    Row(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+        Button(enabled=a.glyph,onClick={
+            if(previous==null) previous=settings.copy()
+            update { it.applyReadabilityLayout(TrioZones.readableLayout(settings)) }
+        },modifier=Modifier.weight(1f)) { Text(stringResource(R.string.readability_apply)) }
+        previous?.let { saved ->
+            TextButton(text=stringResource(R.string.readability_undo),onClick={
+                update { it.applyReadabilityLayout(saved) }
+                previous=null
+            })
+        }
+    }
+    Text(stringResource(R.string.readability_preset_hint),
+        style=MiuixTheme.textStyles.footnote2,
+        color=MiuixTheme.colorScheme.onSurfaceVariantSummary)
+}
+
 @Composable
 private fun DrawingGlyph(
     settings: TrioSettings,
