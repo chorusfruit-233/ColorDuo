@@ -8,7 +8,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 hooks = (ROOT / 'app/src/main/java/io/github/yixing233/hyperduo/ColorOsHooks.java').read_text()
 names = ['writeDrawable', 'readDrawable', 'writeScaleType', 'writeVisibility',
-         'writeLayoutParams', 'readLayoutParams', 'drawMirror', 'nativeUpdate']
+         'writeLayoutParams', 'readLayoutParams', 'drawMirror', 'writeBoosterLayer', 'nativeUpdate']
 methods = []
 for name in names:
     match = re.search(r'    private static Object ' + name + r'\(.*?^    \}', hooks, re.M | re.S)
@@ -36,7 +36,7 @@ class BindingTest {
     static class Drawable { }
     static class View {
         static final int VISIBLE=0,GONE=8;
-        int visibility=VISIBLE;
+        int visibility=VISIBLE;boolean blockBoost;
         ViewGroup.LayoutParams params=new LinearLayout.LayoutParams(18,16);
         void setVisibility(int v) throws Throwable {
             writeVisibility(new XposedInterface.Chain(this,a->{visibility=(Integer)a[0];return null;},v));
@@ -79,6 +79,7 @@ class BindingTest {
         void restoreToCount(int save){y=old;}
     }
     static class ColorOsSizing {
+        static boolean retainBoosterLayer(View view,boolean requested){return requested&&!view.blockBoost;}
         static float mirrorOffset(ViewGroup view){return view.mirrorOffset;}
         static ViewGroup.LayoutParams retainLayoutParams(View view,ViewGroup.LayoutParams params){return params;}
     }
@@ -182,6 +183,16 @@ class BindingTest {
         mirror.mirrorOffset=0;int saves=canvas.saves;
         drawMirror(new XposedInterface.Chain(mirror,a->{check(canvas.y==3,"unowned replay draws at its original position");return null;},canvas));
         check(canvas.saves==saves,"unowned replay does not alter canvas state");
+        View cached=new View();cached.blockBoost=true;
+        Object boostResult=writeBoosterLayer(new XposedInterface.Chain(null,a->{
+            check(a[0]==cached && Boolean.FALSE.equals(a[1]),"static native cache helper disables only its owned target");
+            return expectedResult;
+        },cached,true));
+        check(boostResult==expectedResult,"native cache interceptor preserves the native result");
+        cached.blockBoost=false;
+        writeBoosterLayer(new XposedInterface.Chain(null,a->{check(Boolean.TRUE.equals(a[1]),"unowned cache enable remains native");return null;},cached,true));
+        cached.blockBoost=true;
+        writeBoosterLayer(new XposedInterface.Chain(null,a->{check(Boolean.FALSE.equals(a[1]),"native cache stop always proceeds");return null;},cached,false));
         System.out.println("Stable native binder transactions passed: "+checks+" checks");
     }
 }

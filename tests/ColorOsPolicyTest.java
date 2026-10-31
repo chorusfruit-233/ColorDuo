@@ -102,6 +102,15 @@ public final class ColorOsPolicyTest {
         check(legacySlots.size() == 3, "pre-existing list entries are not duplicated");
         check(legacyOwner.sync(legacySlots, Set.of()), "list-backed ownership releases only our additions");
         check(legacySlots.equals(java.util.List.of("wifi", "alarm_clock")), "existing native policy survives release");
+        ColorOsPolicy.SlotOwnership hdOwner = new ColorOsPolicy.SlotOwnership();
+        Set<String> shadeSlots = new HashSet<>(Set.of("alarm_clock"));
+        check(hdOwner.sync(shadeSlots, Set.of("volte")), "HD is blocked before the IMS child is created");
+        check(shadeSlots.contains("volte"), "a late shade HD icon immediately inherits the block");
+        check(hdOwner.sync(shadeSlots, Set.of()), "mobile hand-back releases owned HD policy");
+        check(shadeSlots.equals(Set.of("alarm_clock")), "HD release preserves unrelated native policy");
+        shadeSlots.add("volte");
+        check(!hdOwner.sync(shadeSlots, Set.of("volte")), "a pre-existing native HD block is not ours");
+        check(!hdOwner.sync(shadeSlots, Set.of()), "native HD blocks survive module disable");
         System.out.println("ColorOS network models, Wi-Fi resolution, signal normalization and slot restoration passed");
     }
 

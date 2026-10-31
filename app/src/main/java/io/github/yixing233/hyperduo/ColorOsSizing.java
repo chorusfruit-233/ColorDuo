@@ -64,6 +64,12 @@ final class ColorOsSizing {
     static java.util.List<ViewGroup> trackedMirrors() { return new ArrayList<>(MIRRORS.keySet()); }
     static void clearMirrors() { MIRRORS.clear(); }
 
+    /** A hardware layer clips overflow even when ViewGroup.clipChildren is false. */
+    static boolean retainBoosterLayer(View view,boolean requested) {
+        ClipState state=CLIPS.get(view);
+        return requested && (state==null || !state.owners.containsValue(Boolean.TRUE));
+    }
+
     private static final class Surface {
         final ViewGroup view;
         final boolean expandable;

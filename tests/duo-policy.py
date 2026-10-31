@@ -271,6 +271,12 @@ public final class DuoPolicyTest {
             check(foldSlot(slot,true,0,Radio.REGISTERING,false), "registration does not flash a native no-SIM placeholder");
             check(!foldSlot(slot,false,0,Radio.NO_SERVICE,true), "component hand-back preserves native no-SIM");
         }
+        check(foldSlot("volte",true,1,Radio.AVAILABLE,false), "ColorOS standalone HD follows owned mobile signals");
+        check(foldSlot("volte",true,0,Radio.REGISTERING,false), "registration cannot reveal a standalone HD icon");
+        check(!foldSlot("volte",false,1,Radio.AVAILABLE,false), "native mobile hand-back also returns HD");
+        check(!foldSlot("volte",true,0,Radio.UNKNOWN,false), "unknown radio state keeps native HD policy");
+        check(!foldSlot("volte",true,0,Radio.NO_SERVICE,false), "no-service handoff waits for its replacement notice");
+        check(!foldSlot("vowifi",true,1,Radio.AVAILABLE,false), "HD ownership does not suppress a separate Wi-Fi-calling indicator");
         check(!foldSlot("airplane",true,0,Radio.REGISTERING,true), "airplane icon is never part of no-SIM handoff");
         check(!foldSlot("wifi",true,0,Radio.NO_SERVICE,true), "no-SIM handoff cannot swallow Wi-Fi");
         Context staleDefault = new Context();

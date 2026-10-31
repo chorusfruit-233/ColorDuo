@@ -397,6 +397,12 @@ final class ColorOsHooks {
             });
         }
 
+        // OEM hardware caches crop descendants to the cached view's own rectangle.
+        // The leased rows intentionally allow enlarged glyphs beyond that rectangle.
+        count += hook(module, Refl.method(Refl.cls(
+                "com.oplusos.systemui.common.rendercache.RenderBooster",loader),
+                "setLayerType",View.class,boolean.class),ColorOsHooks::writeBoosterLayer);
+
         // Both seamless implementations redraw a different view tree during expansion.
         // Register at binding/reset time, before the first measure and animation frame.
         for (String name : new String[] {"StatusBarFakeFrame", "SystemIconFakeFrame"}) {
@@ -606,6 +612,12 @@ final class ColorOsHooks {
             wifiFlow = flow;
             return flow;
         });
+    }
+
+    private static Object writeBoosterLayer(XposedInterface.Chain chain) throws Throwable {
+        boolean requested=(Boolean)chain.getArg(1);
+        boolean retained=ColorOsSizing.retainBoosterLayer((View)chain.getArg(0),requested);
+        return retained==requested?chain.proceed():chain.proceed(new Object[]{chain.getArg(0),retained});
     }
 
     private static Object drawMirror(XposedInterface.Chain chain) throws Throwable {
@@ -1247,10 +1259,13 @@ final class ColorOsHooks {
                 iconContainer = resolved instanceof ViewGroup ? (ViewGroup) resolved : null;
             }
             Set<String> wanted = new HashSet<>();
+            // HD has its own slot, which may not exist until the shade subscribes to IMS.
+            boolean noticeVisible = extra != null && extra.hasVisibleRadioNotice();
+            if (DuoPolicy.foldSlot("volte", appearance.foldsMobile(), state.sims,
+                    state.mobileService, noticeVisible)) wanted.add("volte");
             if (iconContainer != null) for (int i = 0; i < iconContainer.getChildCount(); i++) {
                 Object slot = Refl.callByName(iconContainer.getChildAt(i), "getSlot");
                 if (!(slot instanceof String)) continue;
-                boolean noticeVisible = extra != null && extra.hasVisibleRadioNotice();
                 if (DuoPolicy.foldSlot((String) slot, appearance.foldsMobile(), state.sims,
                         state.mobileService, noticeVisible)) wanted.add((String) slot);
                 if (slot.equals("wifi") && appearance.ownsWifi() && state.wifiLevel >= 0) wanted.add((String) slot);
