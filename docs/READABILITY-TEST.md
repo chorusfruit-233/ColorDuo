@@ -2,6 +2,8 @@
 
 本包为 **0.3.6 / 10026**，使用 ColorDuo 正式签名，可覆盖 0.3.5 并保留配置。它在 `test/readability` 分支提供测试，不发布为 Latest，也不向模块仓同步。
 
+[下载已核验的签名测试包](https://github.com/chorusfruit-233/ColorDuo/actions/runs/41222438458/artifacts/13050317307) · [构建记录](https://github.com/chorusfruit-233/ColorDuo/actions/runs/41222438458)。APK 对应提交 `8c38d8a`；12 组回归检查、12 项设置测试及签名校验已通过。
+
 ## 安装与操作
 
 1. 安装 APK 后重启一次 SystemUI 或手机，确保加载新的尺寸测量逻辑。
