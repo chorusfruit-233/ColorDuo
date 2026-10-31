@@ -1,8 +1,8 @@
-# 0.3.11 HD 开关与控制中心高度修正
+# 0.3.11 下拉显示检查
 
-本包为 **0.3.11 / 10031**，使用正式签名，可覆盖 0.3.5–0.3.10 并保留配置。
+**0.3.11 / 10031 正式版**沿用已验证的签名 APK，可覆盖升级并保留配置。
 
-[下载签名测试包](https://github.com/chorusfruit-233/ColorDuo/actions/runs/41237026481/artifacts/13056192947)（解压后安装 `ColorDuo-0.3.11.apk`）。[构建及检查记录](https://github.com/chorusfruit-233/ColorDuo/actions/runs/41237026481)。
+[下载正式版 APK](https://github.com/chorusfruit-233/ColorDuo/releases/download/v0.3.11/ColorDuo-0.3.11.apk)。[构建及检查记录](https://github.com/chorusfruit-233/ColorDuo/actions/runs/41237026481)。
 
 “网络类型”设置新增“隐藏 HD 图标”：开启隐藏系统 HD，关闭交还系统，默认关闭。此开关独立于网络类型的位置和 Wi-Fi 隐藏设置，不再在模块内绘制 HD 标签。
 
