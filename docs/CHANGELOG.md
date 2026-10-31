@@ -13,6 +13,8 @@
 
 正式签名，可覆盖安装并保留配置。升级后重启 SystemUI 或手机。控制中心过渡阶段的裁切修正仍待实机确认。
 
+已发布：[源码仓库](https://github.com/chorusfruit-233/ColorDuo/releases/tag/v0.3.11) · [Xposed 模块仓](https://github.com/Xposed-Modules-Repo/io.github.chorusfruit_233.colorduo/releases/tag/10031-0.3.11)。
+
 ## 0.3.10
 
 - 将真实 HD 状态并入网络类型，例如 `5G HD`；双卡区分 HD1、HD2 和 HD1+2，读取不完整时保留原生提示。
