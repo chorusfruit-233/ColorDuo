@@ -142,7 +142,7 @@ final class ColorOsHooks {
         for (Map.Entry<Integer, Mobile> entry : MOBILES.entrySet()) {
             Mobile m = entry.getValue();
             mobiles.put(entry.getKey(), new Object[] {m.icon, m.type, m.cellularIcon,
-                    m.cellularType, m.iconGroup, m.inService, m.renderedType, m.ims});
+                    m.cellularType, m.iconGroup, m.inService, m.renderedType});
         }
         saved.put("mobiles", mobiles);
         List<Object[]> meters = new ArrayList<>();
@@ -229,7 +229,6 @@ final class ColorOsHooks {
             Mobile m = new Mobile();
             m.icon = v[0]; m.type = v[1]; m.cellularIcon = v[2]; m.cellularType = v[3];
             m.iconGroup = v[4]; m.inService = v[5]; m.renderedType = (String) v[6];
-            m.ims = v.length > 7 ? v[7] : null;
             MOBILES.put(entry.getKey(), m);
         }
         Context oldContext = (Context) saved.get("context");
@@ -377,6 +376,12 @@ final class ColorOsHooks {
         count += hook(module, Refl.method(View.class, "setMinimumHeight", int.class), chain -> {
             int requested=(Integer)chain.getArg(0);
             int retained=ColorOsSizing.retainMinimumHeight((View)chain.getThisObject(),requested);
+            return retained==requested?chain.proceed():chain.proceed(new Object[]{retained});
+        });
+        count += hook(module, Refl.method(Refl.cls("androidx.constraintlayout.widget.ConstraintLayout",loader),
+                "setMinHeight",int.class), chain -> {
+            int requested=(Integer)chain.getArg(0);
+            int retained=ColorOsSizing.retainWidgetMinimumHeight((View)chain.getThisObject(),requested);
             return retained==requested?chain.proceed():chain.proceed(new Object[]{retained});
         });
         count += hook(module, Refl.method(View.class, "setClipBounds", android.graphics.Rect.class), chain -> {
@@ -542,8 +547,6 @@ final class ColorOsHooks {
                     if (wrapper) mobile.renderedType = null;
                     // Kotlin/R8 constructor parameter order differs across firmware.
                     for (Object interactor : chain.getArgs()) {
-                        Object ims=ColorOsPolicy.nativeMember(interactor,"oplusIMSModel","getOplusIMSModel");
-                        if(ims!=null) mobile.ims=ims;
                         Object group = ColorOsPolicy.nativeMember(interactor,
                                 "networkTypeIconGroup", "getNetworkTypeIconGroup");
                         if (group != null) {
@@ -860,7 +863,6 @@ final class ColorOsHooks {
         volatile Object cellularType;
         volatile Object iconGroup;
         volatile Object inService;
-        volatile Object ims;
         /** null: no binder observation yet; empty: native binder explicitly cleared it. */
         volatile String renderedType;
 
@@ -894,8 +896,6 @@ final class ColorOsHooks {
         ImageView.ScaleType nativeScaleType;
         int nativeDepth;
         boolean active;
-        boolean hdKnown;
-        String hdBadge="";
         boolean failed;
         boolean logged;
         boolean moduleWriting;
@@ -1178,8 +1178,6 @@ final class ColorOsHooks {
             state.slotLevels = TrioState.sSlotLevels.clone();
             state.mobileLevel = -1;
             state.mobileType = "";
-            hdKnown=false;hdBadge="";
-            Boolean[] hdStates=new Boolean[2];int hdMask=0;
             ColorOsRadio.Sample radio = RADIO_SAMPLER.sample(context, now);
             ColorOsNetworkType.sync(context, radio.subscriptions);
             state.dataSlot = radio.dataSlot;
@@ -1199,11 +1197,7 @@ final class ColorOsHooks {
                     int id = subscription.getSubscriptionId();
                     int slot = subscription.getSimSlotIndex();
                     if (slot < 0 || slot >= state.slotLevels.length) continue;
-                    hdMask|=1<<slot;
                     Mobile mobile = MOBILES.get(id);
-                    hdStates[slot]=radio.services[slot]==DuoPolicy.Radio.AVAILABLE
-                            ?(mobile==null?null:ColorOsPolicy.hdState(value(mobile.ims)))
-                            :radio.services[slot]==DuoPolicy.Radio.UNKNOWN?null:Boolean.FALSE;
                     Object signal = mobile == null ? null : mobile.signal();
                     if (signal != null && signal.getClass().getName().endsWith("$Cellular")) {
                         boolean inService = bool(Refl.get(Refl.field(signal.getClass(), "isInService"), signal), false);
@@ -1234,11 +1228,6 @@ final class ColorOsHooks {
                 state.mobileLevel = state.mobileService == DuoPolicy.Radio.REGISTERING ? -1 : 0;
                 state.mobileType = "";
             }
-            hdKnown=ColorOsPolicy.hdKnown(hdMask,hdStates) && state.mobileService==DuoPolicy.Radio.AVAILABLE;
-            if(hdKnown) {
-                hdBadge=ColorOsPolicy.hdBadge(hdMask,hdStates);
-                state.mobileType=ColorOsPolicy.withHd(state.mobileType,hdBadge);
-            }
             TrioState.setMobileType(state.mobileType);
             noteMobile(radio);
         }
@@ -1248,7 +1237,7 @@ final class ColorOsHooks {
                 String note = "ColorOS mobile: models=" + MOBILES.size() + " dataSlot=" + TrioState.sDataSlot
                         + " levels=" + java.util.Arrays.toString(state.slotLevels) + " type=" + state.mobileType
                         + " service=" + state.mobileService + " reported=" + radio.reportedRadio
-                        + " primarySlot=" + state.dataSlot + " hdKnown=" + hdKnown + " hdBadge=" + hdBadge
+                        + " primarySlot=" + state.dataSlot
                         + " subscriptions=" + (radio.subscriptions == null ? -1 : radio.subscriptions.size());
                 if (!note.equals(lastMobileNote)) {
                     lastMobileNote = note;
@@ -1290,10 +1279,9 @@ final class ColorOsHooks {
                 iconContainer = resolved instanceof ViewGroup ? (ViewGroup) resolved : null;
             }
             Set<String> wanted = new HashSet<>();
-            // The module owns HD only when the network-type component represents every
-            // active line's IMS state. Unknown state must leave the native indicator intact.
+            // Register before an HD child exists, so both shade hosts inherit the choice.
             boolean noticeVisible = extra != null && extra.hasVisibleRadioNotice();
-            if (hdKnown && appearance.ownsType()) wanted.add("volte");
+            if (TrioConfig.get().hideHd) wanted.add("volte");
             if (iconContainer != null) for (int i = 0; i < iconContainer.getChildCount(); i++) {
                 Object slot = Refl.callByName(iconContainer.getChildAt(i), "getSlot");
                 if (!(slot instanceof String)) continue;

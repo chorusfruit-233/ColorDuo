@@ -63,6 +63,7 @@ public final class Prefs {
 
     // ------------------------------------------------------------------ keys
     public static final String KEY_ENABLED = "enabled";
+    public static final String KEY_HIDE_HD = "hide_hd";
     /**
      * Overall size of the trio glyph, as a percentage of the size the host box
      * already implies.
@@ -1238,6 +1239,7 @@ public final class Prefs {
 
     // -------------------------------------------------------------- defaults
     public static final boolean DEF_ENABLED = true;
+    public static final boolean DEF_HIDE_HD = false;
     public static final boolean DEF_SHOW_WIFI = true;
     public static final boolean DEF_SHOW_MOBILE = true;
     public static final boolean DEF_SHOW_VALUE = true;

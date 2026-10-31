@@ -127,6 +127,17 @@ class LayoutControlsTest {
         assertEquals(listOf(Prefs.PART_SIM_PAIR), next.ringZones.flatMap { it.toList() }.filter { Prefs.isSignalRow(it) })
     }
 
+    @Test fun hdVisibilityHasOneIndependentSwitchEvenWhenNetworkTypeIsOff() {
+        for (style in listOf(Prefs.STYLE_RING, Prefs.STYLE_CAPSULE)) {
+            val s = settings(style).apply { mobileTypeMode = Prefs.MOBILE_TYPE_OFF }
+            assertEquals(1, contentControlsFor(TrioSettingsPart.Type, s)
+                .count { it == ContentControl.HideHd })
+            s.hideHd = true
+            assertEquals(1, contentControlsFor(TrioSettingsPart.Type, s)
+                .count { it == ContentControl.HideHd })
+        }
+    }
+
     @Test fun boltHasOneMenuWithHiddenNativeAndTheActualStylePositions() {
         val ring = settings()
         assertEquals(listOf(ContentControl.Bolt), contentControlsFor(TrioSettingsPart.Bolt, ring))

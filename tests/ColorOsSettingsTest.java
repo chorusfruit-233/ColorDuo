@@ -9,6 +9,7 @@ import java.util.Arrays;
 /** Executes real settings transport, ownership and rendering with the existing desktop shims. */
 public final class ColorOsSettingsTest {
     public static void main(String[] args) {
+        hdVisibilitySettings();
         adjustableGeometry();
         signalIconScaleSettings();
         ellipticalSides();
@@ -427,4 +428,30 @@ public final class ColorOsSettingsTest {
         old.putInt(Prefs.KEY_SIGNAL_ICON_SCALE,999);
         check(TrioSettings.fromBundle(old).signalIconScale==200,"oversized icon scales clamp safely");
     }
+    private static void hdVisibilitySettings() {
+        TrioSettings system=TrioSettings.defaults();
+        check(!system.hideHd,"HD defaults to the system, including old installations without the key");
+        TrioSettings hidden=system.copy();hidden.hideHd=true;
+        check(hidden.copy().hideHd && !hidden.equals(system),"HD choice survives snapshots and change detection");
+        check(TrioSettings.fromBundle(hidden.toBundle()).hideHd,"HD choice survives full hot reload");
+        check(!TrioSettings.fromBundle(new Bundle()).hideHd,"empty framework settings retain the system HD icon");
+        TrioSettings live=system.copy();
+        check(live.applyKeyFrom(hidden,Prefs.KEY_HIDE_HD) && live.hideHd,"HD hide applies as a live single-key update");
+        check(live.applyKeyFrom(system,Prefs.KEY_HIDE_HD) && !live.hideHd,"HD handoff applies without restarting SystemUI");
+        check(live.equals(system),"toggling HD leaves network type and all other preferences unchanged");
+        android.content.SharedPreferences stored=(android.content.SharedPreferences)java.lang.reflect.Proxy.newProxyInstance(
+                android.content.SharedPreferences.class.getClassLoader(),
+                new Class<?>[]{android.content.SharedPreferences.class},(proxy,method,args)->switch(method.getName()) {
+                    case "getBoolean" -> Prefs.KEY_HIDE_HD.equals(args[0])?true:args[1];
+                    case "getInt", "getString" -> args[1];
+                    case "contains" -> Prefs.KEY_HIDE_HD.equals(args[0]);
+                    default -> throw new UnsupportedOperationException(method.getName());
+                });
+        for(int style:new int[]{Prefs.STYLE_RING,Prefs.STYLE_CAPSULE}) {
+            check(TrioSettings.from(stored,1f,style).hideHd,"both styles read the same saved HD switch");
+            check(Prefs.styledKey(Prefs.KEY_HIDE_HD,style).equals(Prefs.KEY_HIDE_HD),"HD choice is global across styles");
+            check(hidden.withComponentsFrom(system,style).hideHd,"loading another style's components keeps the global HD choice");
+        }
+    }
+
 }

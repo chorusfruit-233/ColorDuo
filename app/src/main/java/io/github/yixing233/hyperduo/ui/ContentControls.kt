@@ -93,6 +93,7 @@ internal enum class ContentControl(val owner: TrioSettingsPart) {
     Type(TrioSettingsPart.Type),
     /** Drops the label while the arcs are on; see Prefs.KEY_TYPE_HIDE_ON_WIFI. */
     TypeHideOnWifi(TrioSettingsPart.Type),
+    HideHd(TrioSettingsPart.Type),
     // --- readouts and fixed pieces --------------------------------------------
     Power(TrioSettingsPart.Readouts),
     Temperature(TrioSettingsPart.Readouts),
@@ -260,6 +261,8 @@ internal fun ContentControlRow(
             R.string.type_hide_on_wifi_summary, master) { value ->
                 update { it.setTypeHideOnWifi(value) }
             }
+        ContentControl.HideHd -> ContentToggle(settings.hideHd, R.string.hide_hd_title,
+            R.string.hide_hd_summary, master) { value -> update { it.setHideHd(value) } }
         ContentControl.Power -> ContentToggle(settings.perfPower, R.string.perf_power_title,
             null, master) { value -> update { it.setPerfPower(value) } }
         ContentControl.Temperature -> ContentToggle(settings.perfTemp, R.string.perf_temp_title,

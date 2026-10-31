@@ -70,7 +70,9 @@ final class ColorOsSizing {
         ClipState clip=CLIPS.get(view);
         return (height==null?"allocation=native":"nativeLpH="+height.nativeHeight
                 +" nativeMinH="+height.nativeMinimum+" allocatedH="+height.writtenHeight
-                +" allocatedMinH="+height.writtenMinimum)
+                +" allocatedMinH="+height.writtenMinimum
+                +" nativeWidgetMinH="+height.nativeWidgetMinimum
+                +" allocatedWidgetMinH="+height.writtenWidgetMinimum)
                 +(clip==null?"":" nativeClip="+clip.nativeClip+" nativeClipH="+clip.nativeClipHeight
                 +" overflowLease="+clip.owners.containsValue(Boolean.TRUE));
     }
@@ -83,8 +85,9 @@ final class ColorOsSizing {
 
     private static final class HeightState {
         int nativeHeight,nativeMinimum,nativeMeasured,writtenHeight,writtenMinimum;
+        int nativeWidgetMinimum,writtenWidgetMinimum;
         boolean writing;
-        final java.lang.reflect.Method widgetMinimum;
+        final java.lang.reflect.Method widgetMinimum,widgetMinimumSetter;
         final boolean exactWrap;
         final Map<ColorOsSizing,Integer> owners=new WeakHashMap<>();
         HeightState(ViewGroup view) {
@@ -95,23 +98,29 @@ final class ColorOsSizing {
             try { getter=view.getClass().getMethod("getMinHeight");getter.setAccessible(true); }
             catch(ReflectiveOperationException | RuntimeException ignored) { }
             widgetMinimum=getter;
+            java.lang.reflect.Method setter=null;
+            if(getter!=null) try {
+                setter=view.getClass().getMethod("setMinHeight",int.class);setter.setAccessible(true);
+            } catch(ReflectiveOperationException | RuntimeException ignored) { }
+            widgetMinimumSetter=setter;
+            nativeWidgetMinimum=writtenWidgetMinimum=readWidgetMinimum(view);
             boolean constrained=getter!=null;
             for(Class<?> type=view.getClass();type!=null && !constrained;type=type.getSuperclass())
                 constrained="androidx.constraintlayout.widget.ConstraintLayout".equals(type.getName());
             exactWrap=constrained;
         }
-        int widgetMinimum(View view) {
+        int readWidgetMinimum(View view) {
             if(widgetMinimum==null) return 0;
             try { return ((Number)widgetMinimum.invoke(view)).intValue(); }
             catch(ReflectiveOperationException | RuntimeException ignored) { return 0; }
         }
-        int heightFor(View view,int minimum) {
+        int heightFor(int minimum) {
             if(owners.isEmpty()) return nativeHeight;
             if(nativeHeight>0) return Math.max(nativeHeight,minimum);
             // ConstraintLayout's own minHeight is distinct from View.minimumHeight.
-            // Its wrap-content row with 0dp children needs an explicit allocated height.
+            // Keep an explicit height for parents which do honor LayoutParams.
             if(nativeHeight==ViewGroup.LayoutParams.WRAP_CONTENT && exactWrap)
-                return Math.max(minimum,Math.max(nativeMinimum,widgetMinimum(view)));
+                return Math.max(minimum,Math.max(nativeMinimum,nativeWidgetMinimum));
             return nativeHeight;
         }
         void readNative(ViewGroup view) {
@@ -120,17 +129,28 @@ final class ColorOsSizing {
                 if(nativeHeight>0) nativeMeasured=nativeHeight;
             }
             if(view.getMinimumHeight()!=writtenMinimum) nativeMinimum=view.getMinimumHeight();
+            int widget=readWidgetMinimum(view);
+            if(widget!=writtenWidgetMinimum) nativeWidgetMinimum=widget;
         }
-        int floor(View view) { return Math.max(widgetMinimum(view),Math.max(nativeMinimum,nativeHeight>0?nativeHeight:exactWrap?0:nativeMeasured)); }
+        int floor() { return Math.max(nativeWidgetMinimum,Math.max(nativeMinimum,nativeHeight>0?nativeHeight:exactWrap?0:nativeMeasured)); }
         void apply(ViewGroup view) {
             int required=nativeMinimum;
             for(int value:owners.values()) required=Math.max(required,value);
             writtenMinimum=required;
             // Preserve MATCH_PARENT and ConstraintLayout's 0dp matching semantics.
-            writtenHeight=heightFor(view,required);
+            writtenHeight=heightFor(required);
+            int widgetRequired=owners.isEmpty()?nativeWidgetMinimum:Math.max(nativeWidgetMinimum,required);
             writing=true;
             try {
                 if(view.getMinimumHeight()!=writtenMinimum) view.setMinimumHeight(writtenMinimum);
+                // OplusQuickStatusBarHeader measures this row directly with AT_MOST;
+                // that bypasses LayoutParams.height. Its 0dp children depend on the
+                // ConstraintLayout solver minimum, not View.minimumHeight.
+                if(widgetMinimumSetter!=null && readWidgetMinimum(view)!=widgetRequired) {
+                    try { widgetMinimumSetter.invoke(view,widgetRequired); }
+                    catch(ReflectiveOperationException | RuntimeException ignored) { }
+                }
+                writtenWidgetMinimum=readWidgetMinimum(view);
                 ViewGroup.LayoutParams params=view.getLayoutParams();
                 if(params.height!=writtenHeight) { params.height=writtenHeight;view.setLayoutParams(params); }
             } finally { writing=false; }
@@ -285,9 +305,9 @@ final class ColorOsSizing {
             state.nativeHeight=requested.height;
             if(state.nativeHeight>0) state.nativeMeasured=state.nativeHeight;
         }
-        int minimum=Math.max(state.nativeMinimum,state.widgetMinimum(view));
+        int minimum=Math.max(state.nativeMinimum,state.nativeWidgetMinimum);
         for(int value:state.owners.values()) minimum=Math.max(minimum,value);
-        state.writtenHeight=state.heightFor(view,minimum);
+        state.writtenHeight=state.heightFor(minimum);
         requested.height=state.writtenHeight;
         return requested;
     }
@@ -298,6 +318,15 @@ final class ColorOsSizing {
         if(requested!=state.writtenMinimum) state.nativeMinimum=requested;
         for(int value:state.owners.values()) requested=Math.max(requested,value);
         state.writtenMinimum=requested;
+        return requested;
+    }
+
+    static int retainWidgetMinimumHeight(View view,int requested) {
+        HeightState state=HEIGHTS.get(view);
+        if(state==null || state.writing || state.owners.isEmpty()) return requested;
+        if(requested!=state.writtenWidgetMinimum) state.nativeWidgetMinimum=requested;
+        for(int value:state.owners.values()) requested=Math.max(requested,value);
+        state.writtenWidgetMinimum=requested;
         return requested;
     }
 
@@ -325,7 +354,7 @@ final class ColorOsSizing {
         HeightState state=HEIGHTS.get(view);
         if(state==null) return view.getHeight();
         if(state.nativeHeight>0) return state.nativeHeight;
-        int minimum=Math.max(state.nativeMinimum,state.widgetMinimum(view));
+        int minimum=Math.max(state.nativeMinimum,state.nativeWidgetMinimum);
         return state.exactWrap && minimum>0?minimum:Math.max(state.nativeMeasured,minimum);
     }
 
@@ -334,7 +363,7 @@ final class ColorOsSizing {
         HeightState state=HEIGHTS.get(view);
         if(state==null) { state=new HeightState(view);HEIGHTS.put(view,state); }
         state.readNative(view);
-        int ownRequired=Math.max(required,state.floor(view));
+        int ownRequired=Math.max(required,state.floor());
         state.owners.put(this,ownRequired);heights.add(view);state.apply(view);
         return ownRequired;
     }

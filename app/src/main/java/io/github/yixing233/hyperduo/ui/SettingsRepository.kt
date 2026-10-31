@@ -69,6 +69,7 @@ class SettingsRepository(context: Context) {
     // ------------------------------------------------------------- appearance
 
     fun setEnabled(value: Boolean) = writeBoolean(Prefs.KEY_ENABLED, value)
+    fun setHideHd(value: Boolean) = writeBoolean(Prefs.KEY_HIDE_HD, value)
     fun setShowWifi(value: Boolean) = writeStyled(style(), Prefs.KEY_SHOW_WIFI) { e, k ->
         e.putBoolean(k, value) }
     fun setShowMobile(value: Boolean) = writeStyled(style(), Prefs.KEY_SHOW_MOBILE) { e, k ->
@@ -433,6 +434,7 @@ class SettingsRepository(context: Context) {
         val style = Prefs.normalizeTrioStyle(snapshot.trioStyle)
         push { prefs ->
             prefs.putBoolean(Prefs.KEY_ENABLED, snapshot.enabled)
+            prefs.putBoolean(Prefs.KEY_HIDE_HD, snapshot.hideHd)
             prefs.putBoolean(Prefs.styledKey(Prefs.KEY_SHOW_WIFI, style), snapshot.showWifi)
             prefs.putBoolean(Prefs.styledKey(Prefs.KEY_SHOW_MOBILE, style), snapshot.showMobile)
             prefs.putBoolean(Prefs.styledKey(Prefs.KEY_SHOW_VALUE, style), snapshot.showValue)

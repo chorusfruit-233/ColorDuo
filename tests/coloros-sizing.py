@@ -80,6 +80,11 @@ public class ViewGroup extends View {
 public class ConstraintLayout extends android.view.ViewGroup {
     public int widgetMinimumHeight=20;
     public int getMinHeight(){return widgetMinimumHeight;}
+    public static java.util.function.BiFunction<android.view.View,Integer,Integer> widgetMinimumFilter=(view,value)->value;
+    public void setMinHeight(int value){widgetMinimumHeight=widgetMinimumFilter.apply(this,value);}
+    // The header manually calls measure(AT_MOST), so LayoutParams.height and
+    // View.minimumHeight cannot replace ConstraintLayout's own solver minimum.
+    public int measureHeaderRow(int cap){return Math.min(cap,Math.max(20,widgetMinimumHeight));}
 }""",
     "io/github/yixing233/hyperduo/ColorOsSizingTest.java": """package io.github.yixing233.hyperduo;
 import android.view.View;
@@ -99,6 +104,7 @@ public final class ColorOsSizingTest {
     public static void main(String[] args){
         View.layoutFilter=ColorOsSizing::retainLayoutParams;
         View.minimumFilter=ColorOsSizing::retainMinimumHeight;
+        androidx.constraintlayout.widget.ConstraintLayout.widgetMinimumFilter=ColorOsSizing::retainWidgetMinimumHeight;
         View.clipFilter=ColorOsSizing::retainClipBounds;
         for(float density:new float[]{1.5f,2f,3f,4f})
         for(ViewGroup surface:new ViewGroup[]{new PhoneStatusBarView(),new KeyguardStatusBarView(),new QuickStatusBarHeader()}) {
@@ -159,6 +165,8 @@ public final class ColorOsSizingTest {
         check(!enlarged.limited && enlarged.height==30,"the old 26dp QS header does not cap a 150% glyph");
         check(fixedRow.minimumHeight>=31,"constrained rows reserve the glyph plus its native margin");
         check(fixedRow.params.height>=31,"ConstraintLayout wrap-content rows get explicit height rather than an ineffective View minimum");
+        check(fixedRow.measureHeaderRow(fixedRow.params.height)>=31,
+              "a manual AT_MOST header measurement must honor the glyph's height in the constraint solver");
         check(battery.params.height==0 && battery.minimumHeight>=31,"battery matching constraints are preserved");
         check(fixed.params.height>=41,"QS header grows with padding and actual glyph occupation");
         check(fixed.getClipBounds().bottom>=41,"full-height cached header clips follow the new height");
@@ -167,6 +175,8 @@ public final class ColorOsSizingTest {
         ViewGroup.LayoutParams reset=new ViewGroup.LayoutParams(-1,26);
         fixed.setLayoutParams(reset);
         check(fixed.params.height>=41,"native layout writes cannot reintroduce the fixed header crop");
+        fixedRow.setMinHeight(20);
+        check(fixedRow.getMinHeight()>=31,"native solver-minimum writes cannot collapse an active glyph");
         fixedRow.setMinimumHeight(20);
         check(fixedRow.minimumHeight>=31,"native minimum-height writes retain the active glyph allocation");
         fixed.setClipBounds(new android.graphics.Rect(0,0,420,26));
@@ -174,21 +184,29 @@ public final class ColorOsSizingTest {
         fixed.setLayoutParams(fixed.getLayoutParams());
         fixedRow.setLayoutParams(fixedRow.getLayoutParams());
         fixedRow.setMinimumHeight(fixedRow.getMinimumHeight());
+        fixedRow.setMinHeight(fixedRow.getMinHeight());
         fixed.setClipBounds(fixed.getClipBounds());
         ViewGroup otherBattery=child(fixedRow);otherBattery.height=20;otherBattery.params.height=0;
         View otherImage=icon(otherBattery,1);
         ColorOsSizing large=new ColorOsSizing();s.glyphScale=300;
         large.measure(otherBattery,otherImage,TrioAppearance.of(s));
         check(fixed.params.height>=70,"shared headers reserve the largest active glyph");
+        check(fixedRow.getMinHeight()>=60,"shared constraint solvers reserve the largest owner's glyph");
+        s.glyphScale=150;large.measure(otherBattery,otherImage,TrioAppearance.of(s));
+        check(fixedRow.getMinHeight()>=31 && fixedRow.getMinHeight()<60,"shrinking a glyph does not treat its owned minimum as native");
+        s.glyphScale=300;large.measure(otherBattery,otherImage,TrioAppearance.of(s));
         large.release();
+        check(fixedRow.getMinHeight()==31,"releasing the largest owner restores the remaining solver allocation");
         check(fixed.params.height>=41 && fixed.params.height<70,"releasing the larger owner shrinks to the remaining request");
         fixed.params.height=28;fixedRow.minimumHeight=22;
+        fixedRow.setMinHeight(23);
         s.glyphScale=150;small.measure(battery,batteryImage,TrioAppearance.of(s));
         fixed.setClipBounds(new android.graphics.Rect(0,0,420,28));
         check(fixed.getClipBounds().bottom>=41,"configuration changes keep the new full-height native clip expanded");
         small.release();
         check(fixed.params.height==28 && fixedRow.minimumHeight==22,"disable restores the latest native header height and row minimum");
-        check(fixedRow.params.height==-2 && fixedRow.widgetMinimumHeight==20,"native wrap-content and widget-specific minimum remain intact");
+        check(fixedRow.params.height==-2 && fixedRow.widgetMinimumHeight==23,"handoff restores the latest native wrap-content and solver minimum independently");
+        fixedRow.setMinHeight(20);
         check(battery.params.height==0 && battery.minimumHeight==0,"native constrained meter height is restored");
         check(fixed.getClipBounds().bottom==28,"the latest cached native clip is restored after the last owner exits");
         fixed.setClipBounds(new android.graphics.Rect(0,5,420,18));

@@ -380,4 +380,6 @@
     <string name="readability_size_limit">放大时同步增加占位；下拉面板会增高头部，实际大小以可显示区域为界。</string>
     <string name="readability_actual_preview">实际尺寸参考</string>
     <string name="readability_actual_hint">按当前 DPI 绘制的模拟数据；真实状态栏以所在页面的可用空间为准。上方大图用于编辑。</string>
+    <string name="hide_hd_title">隐藏 HD 图标</string>
+    <string name="hide_hd_summary">开启时隐藏系统 HD 图标，关闭时交还系统。</string>
 </resources>

@@ -381,4 +381,6 @@
     <string name="readability_size_limit">Enlarging the icon reserves matching space in the shade header. Visible window bounds still apply.</string>
     <string name="readability_actual_preview">Actual-size reference</string>
     <string name="readability_actual_hint">Simulated readings at the current DPI. Available space on the actual status bar may differ. The large preview above is for editing.</string>
+    <string name="hide_hd_title">Hide HD icon</string>
+    <string name="hide_hd_summary">Hide the system HD icon when enabled; return control to the system when disabled.</string>
 </resources>
