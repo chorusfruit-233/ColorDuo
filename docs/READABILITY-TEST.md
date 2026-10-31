@@ -2,6 +2,8 @@
 
 本包为 **0.3.8 / 10028**，使用正式签名，可覆盖 0.3.5–0.3.7 并保留配置。安装后重启 SystemUI 或手机。
 
+[下载签名测试包](https://github.com/chorusfruit-233/ColorDuo/actions/runs/41227923737/artifacts/13052697075)（解压后安装 `ColorDuo-0.3.8.apk`）。[构建及检查记录](https://github.com/chorusfruit-233/ColorDuo/actions/runs/41227923737)。
+
 保持上一版出现遮挡时的尺寸，检查：
 
 1. 下拉控制中心，尤其留意动画开始的一瞬间是否仍闪过裁切。
