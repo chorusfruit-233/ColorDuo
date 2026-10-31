@@ -2,6 +2,8 @@
 
 本包为 **0.3.7 / 10027**，使用 ColorDuo 正式签名，可覆盖 0.3.5、0.3.6 并保留当前配置。它在 `test/readability` 分支测试，不发布为 Latest，也不向模块仓同步。
 
+[下载签名测试包](https://github.com/chorusfruit-233/ColorDuo/actions/runs/41225839499/artifacts/13052046487)（解压后安装 `ColorDuo-0.3.7.apk`）。[构建记录](https://github.com/chorusfruit-233/ColorDuo/actions/runs/41225839499)已通过回归、设置测试及签名检查。
+
 ## 操作
 
 1. 安装 APK 后重启一次 SystemUI 或手机。
