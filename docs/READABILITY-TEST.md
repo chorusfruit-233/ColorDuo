@@ -2,6 +2,8 @@
 
 本包为 **0.3.10 / 10030**，使用正式签名，可覆盖 0.3.5–0.3.9 并保留配置。
 
+[下载签名诊断包](https://github.com/chorusfruit-233/ColorDuo/actions/runs/41233891226/artifacts/13054693437)（解压后安装 `ColorDuo-0.3.10.apk`）。[构建及检查记录](https://github.com/chorusfruit-233/ColorDuo/actions/runs/41233891226)。
+
 HD 读取各卡原生 IMS 状态，显示在现有网络类型旁，例如 `5G HD`；双卡显示 HD1、HD2 或 HD1+2。它跟随网络类型的环内、环外和 Wi-Fi 隐藏设置；关闭网络类型或状态读取不完整时归还原生 HD。
 
 **控制中心中途的上下裁切尚未修复。** 本包采集真机动画中间态，下一步需要这台手机的日志：
