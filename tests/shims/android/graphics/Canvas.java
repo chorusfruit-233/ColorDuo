@@ -36,6 +36,15 @@ public class Canvas {
                 RenderingHints.VALUE_STROKE_PURE);
     }
 
+    public boolean getClipBounds(Rect out) {
+        java.awt.Rectangle clip=g.getClipBounds();
+        if(clip==null) {out.set(-100000,-100000,100000,100000);return true;}
+        out.set(clip.x,clip.y,clip.x+clip.width,clip.y+clip.height);
+        return !clip.isEmpty();
+    }
+
+    public Matrix getMatrix() { return new Matrix(g.getTransform()); }
+
     public Graphics2D graphics() {
         return g;
     }

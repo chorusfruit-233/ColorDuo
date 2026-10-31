@@ -102,17 +102,29 @@ public final class ColorOsPolicyTest {
         check(legacySlots.size() == 3, "pre-existing list entries are not duplicated");
         check(legacyOwner.sync(legacySlots, Set.of()), "list-backed ownership releases only our additions");
         check(legacySlots.equals(java.util.List.of("wifi", "alarm_clock")), "existing native policy survives release");
-        ColorOsPolicy.SlotOwnership hdOwner = new ColorOsPolicy.SlotOwnership();
-        Set<String> shadeSlots = new HashSet<>(Set.of("alarm_clock"));
-        check(hdOwner.sync(shadeSlots, Set.of("volte")), "HD is blocked before the IMS child is created");
-        check(shadeSlots.contains("volte"), "a late shade HD icon immediately inherits the block");
-        check(hdOwner.sync(shadeSlots, Set.of()), "mobile hand-back releases owned HD policy");
-        check(shadeSlots.equals(Set.of("alarm_clock")), "HD release preserves unrelated native policy");
-        shadeSlots.add("volte");
-        check(!hdOwner.sync(shadeSlots, Set.of("volte")), "a pre-existing native HD block is not ours");
-        check(!hdOwner.sync(shadeSlots, Set.of()), "native HD blocks survive module disable");
+        check(ColorOsPolicy.hdState(new Ims(true,false,true,false))==Boolean.TRUE,"registered VoLTE contributes HD");
+        check(ColorOsPolicy.hdState(new Ims(true,false,false,true))==Boolean.TRUE,"registered VoNR contributes HD");
+        check(ColorOsPolicy.hdState(new Ims(true,false,false,false))==Boolean.FALSE,"explicit IMS loss removes HD");
+        check(ColorOsPolicy.hdState(new Ims(false,false,false,false))==null,"cold IMS default cannot suppress native HD");
+        check(ColorOsPolicy.hdState(new Ims(true,true,true,false))==null,"removed or forbidden SIM cannot leave stale HD");
+        check(ColorOsPolicy.hdState(null)==null && ColorOsPolicy.hdState(new Object())==null,"unknown IMS keeps native fallback");
+        Boolean[] hd={true,null};
+        check(ColorOsPolicy.hdKnown(1,hd) && ColorOsPolicy.hdBadge(1,hd).equals("HD"),"single SIM HD does not depend on an absent second slot");
+        check(!ColorOsPolicy.hdKnown(3,hd) && ColorOsPolicy.hdBadge(3,hd).isEmpty(),"partial dual-SIM IMS cannot own the shared native HD slot");
+        hd[1]=false;
+        check(ColorOsPolicy.hdBadge(3,hd).equals("HD1"),"dual-SIM HD identifies the first physical line");
+        hd[0]=false;hd[1]=true;
+        check(ColorOsPolicy.hdBadge(3,hd).equals("HD2"),"data-SIM changes do not rename HD's physical line");
+        hd[0]=true;
+        check(ColorOsPolicy.hdBadge(3,hd).equals("HD1+2"),"both HD lines remain represented");
+        check(ColorOsPolicy.withHd("5G","HD").equals("5G HD"),"HD appears next to the carrier's network type");
+        check(ColorOsPolicy.withHd("5GA","").equals("5GA"),"IMS loss preserves the native RAT label");
+        check(ColorOsPolicy.withHd("","HD").equals("HD"),"HD never fabricates an unknown RAT");
+        check(!ColorOsPolicy.hdKnown(0,hd),"no active subscription cannot claim HD ownership");
         System.out.println("ColorOS network models, Wi-Fi resolution, signal normalization and slot restoration passed");
     }
+
+    public record Ims(boolean simInserted,boolean noSim,boolean shouldShowVolte,boolean shouldShowVo5G) { }
 
     private static void equal(int expected, int actual, String message) {
         if (expected != actual) throw new AssertionError(message + ": " + actual + " != " + expected);

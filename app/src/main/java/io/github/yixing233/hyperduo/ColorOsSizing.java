@@ -61,13 +61,18 @@ final class ColorOsSizing {
         return mirror==null || !mirror.attached?0:-mirror.top();
     }
 
+    java.util.List<ViewGroup> mirrorFrames() { return new ArrayList<>(mirrors); }
     static java.util.List<ViewGroup> trackedMirrors() { return new ArrayList<>(MIRRORS.keySet()); }
     static void clearMirrors() { MIRRORS.clear(); }
 
-    /** A hardware layer clips overflow even when ViewGroup.clipChildren is false. */
-    static boolean retainBoosterLayer(View view,boolean requested) {
-        ClipState state=CLIPS.get(view);
-        return requested && (state==null || !state.owners.containsValue(Boolean.TRUE));
+    static String describe(View view) {
+        HeightState height=HEIGHTS.get(view);
+        ClipState clip=CLIPS.get(view);
+        return (height==null?"allocation=native":"nativeLpH="+height.nativeHeight
+                +" nativeMinH="+height.nativeMinimum+" allocatedH="+height.writtenHeight
+                +" allocatedMinH="+height.writtenMinimum)
+                +(clip==null?"":" nativeClip="+clip.nativeClip+" nativeClipH="+clip.nativeClipHeight
+                +" overflowLease="+clip.owners.containsValue(Boolean.TRUE));
     }
 
     private static final class Surface {

@@ -64,7 +64,7 @@ public final class DuoPolicy {
     }
 
     static boolean foldSlot(String slot, boolean owns, int readings, Radio radio, boolean noticeVisible) {
-        if ("mobile".equals(slot) || "stacked_mobile".equals(slot) || "volte".equals(slot)) {
+        if ("mobile".equals(slot) || "stacked_mobile".equals(slot)) {
             return foldMobile(owns, readings, radio, noticeVisible);
         }
         // ColorOS uses separate status slots when no subscriptions are active.

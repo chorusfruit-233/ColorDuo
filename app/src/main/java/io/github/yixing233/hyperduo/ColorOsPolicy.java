@@ -162,6 +162,38 @@ final class ColorOsPolicy {
         return validWifiLevel(level) ? level : -1;
     }
 
+    /** Follow each native per-subscription IMS model, including VoNR's HD voice state. */
+    static Boolean hdState(Object model) {
+        Object inserted=nativeMember(model,"simInserted","getSimInserted");
+        Object noSim=nativeMember(model,"noSim","getNoSim");
+        Object volte=nativeMember(model,"shouldShowVolte","getShouldShowVolte");
+        Object vo5g=nativeMember(model,"shouldShowVo5G","getShouldShowVo5G");
+        if(!Boolean.TRUE.equals(inserted) || Boolean.TRUE.equals(noSim)
+                || !(volte instanceof Boolean) || !(vo5g instanceof Boolean)) return null;
+        return Boolean.TRUE.equals(volte) || Boolean.TRUE.equals(vo5g);
+    }
+
+    static boolean hdKnown(int activeMask,Boolean[] states) {
+        if(activeMask<=0 || (activeMask&~3)!=0 || states==null || states.length<2) return false;
+        for(int slot=0;slot<2;slot++) if((activeMask&(1<<slot))!=0 && states[slot]==null) return false;
+        return true;
+    }
+
+    static String hdBadge(int activeMask,Boolean[] states) {
+        if(!hdKnown(activeMask,states)) return "";
+        boolean first=(activeMask&1)!=0 && Boolean.TRUE.equals(states[0]);
+        boolean second=(activeMask&2)!=0 && Boolean.TRUE.equals(states[1]);
+        if(!first && !second) return "";
+        if(Integer.bitCount(activeMask)==1) return "HD";
+        return first?(second?"HD1+2":"HD1"):"HD2";
+    }
+
+    static String withHd(String networkType,String badge) {
+        String type=networkType==null?"":networkType;
+        if(badge==null || badge.isEmpty()) return type;
+        return type.isEmpty()?badge:type+" "+badge;
+    }
+
     /** Remembers only slots this adapter added; existing block lists belong to their owners. */
     static final class SlotOwnership {
         private final Set<String> added = new HashSet<>();

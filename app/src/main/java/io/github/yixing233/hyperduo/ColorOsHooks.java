@@ -142,7 +142,7 @@ final class ColorOsHooks {
         for (Map.Entry<Integer, Mobile> entry : MOBILES.entrySet()) {
             Mobile m = entry.getValue();
             mobiles.put(entry.getKey(), new Object[] {m.icon, m.type, m.cellularIcon,
-                    m.cellularType, m.iconGroup, m.inService, m.renderedType});
+                    m.cellularType, m.iconGroup, m.inService, m.renderedType, m.ims});
         }
         saved.put("mobiles", mobiles);
         List<Object[]> meters = new ArrayList<>();
@@ -229,6 +229,7 @@ final class ColorOsHooks {
             Mobile m = new Mobile();
             m.icon = v[0]; m.type = v[1]; m.cellularIcon = v[2]; m.cellularType = v[3];
             m.iconGroup = v[4]; m.inService = v[5]; m.renderedType = (String) v[6];
+            m.ims = v.length > 7 ? v[7] : null;
             MOBILES.put(entry.getKey(), m);
         }
         Context oldContext = (Context) saved.get("context");
@@ -397,12 +398,6 @@ final class ColorOsHooks {
             });
         }
 
-        // OEM hardware caches crop descendants to the cached view's own rectangle.
-        // The leased rows intentionally allow enlarged glyphs beyond that rectangle.
-        count += hook(module, Refl.method(Refl.cls(
-                "com.oplusos.systemui.common.rendercache.RenderBooster",loader),
-                "setLayerType",View.class,boolean.class),ColorOsHooks::writeBoosterLayer);
-
         // Both seamless implementations redraw a different view tree during expansion.
         // Register at binding/reset time, before the first measure and animation frame.
         for (String name : new String[] {"StatusBarFakeFrame", "SystemIconFakeFrame"}) {
@@ -547,6 +542,8 @@ final class ColorOsHooks {
                     if (wrapper) mobile.renderedType = null;
                     // Kotlin/R8 constructor parameter order differs across firmware.
                     for (Object interactor : chain.getArgs()) {
+                        Object ims=ColorOsPolicy.nativeMember(interactor,"oplusIMSModel","getOplusIMSModel");
+                        if(ims!=null) mobile.ims=ims;
                         Object group = ColorOsPolicy.nativeMember(interactor,
                                 "networkTypeIconGroup", "getNetworkTypeIconGroup");
                         if (group != null) {
@@ -614,18 +611,17 @@ final class ColorOsHooks {
         });
     }
 
-    private static Object writeBoosterLayer(XposedInterface.Chain chain) throws Throwable {
-        boolean requested=(Boolean)chain.getArg(1);
-        boolean retained=ColorOsSizing.retainBoosterLayer((View)chain.getArg(0),requested);
-        return retained==requested?chain.proceed():chain.proceed(new Object[]{chain.getArg(0),retained});
-    }
-
     private static Object drawMirror(XposedInterface.Chain chain) throws Throwable {
-        float offset=ColorOsSizing.mirrorOffset((ViewGroup)chain.getThisObject());
-        if(offset==0) return chain.proceed();
-        Canvas canvas=(Canvas)chain.getArg(0);
-        int save=canvas.save();canvas.translate(0,offset);
-        try { return chain.proceed(); } finally { canvas.restoreToCount(save); }
+        ViewGroup frame=(ViewGroup)chain.getThisObject();
+        boolean trace=TrioConfig.debugLog();
+        ViewGroup previous=trace?ColorOsDiagnostics.enterMirror(frame):null;
+        try {
+            float offset=ColorOsSizing.mirrorOffset(frame);
+            if(offset==0) return chain.proceed();
+            Canvas canvas=(Canvas)chain.getArg(0);
+            int save=canvas.save();canvas.translate(0,offset);
+            try { return chain.proceed(); } finally { canvas.restoreToCount(save); }
+        } finally { if(trace) ColorOsDiagnostics.leaveMirror(previous); }
     }
 
     private static Object writeDrawable(XposedInterface.Chain chain) throws Throwable {
@@ -789,7 +785,7 @@ final class ColorOsHooks {
         for (WeakReference<Host> reference : new ArrayList<>(HOSTS.values())) {
             Host host = reference.get();
             if (host == null || host.nativeDepth != 0) continue;
-            try { host.apply(); }
+            try { host.apply();host.traceLayout(); }
             catch (Throwable error) { host.fail(error); }
         }
     }
@@ -864,6 +860,7 @@ final class ColorOsHooks {
         volatile Object cellularType;
         volatile Object iconGroup;
         volatile Object inService;
+        volatile Object ims;
         /** null: no binder observation yet; empty: native binder explicitly cleared it. */
         volatile String renderedType;
 
@@ -897,6 +894,8 @@ final class ColorOsHooks {
         ImageView.ScaleType nativeScaleType;
         int nativeDepth;
         boolean active;
+        boolean hdKnown;
+        String hdBadge="";
         boolean failed;
         boolean logged;
         boolean moduleWriting;
@@ -904,6 +903,7 @@ final class ColorOsHooks {
         int ownedHeight;
         float ownedScale;
         final ColorOsSizing sizing = new ColorOsSizing();
+        final ColorOsDiagnostics diagnostics = new ColorOsDiagnostics();
         String lastSizeNote;
         long nextSignalSample;
         String lastWifiNote;
@@ -1042,6 +1042,26 @@ final class ColorOsHooks {
             } finally { moduleWriting=previous; }
         }
 
+        void traceLayout() {
+            if(!TrioConfig.debugLog() || !active || image==null) return;
+            try {
+                diagnostics.layout(meter,image,ownedWidth,ownedHeight,ownedScale,sizing.mirrorFrames(),SystemClock.uptimeMillis(),
+                        note -> TrioHooks.log(TrioHooks.LOG_INFO,note));
+            } catch(Throwable error) {
+                TrioHooks.log(TrioHooks.LOG_WARN,"ColorDuoTrace layout unavailable: "+error);
+            }
+        }
+
+        void traceDraw(Canvas canvas,android.graphics.Rect bounds) {
+            if(!TrioConfig.debugLog()) return;
+            try {
+                diagnostics.draw(meter,image,canvas,bounds,ownedScale,SystemClock.uptimeMillis(),
+                        note -> TrioHooks.log(TrioHooks.LOG_INFO,note));
+            } catch(Throwable error) {
+                TrioHooks.log(TrioHooks.LOG_WARN,"ColorDuoTrace draw unavailable: "+error);
+            }
+        }
+
         void hide(String name, boolean hidden) {
             hide(find(name), hidden);
         }
@@ -1158,6 +1178,8 @@ final class ColorOsHooks {
             state.slotLevels = TrioState.sSlotLevels.clone();
             state.mobileLevel = -1;
             state.mobileType = "";
+            hdKnown=false;hdBadge="";
+            Boolean[] hdStates=new Boolean[2];int hdMask=0;
             ColorOsRadio.Sample radio = RADIO_SAMPLER.sample(context, now);
             ColorOsNetworkType.sync(context, radio.subscriptions);
             state.dataSlot = radio.dataSlot;
@@ -1177,7 +1199,11 @@ final class ColorOsHooks {
                     int id = subscription.getSubscriptionId();
                     int slot = subscription.getSimSlotIndex();
                     if (slot < 0 || slot >= state.slotLevels.length) continue;
+                    hdMask|=1<<slot;
                     Mobile mobile = MOBILES.get(id);
+                    hdStates[slot]=radio.services[slot]==DuoPolicy.Radio.AVAILABLE
+                            ?(mobile==null?null:ColorOsPolicy.hdState(value(mobile.ims)))
+                            :radio.services[slot]==DuoPolicy.Radio.UNKNOWN?null:Boolean.FALSE;
                     Object signal = mobile == null ? null : mobile.signal();
                     if (signal != null && signal.getClass().getName().endsWith("$Cellular")) {
                         boolean inService = bool(Refl.get(Refl.field(signal.getClass(), "isInService"), signal), false);
@@ -1208,6 +1234,11 @@ final class ColorOsHooks {
                 state.mobileLevel = state.mobileService == DuoPolicy.Radio.REGISTERING ? -1 : 0;
                 state.mobileType = "";
             }
+            hdKnown=ColorOsPolicy.hdKnown(hdMask,hdStates) && state.mobileService==DuoPolicy.Radio.AVAILABLE;
+            if(hdKnown) {
+                hdBadge=ColorOsPolicy.hdBadge(hdMask,hdStates);
+                state.mobileType=ColorOsPolicy.withHd(state.mobileType,hdBadge);
+            }
             TrioState.setMobileType(state.mobileType);
             noteMobile(radio);
         }
@@ -1217,7 +1248,7 @@ final class ColorOsHooks {
                 String note = "ColorOS mobile: models=" + MOBILES.size() + " dataSlot=" + TrioState.sDataSlot
                         + " levels=" + java.util.Arrays.toString(state.slotLevels) + " type=" + state.mobileType
                         + " service=" + state.mobileService + " reported=" + radio.reportedRadio
-                        + " primarySlot=" + state.dataSlot
+                        + " primarySlot=" + state.dataSlot + " hdKnown=" + hdKnown + " hdBadge=" + hdBadge
                         + " subscriptions=" + (radio.subscriptions == null ? -1 : radio.subscriptions.size());
                 if (!note.equals(lastMobileNote)) {
                     lastMobileNote = note;
@@ -1259,10 +1290,10 @@ final class ColorOsHooks {
                 iconContainer = resolved instanceof ViewGroup ? (ViewGroup) resolved : null;
             }
             Set<String> wanted = new HashSet<>();
-            // HD has its own slot, which may not exist until the shade subscribes to IMS.
+            // The module owns HD only when the network-type component represents every
+            // active line's IMS state. Unknown state must leave the native indicator intact.
             boolean noticeVisible = extra != null && extra.hasVisibleRadioNotice();
-            if (DuoPolicy.foldSlot("volte", appearance.foldsMobile(), state.sims,
-                    state.mobileService, noticeVisible)) wanted.add("volte");
+            if (hdKnown && appearance.ownsType()) wanted.add("volte");
             if (iconContainer != null) for (int i = 0; i < iconContainer.getChildCount(); i++) {
                 Object slot = Refl.callByName(iconContainer.getChildAt(i), "getSlot");
                 if (!(slot instanceof String)) continue;
@@ -1333,6 +1364,7 @@ final class ColorOsHooks {
 
         @Override public void draw(Canvas canvas) {
             if (!host.active || host.failed || getBounds().isEmpty()) return;
+            host.traceDraw(canvas,getBounds());
             // The shared renderer clears its canvas. A clipped layer confines that clear to the
             // battery drawable, keeping neighbouring SystemUI icons on the parent canvas intact.
             int save = canvas.save();

@@ -20,6 +20,8 @@ public class View implements ViewParent {
     public static final int NO_ID=-1;
     public ViewParent parent;
     public int width,height,y,top,id=NO_ID,paddingTop,paddingBottom,minimumHeight;
+    public int measuredWidth,measuredHeight,paddingLeft,paddingRight,visibility,layer;
+    public float alpha=1,transitionAlpha=1,scaleX=1,scaleY=1;
     public boolean attached=true;
     public ViewGroup.LayoutParams params=new ViewGroup.MarginLayoutParams(-2,-2);
     public android.graphics.Rect clip;
@@ -38,6 +40,13 @@ public class View implements ViewParent {
     public int getWidth(){return width;} public int getHeight(){return height;}
     public int getPaddingTop(){return paddingTop;} public int getPaddingBottom(){return paddingBottom;}
     public boolean isAttachedToWindow(){return attached;}
+    public int getMeasuredWidth(){return measuredWidth;} public int getMeasuredHeight(){return measuredHeight;}
+    public int getPaddingLeft(){return paddingLeft;} public int getPaddingRight(){return paddingRight;}
+    public boolean getClipToOutline(){return false;} public int getLayerType(){return layer;}
+    public int getVisibility(){return visibility;} public boolean isShown(){return visibility==0;}
+    public float getAlpha(){return alpha;} public float getTransitionAlpha(){return transitionAlpha;}
+    public float getScaleX(){return scaleX;} public float getScaleY(){return scaleY;}
+    public float getTranslationX(){return 0;} public boolean isLayoutRequested(){return false;}
     public int getTop(){return top;} public float getTranslationY(){return 0;} public int getScrollY(){return 0;}
     public static class MeasureSpec {
         public static final int UNSPECIFIED=0, EXACTLY=0x40000000, AT_MOST=0x80000000;
@@ -58,7 +67,7 @@ public class ViewGroup extends View {
         public LayoutParams(int width,int height){this.width=width;this.height=height;}
     }
     public static class MarginLayoutParams extends LayoutParams {
-        public int topMargin,bottomMargin;
+        public int leftMargin,topMargin,rightMargin,bottomMargin;
         public MarginLayoutParams(int width,int height){super(width,height);}
     }
     public boolean clipChildren=true,clipPadding=true;
@@ -256,22 +265,6 @@ public final class ColorOsSizingTest {
         check(ColorOsSizing.mirrorOffset(replayFrame)==5,"negative source ink is moved inside the expanded replay frame");
         check(replaySourceBar.params.height==-2 && replaySource.minimumHeight==0,
               "mirror allocation does not resize the real fixed status bar");
-        check(!ColorOsSizing.retainBoosterLayer(replaySource,true),
-              "native hardware caches cannot crop an owned row during the fake-to-real handoff");
-        check(ColorOsSizing.retainBoosterLayer(replaySourceBar,true),
-              "the fixed status-window boundary and unrelated views keep native caching");
-        check(!ColorOsSizing.retainBoosterLayer(replaySource,false),
-              "native hardware cache shutdown is always honored");
-        // Android hardware layers rasterize only their own bounds. The replay source is
-        // 20px high but its centred glyph occupies [-5,25]; clipChildren=false is insufficient.
-        java.awt.image.BufferedImage originalLayer=new java.awt.image.BufferedImage(60,20,java.awt.image.BufferedImage.TYPE_INT_ARGB);
-        java.awt.Graphics2D layerGraphics=originalLayer.createGraphics();
-        layerGraphics.setColor(java.awt.Color.WHITE);layerGraphics.fillRect(10,-5,40,30);layerGraphics.dispose();
-        java.awt.image.BufferedImage cachedReplay=new java.awt.image.BufferedImage(60,30,java.awt.image.BufferedImage.TYPE_INT_ARGB);
-        java.awt.Graphics2D replayGraphics=cachedReplay.createGraphics();
-        replayGraphics.drawImage(originalLayer,0,5,null);replayGraphics.dispose();
-        check((cachedReplay.getRGB(20,0)>>>24)==0 && (cachedReplay.getRGB(20,29)>>>24)==0,
-              "native-sized hardware layers reproduce the persistent top and bottom crop at a held transition height");
         int cached=View.MeasureSpec.makeMeasureSpec(20,View.MeasureSpec.EXACTLY);
         int retained=ColorOsSizing.retainMeasureSpec(replayFrame,cached);
         check(View.MeasureSpec.getSize(retained)==30 && View.MeasureSpec.getMode(retained)==View.MeasureSpec.EXACTLY,
@@ -305,7 +298,6 @@ public final class ColorOsSizingTest {
         check(replayFrame.params.height==20 && replayHolder.minimumHeight==0 && ColorOsSizing.mirrorOffset(replayFrame)==0,
               "disabling restores the real and replay trees together");
         check(ColorOsSizing.retainMeasureSpec(replayFrame,cached)==cached,"released replay measurement is fully native");
-        check(ColorOsSizing.retainBoosterLayer(replaySource,true),"module hand-back immediately restores native cache decisions");
         ColorOsSizing.clearMirrors();
         check(ColorOsSizing.trackedMirrors().isEmpty(),"retirement can remove every tracked replay listener");
         System.out.println("Production size limits and clipping ownership: "+checks+" checks passed");
