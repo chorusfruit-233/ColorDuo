@@ -8,7 +8,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 hooks = (ROOT / 'app/src/main/java/io/github/yixing233/hyperduo/ColorOsHooks.java').read_text()
 names = ['writeDrawable', 'readDrawable', 'writeScaleType', 'writeVisibility',
-         'writeLayoutParams', 'readLayoutParams', 'nativeUpdate']
+         'writeLayoutParams', 'readLayoutParams', 'drawMirror', 'nativeUpdate']
 methods = []
 for name in names:
     match = re.search(r'    private static Object ' + name + r'\(.*?^    \}', hooks, re.M | re.S)
@@ -49,7 +49,7 @@ class BindingTest {
         }
     }
     static class ViewGroup extends View {
-        ImageView child;
+        ImageView child;float mirrorOffset;
         static class LayoutParams {int width,height;LayoutParams(int w,int h){width=w;height=h;}}
     }
     static class LinearLayout {
@@ -72,7 +72,14 @@ class BindingTest {
             writeScaleType(new XposedInterface.Chain(this,a->{scale=(ScaleType)a[0];return null;},s));
         }
     }
+    static class Canvas {
+        float y,old;int saves;
+        int save(){old=y;return ++saves;}
+        void translate(float x,float dy){y+=dy;}
+        void restoreToCount(int save){y=old;}
+    }
     static class ColorOsSizing {
+        static float mirrorOffset(ViewGroup view){return view.mirrorOffset;}
         static ViewGroup.LayoutParams retainLayoutParams(View view,ViewGroup.LayoutParams params){return params;}
     }
     static final Map<View,Host> owners=new IdentityHashMap<>();
@@ -163,6 +170,18 @@ class BindingTest {
         h.enabled=false;h.apply();check(replacement.drawable==replacementNative,"new child retains its own restoration snapshot");
         ImageView other=new ImageView();Drawable otherNative=new Drawable();other.setImageDrawable(otherNative);
         check(other.drawable==otherNative,"unowned image views are untouched");
+        ViewGroup mirror=new ViewGroup();mirror.mirrorOffset=5;
+        Canvas canvas=new Canvas();canvas.y=3;Object expectedResult=new Object();
+        Object mirrorResult=drawMirror(new XposedInterface.Chain(mirror,a->{
+            check(canvas.y==8,"native replay receives the exact reserved vertical inset");return expectedResult;
+        },canvas));
+        check(mirrorResult==expectedResult && canvas.y==3,"native replay preserves return values and restores the canvas");
+        try {drawMirror(new XposedInterface.Chain(mirror,a->{throw new IllegalArgumentException("draw");},canvas));
+            throw new AssertionError("native draw failure was swallowed");}
+        catch(IllegalArgumentException expected){check(canvas.y==3,"failed native replay always restores the canvas transform");}
+        mirror.mirrorOffset=0;int saves=canvas.saves;
+        drawMirror(new XposedInterface.Chain(mirror,a->{check(canvas.y==3,"unowned replay draws at its original position");return null;},canvas));
+        check(canvas.saves==saves,"unowned replay does not alter canvas state");
         System.out.println("Stable native binder transactions passed: "+checks+" checks");
     }
 }

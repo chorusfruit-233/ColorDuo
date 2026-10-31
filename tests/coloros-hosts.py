@@ -21,7 +21,7 @@ def method(name):
     return match.group()
 
 
-methods = "\n".join(method(name) for name in ("applyInternal", "restoreBatteryInternal", "syncExtra"))
+methods = "\n".join(method(name) for name in ("applyInternal", "resize", "restoreBatteryInternal", "syncExtra"))
 harness = r'''
 package io.github.yixing233.hyperduo;
 import java.util.*;
@@ -151,7 +151,7 @@ public final class ColorOsHostTest {
         float ownedScale;
         final ColorOsSizing sizing=new ColorOsSizing();
         String lastSizeNote;
-        boolean active,failed,logged;
+        boolean active,failed,logged,moduleWriting;
         final boolean main;
         Host(boolean main,boolean constraintParent){
             this.main=main;

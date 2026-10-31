@@ -5,6 +5,8 @@ import android.graphics.Rect;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Map;
@@ -15,8 +17,52 @@ import java.util.WeakHashMap;
 final class ColorOsSizing {
     private static final Map<ViewGroup, ClipState> CLIPS = new WeakHashMap<>();
     private static final Map<ViewGroup, HeightState> HEIGHTS = new WeakHashMap<>();
+    // A seamless frame redraws a source view; it does not contain that source's meter.
+    private static final Map<ViewGroup, Mirror> MIRRORS = new WeakHashMap<>();
     private final Set<ViewGroup> held = Collections.newSetFromMap(new IdentityHashMap<>());
     private final Set<ViewGroup> heights = Collections.newSetFromMap(new IdentityHashMap<>());
+    private final Set<ViewGroup> mirrors = Collections.newSetFromMap(new IdentityHashMap<>());
+
+    private static final class Ink {
+        final int top,bottom;
+        Ink(int top,int bottom) { this.top=top;this.bottom=bottom; }
+    }
+
+    private static final class Mirror {
+        WeakReference<View> source=new WeakReference<>(null);
+        boolean attached;
+        final Map<ColorOsSizing,Ink> owners=new WeakHashMap<>();
+        int top() { int top=0;for(Ink ink:owners.values()) top=Math.min(top,ink.top);return top; }
+        int height(View source) {
+            int bottom=source.getHeight();
+            for(Ink ink:owners.values()) bottom=Math.max(bottom,ink.bottom);
+            return bottom-top();
+        }
+    }
+
+    /** Return true only once, so the caller can install one reversible attach listener. */
+    static boolean trackMirror(ViewGroup frame,View source) {
+        Mirror mirror=MIRRORS.get(frame);
+        boolean fresh=mirror==null;
+        if(fresh) { mirror=new Mirror();MIRRORS.put(frame,mirror); }
+        if(mirror.source.get()!=source) mirror.owners.clear();
+        mirror.source=new WeakReference<>(source);
+        mirror.attached=frame.isAttachedToWindow();
+        return fresh;
+    }
+
+    static void mirrorAttached(ViewGroup frame,boolean attached) {
+        Mirror mirror=MIRRORS.get(frame);
+        if(mirror!=null) mirror.attached=attached;
+    }
+
+    static float mirrorOffset(ViewGroup frame) {
+        Mirror mirror=MIRRORS.get(frame);
+        return mirror==null || !mirror.attached?0:-mirror.top();
+    }
+
+    static java.util.List<ViewGroup> trackedMirrors() { return new ArrayList<>(MIRRORS.keySet()); }
+    static void clearMirrors() { MIRRORS.clear(); }
 
     private static final class Surface {
         final ViewGroup view;
@@ -116,16 +162,6 @@ final class ColorOsSizing {
         float density=meter.getResources().getDisplayMetrics().density;
         Surface found=surface(meter);
         ViewGroup surface=found.view;
-        Set<ViewGroup> requiredHeights=Collections.newSetFromMap(new IdentityHashMap<>());
-        if(found.expandable) {
-            for(ViewParent p=image.getParent();p instanceof ViewGroup;p=p.getParent()) {
-                requiredHeights.add((ViewGroup)p);
-                if(p==surface) break;
-            }
-        }
-        for(ViewGroup group:heights.toArray(new ViewGroup[0]))
-            if(!requiredHeights.contains(group)) releaseHeight(group);
-
         int maxHeight=Math.round(20f*density),maxWidth=Math.round(180f*density);
         if(surface!=null) {
             if(surface.getWidth()>0) maxWidth=Math.max(Math.round(24f*density),surface.getWidth()/2);
@@ -157,22 +193,28 @@ final class ColorOsSizing {
             }
         }
         TrioSizing.Metrics metrics=TrioSizing.measure(appearance,density,maxHeight,maxWidth);
-        if(found.expandable) {
-            int required=metrics.height+image.getPaddingTop()+image.getPaddingBottom()+margins(image);
-            for(ViewParent p=image.getParent();p instanceof ViewGroup;p=p.getParent()) {
-                ViewGroup group=(ViewGroup)p;
-                required+=group.getPaddingTop()+group.getPaddingBottom();
-                required=acquireHeight(group,required)+margins(group);
-                if(group==surface) break;
-            }
-        }
-
+        Set<ViewGroup> requiredHeights=Collections.newSetFromMap(new IdentityHashMap<>());
         Map<ViewGroup,Boolean> clips=new IdentityHashMap<>();
-        if(surface!=null && (found.expandable || metrics.height>Math.round(20f*density))) {
-            for(ViewParent p=image.getParent();p instanceof ViewGroup && p!=surface;p=p.getParent())
-                clips.put((ViewGroup)p,true);
-            if(found.expandable) clips.put(surface,false);
+        if(found.expandable) reservePath((ViewGroup)image.getParent(),surface,
+                metrics.height+image.getPaddingTop()+image.getPaddingBottom()+margins(image),requiredHeights);
+        if(surface!=null && (found.expandable || metrics.height>Math.round(20f*density)))
+            clipPath((ViewGroup)image.getParent(),found,clips);
+
+        Set<ViewGroup> requiredMirrors=Collections.newSetFromMap(new IdentityHashMap<>());
+        for(Map.Entry<ViewGroup,Mirror> entry:MIRRORS.entrySet()) {
+            ViewGroup frame=entry.getKey();Mirror mirror=entry.getValue();View source=mirror.source.get();
+            Ink ink=source==null || !mirror.attached?null:sourceInk(image,source,metrics.height);
+            Surface target=surface(frame);
+            if(ink==null || !target.expandable) continue;
+            mirror.owners.put(this,ink);requiredMirrors.add(frame);mirrors.add(frame);
+            reservePath(frame,target.view,mirror.height(source),requiredHeights);
+            clipPath(frame,target,clips);
         }
+        for(ViewGroup frame:mirrors.toArray(new ViewGroup[0]))
+            if(!requiredMirrors.contains(frame)) releaseMirror(frame);
+        for(ViewGroup group:heights.toArray(new ViewGroup[0]))
+            if(!requiredHeights.contains(group)) releaseHeight(group);
+
         for(ViewGroup group:held.toArray(new ViewGroup[0])) if(!clips.containsKey(group)) releaseClip(group);
         for(Map.Entry<ViewGroup,Boolean> entry:clips.entrySet()) {
             ViewGroup group=entry.getKey();
@@ -181,6 +223,46 @@ final class ColorOsSizing {
             state.owners.put(this,entry.getValue());held.add(group);state.apply(group);
         }
         return metrics;
+    }
+
+    private static Ink sourceInk(View image,View source,int height) {
+        float top=(image.getHeight()-height)/2f;
+        View view=image;
+        while(view!=source) {
+            if(!(view.getParent() instanceof View)) return null;
+            top+=view.getTop()+view.getTranslationY()-((View)view.getParent()).getScrollY();
+            view=(View)view.getParent();
+        }
+        return new Ink(Math.min(0,(int)Math.floor(top)),Math.max(source.getHeight(),(int)Math.ceil(top+height)));
+    }
+
+    private void reservePath(ViewGroup first,ViewGroup surface,int required,Set<ViewGroup> groups) {
+        for(ViewGroup group=first;group!=null;) {
+            groups.add(group);
+            required+=group.getPaddingTop()+group.getPaddingBottom();
+            required=acquireHeight(group,required)+margins(group);
+            if(group==surface) break;
+            group=group.getParent() instanceof ViewGroup?(ViewGroup)group.getParent():null;
+        }
+    }
+
+    private static void clipPath(ViewGroup first,Surface surface,Map<ViewGroup,Boolean> clips) {
+        for(ViewGroup group=first;group!=null && group!=surface.view;) {
+            clips.put(group,true);
+            group=group.getParent() instanceof ViewGroup?(ViewGroup)group.getParent():null;
+        }
+        if(surface.expandable) clips.put(surface.view,false);
+    }
+
+    /** Native seamless frames can pass a cached small spec even after LayoutParams grew. */
+    static int retainMeasureSpec(View view,int requested) {
+        HeightState state=HEIGHTS.get(view);
+        if(state==null || state.owners.isEmpty()) return requested;
+        state.readNative((ViewGroup)view);state.apply((ViewGroup)view);
+        int required=Math.max(state.writtenMinimum,state.writtenHeight);
+        if(View.MeasureSpec.getMode(requested)==View.MeasureSpec.UNSPECIFIED
+                || View.MeasureSpec.getSize(requested)>=required) return requested;
+        return View.MeasureSpec.makeMeasureSpec(required,View.MeasureSpec.EXACTLY);
     }
 
     /** Retain the current allocation when native configuration/animation code rewrites it. */
@@ -262,7 +344,7 @@ final class ColorOsSizing {
     }
 
     private static Surface surface(ViewGroup meter) {
-        ViewGroup fixed=null,header=null,fallback=null;
+        ViewGroup fixed=null,header=null,fallback=null,notificationRow=null;
         for(ViewParent p=meter.getParent();p instanceof ViewGroup;p=p.getParent()) {
             ViewGroup group=(ViewGroup)p;
             String type=group.getClass().getSimpleName(),name="";
@@ -270,7 +352,11 @@ final class ColorOsSizing {
                 name=group.getResources().getResourceEntryName(group.getId());
             } catch(RuntimeException ignored) { }
             if("qs_status_bar_container_layout".equals(name) || "qs_fake_status_layout".equals(name)
-                    || "separateqs_fake_status_layout".equals(name)) return new Surface(group,true);
+                    || "separateqs_fake_status_layout".equals(name)
+                    || "simple_qs_fake_status_layout".equals(name)) return new Surface(group,true);
+            if("header_container".equals(name)) notificationRow=group;
+            if(notificationRow!=null && ("OplusQSSimpleHeader".equals(type) || "simple_qs_footer".equals(name)))
+                return new Surface(notificationRow,true);
             if(type.contains("QuickStatusBarHeader") || "quick_status_bar_header".equals(name)) header=group;
             if(fixed==null && (type.contains("PhoneStatusBarView") || type.contains("KeyguardStatusBarView")
                     || "status_bar".equals(name) || "keyguard_header".equals(name)
@@ -298,12 +384,19 @@ final class ColorOsSizing {
         } else state.apply(group);
     }
 
+    private void releaseMirror(ViewGroup frame) {
+        mirrors.remove(frame);
+        Mirror mirror=MIRRORS.get(frame);
+        if(mirror!=null) mirror.owners.remove(this);
+    }
+
     private static Rect copy(Rect r) { return r==null?null:new Rect(r.left,r.top,r.right,r.bottom); }
     private static boolean same(Rect a,Rect b) {
         return a==b || (a!=null && b!=null && a.left==b.left && a.top==b.top && a.right==b.right && a.bottom==b.bottom);
     }
 
     void release() {
+        for(ViewGroup frame:mirrors.toArray(new ViewGroup[0])) releaseMirror(frame);
         for(ViewGroup group:heights.toArray(new ViewGroup[0])) releaseHeight(group);
         for(ViewGroup group:held.toArray(new ViewGroup[0])) releaseClip(group);
     }

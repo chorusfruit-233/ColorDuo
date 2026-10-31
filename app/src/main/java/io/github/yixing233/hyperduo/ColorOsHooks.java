@@ -66,6 +66,17 @@ final class ColorOsHooks {
     private static volatile Object chargeFlow;
     private static volatile Object savingFlow;
     private static volatile boolean installed;
+    private static boolean refreshingMirrors;
+    private static final View.OnAttachStateChangeListener MIRROR_ATTACH = new View.OnAttachStateChangeListener() {
+        @Override public void onViewAttachedToWindow(View view) {
+            ColorOsSizing.mirrorAttached((ViewGroup)view,true);
+            refreshMirrorSizes();
+        }
+        @Override public void onViewDetachedFromWindow(View view) {
+            ColorOsSizing.mirrorAttached((ViewGroup)view,false);
+            refreshMirrorSizes();
+        }
+    };
     private static boolean refreshQueued;
     private static boolean tickerStarted;
     private static Class<?> meterClass;
@@ -158,6 +169,7 @@ final class ColorOsHooks {
             // are cancelled only after all external registrations have closed successfully.
             ColorOsReload.closeCallbacks();
             ColorOsNetworkType.stop();
+            stopMirrors();
             MAIN.removeCallbacksAndMessages(null);
         } finally {
             HOSTS.clear();
@@ -372,6 +384,44 @@ final class ColorOsHooks {
             return retained==requested?chain.proceed():chain.proceed(new Object[]{retained});
         });
 
+        Set<Method> sizingMeasures=new HashSet<>();
+        for(Class<?> type:new Class<?>[]{LinearLayout.class,android.widget.FrameLayout.class,meterClass,
+                Refl.cls("androidx.constraintlayout.widget.ConstraintLayout",loader),
+                Refl.cls("com.oplus.systemui.qs.OplusQuickStatusBarHeader",loader)}) {
+            Method measure=Refl.methodDeep(type,"onMeasure",int.class,int.class);
+            if(measure==null || !sizingMeasures.add(measure)) continue;
+            count += hook(module,measure,chain -> {
+                int requested=(Integer)chain.getArg(1);
+                int retained=ColorOsSizing.retainMeasureSpec((View)chain.getThisObject(),requested);
+                return retained==requested?chain.proceed():chain.proceed(new Object[]{chain.getArg(0),retained});
+            });
+        }
+
+        // Both seamless implementations redraw a different view tree during expansion.
+        // Register at binding/reset time, before the first measure and animation frame.
+        for (String name : new String[] {"StatusBarFakeFrame", "SystemIconFakeFrame"}) {
+            Class<?> frameClass=Refl.cls("com.oplus.systemui.seamless.widget."+name,loader);
+            if(frameClass==null) continue;
+            for(Method method:frameClass.getDeclaredMethods()) {
+                String methodName=method.getName();
+                if(methodName.equals("dispatchDraw") && method.getParameterCount()==1) {
+                    count += hook(module,method,ColorOsHooks::drawMirror);
+                } else if(methodName.equals("setFakeView") || methodName.equals("setMView")
+                        || methodName.equals("bindRealView") || methodName.equals("resetLayoutParams")
+                        || methodName.equals("clearFakeView")) {
+                    count += hook(module,method,chain -> {
+                        Object result=chain.proceed();
+                        ViewGroup frame=(ViewGroup)chain.getThisObject();
+                        Object source=Refl.callByName(frame,"getMView");
+                        if(ColorOsSizing.trackMirror(frame,source instanceof View?(View)source:null))
+                            frame.addOnAttachStateChangeListener(MIRROR_ATTACH);
+                        refreshMirrorSizes();
+                        return result;
+                    });
+                }
+            }
+        }
+
         for (Method method : meterClass.getDeclaredMethods()) {
             String name = method.getName();
             if (name.equals("onFinishInflate") || name.equals("onAttachedToWindow")
@@ -558,6 +608,14 @@ final class ColorOsHooks {
         });
     }
 
+    private static Object drawMirror(XposedInterface.Chain chain) throws Throwable {
+        float offset=ColorOsSizing.mirrorOffset((ViewGroup)chain.getThisObject());
+        if(offset==0) return chain.proceed();
+        Canvas canvas=(Canvas)chain.getArg(0);
+        int save=canvas.save();canvas.translate(0,offset);
+        try { return chain.proceed(); } finally { canvas.restoreToCount(save); }
+    }
+
     private static Object writeDrawable(XposedInterface.Chain chain) throws Throwable {
         Host owner = childOwner((View) chain.getThisObject());
         if (owner == null || owner.image != chain.getThisObject()
@@ -689,6 +747,28 @@ final class ColorOsHooks {
                 refreshHosts();
             });
         });
+    }
+
+    private static void refreshMirrorSizes() {
+        if(ColorOsReload.retiring || refreshingMirrors) return;
+        refreshingMirrors=true;
+        try {
+            for(WeakReference<Host> reference:new ArrayList<>(HOSTS.values())) {
+                Host host=reference.get();
+                if(host==null || !host.active || host.nativeDepth!=0) continue;
+                try {
+                    if(!TrioConfig.get().enabled || !host.meter.isAttachedToWindow()
+                            || host.meter.getVisibility()!=View.VISIBLE) host.apply();
+                    else host.resize(TrioConfig.appearance());
+                } catch(Throwable error) { host.fail(error); }
+            }
+        } finally { refreshingMirrors=false; }
+    }
+
+    private static void stopMirrors() {
+        for(ViewGroup frame:ColorOsSizing.trackedMirrors())
+            frame.removeOnAttachStateChangeListener(MIRROR_ATTACH);
+        ColorOsSizing.clearMirrors();
     }
 
     private static void refreshHosts() {
@@ -897,27 +977,7 @@ final class ColorOsHooks {
             if (!active) capture();
             active = true;
             TrioAppearance appearance = TrioConfig.appearance();
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(nativeParams);
-            TrioSizing.Metrics dimensions = sizing.measure(meter,image,appearance);
-            params.height = dimensions.height;
-            params.width = dimensions.width;
-            params.gravity = android.view.Gravity.CENTER_VERTICAL;
-            ownedScale = dimensions.scale;
-            if (TrioConfig.debugLog()) {
-                String note = "ColorOS size: requested=" + TrioConfig.get().glyphScale
-                        + " effective=" + Math.round(dimensions.effectivePercent)
-                        + " width=" + dimensions.width + " height=" + dimensions.height
-                        + " limited=" + dimensions.limited;
-                if (!note.equals(lastSizeNote)) {
-                    lastSizeNote = note;
-                    TrioHooks.log(TrioHooks.LOG_INFO,note);
-                }
-            }
-            ownedWidth = params.width;
-            ownedHeight = params.height;
-            if (image.getLayoutParams().width != params.width || image.getLayoutParams().height != params.height) {
-                image.setLayoutParams(params);
-            }
+            resize(appearance);
             image.setScaleType(ImageView.ScaleType.FIT_XY);
             if (image.getDrawable() != glyph) image.setImageDrawable(glyph);
             visibilityOverrides.put(image, View.VISIBLE);
@@ -939,6 +999,35 @@ final class ColorOsHooks {
                         + " wifiLevel=" + state.wifiLevel + " wifiPresent=" + state.wifiPresent
                         + " mobileSubscriptions=" + MOBILES.size());
             }
+        }
+
+        /** Geometry-only refresh for native seamless binding/layout callbacks. */
+        void resize(TrioAppearance appearance) {
+            boolean previous=moduleWriting;
+            moduleWriting=true;
+            try {
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(nativeParams);
+                TrioSizing.Metrics dimensions = sizing.measure(meter,image,appearance);
+                params.height = dimensions.height;
+                params.width = dimensions.width;
+                params.gravity = android.view.Gravity.CENTER_VERTICAL;
+                ownedScale = dimensions.scale;
+                if (TrioConfig.debugLog()) {
+                    String note = "ColorOS size: requested=" + TrioConfig.get().glyphScale
+                            + " effective=" + Math.round(dimensions.effectivePercent)
+                            + " width=" + dimensions.width + " height=" + dimensions.height
+                            + " limited=" + dimensions.limited;
+                    if (!note.equals(lastSizeNote)) {
+                        lastSizeNote = note;
+                        TrioHooks.log(TrioHooks.LOG_INFO,note);
+                    }
+                }
+                ownedWidth = params.width;
+                ownedHeight = params.height;
+                if (image.getLayoutParams().width != params.width || image.getLayoutParams().height != params.height) {
+                    image.setLayoutParams(params);
+                }
+            } finally { moduleWriting=previous; }
         }
 
         void hide(String name, boolean hidden) {
@@ -1209,7 +1298,7 @@ final class ColorOsHooks {
         }
 
         @Override public void onViewAttachedToWindow(View view) {
-            MAIN.post(() -> { try { apply(); } catch (Throwable error) { fail(error); } });
+            try { apply(); } catch (Throwable error) { fail(error); }
         }
         @Override public void onViewDetachedFromWindow(View view) {
             restore();

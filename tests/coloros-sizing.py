@@ -13,13 +13,14 @@ fixtures = {
 public class Resources {
     public final android.util.DisplayMetrics metrics=new android.util.DisplayMetrics();
     public android.util.DisplayMetrics getDisplayMetrics(){return metrics;}
-    public String getResourceEntryName(int id){return id==1?"system_icons":id==2?"quick_qs_status_icons":id==3?"qs_status_bar_container_layout":id==4?"qs_fake_status_layout":"fixture";}
+    public String getResourceEntryName(int id){return id==1?"system_icons":id==2?"quick_qs_status_icons":id==3?"qs_status_bar_container_layout":id==4?"qs_fake_status_layout":id==5?"header_container":id==6?"simple_qs_fake_status_layout":id==7?"status_bar_end_side_container_for_fake":"fixture";}
 }""",
     "android/view/View.java": """package android.view;
 public class View implements ViewParent {
     public static final int NO_ID=-1;
     public ViewParent parent;
-    public int width,height,y,id=NO_ID,paddingTop,paddingBottom,minimumHeight;
+    public int width,height,y,top,id=NO_ID,paddingTop,paddingBottom,minimumHeight;
+    public boolean attached=true;
     public ViewGroup.LayoutParams params=new ViewGroup.MarginLayoutParams(-2,-2);
     public android.graphics.Rect clip;
     public final android.content.res.Resources resources=new android.content.res.Resources();
@@ -36,6 +37,14 @@ public class View implements ViewParent {
     public void setClipBounds(android.graphics.Rect value){value=clipFilter.apply(this,value);clip=value==null?null:new android.graphics.Rect(value.left,value.top,value.right,value.bottom);}
     public int getWidth(){return width;} public int getHeight(){return height;}
     public int getPaddingTop(){return paddingTop;} public int getPaddingBottom(){return paddingBottom;}
+    public boolean isAttachedToWindow(){return attached;}
+    public int getTop(){return top;} public float getTranslationY(){return 0;} public int getScrollY(){return 0;}
+    public static class MeasureSpec {
+        public static final int UNSPECIFIED=0, EXACTLY=0x40000000, AT_MOST=0x80000000;
+        public static int getMode(int s){return s&0xc0000000;}
+        public static int getSize(int s){return s&0x3fffffff;}
+        public static int makeMeasureSpec(int size,int mode){return size|mode;}
+    }
     public int getId(){return id;}
     public android.content.res.Resources getResources(){return resources;}
     public void getLocationInWindow(int[] out){out[0]=0;out[1]=y;}
@@ -72,6 +81,7 @@ public final class ColorOsSizingTest {
     static class PhoneStatusBarView extends ViewGroup { }
     static class KeyguardStatusBarView extends ViewGroup { }
     static class QuickStatusBarHeader extends ViewGroup { }
+    static class OplusQSSimpleHeader extends ViewGroup { }
     static ViewGroup child(ViewGroup parent){ViewGroup v=new ViewGroup();v.parent=parent;return v;}
     static View icon(ViewGroup parent,float density){
         View v=new View();v.parent=parent;v.height=Math.round(16*density);v.y=Math.round(16*density);
@@ -191,6 +201,96 @@ public final class ColorOsSizingTest {
         small.measure(battery,batteryImage,TrioAppearance.of(s));
         check(fake.params.height==26 && fixed.params.height==26,"reparenting back to main releases old QS height ownership");
         small.release();
+        // Notification centre: public header inside its own fixed 40dp row.
+        OplusQSSimpleHeader notification=new OplusQSSimpleHeader();notification.parent=shade;
+        notification.height=800;notification.width=420;notification.params.height=-1;
+        ViewGroup notificationColumn=child(notification);notificationColumn.height=100;
+        ViewGroup notificationRow=child(notificationColumn);notificationRow.id=5;
+        notificationRow.height=40;notificationRow.width=420;notificationRow.params.height=40;
+        QuickStatusBarHeader notificationHeader=new QuickStatusBarHeader();notificationHeader.parent=notificationRow;
+        notificationHeader.height=26;notificationHeader.params.height=26;notificationHeader.paddingTop=10;
+        ViewGroup notificationIcons=child(notificationHeader);notificationIcons.id=2;notificationIcons.height=20;
+        ViewGroup notificationBattery=child(notificationIcons);View notificationImage=icon(notificationBattery,1);
+        s.glyphScale=300;
+        ColorOsSizing notificationOwner=new ColorOsSizing();
+        TrioSizing.Metrics notificationSize=notificationOwner.measure(notificationBattery,notificationImage,TrioAppearance.of(s));
+        check(!notificationSize.limited && notificationRow.params.height>=70,
+              "notification centre reserves its outer 40dp row as well as the inner 26dp header");
+        check(notification.params.height==-1 && notificationColumn.params.height==-2,
+              "notification centre does not grow the full-screen surface or unrelated button column");
+        notificationRow.setLayoutParams(new ViewGroup.LayoutParams(-1,40));
+        check(notificationRow.params.height>=70,"native notification resource updates retain the enlarged row immediately");
+        notificationOwner.release();
+        check(notificationRow.params.height==40 && notificationHeader.params.height==26,
+              "notification centre restores both independent native height limits");
+        ViewGroup notificationFake=child(notification);notificationFake.id=6;
+        notificationFake.height=40;notificationFake.width=420;notificationFake.params.height=40;
+        notificationHeader.parent=notificationFake;
+        notificationOwner.measure(notificationBattery,notificationImage,TrioAppearance.of(s));
+        check(notificationFake.params.height>=70,"notification centre transition wrapper reserves enlarged glyphs");
+        notificationOwner.release();
+        check(notificationFake.params.height==40,"notification transition wrapper restores its original size");
+        // Generic header_container IDs outside OplusQSSimpleHeader are not expandable.
+        notificationRow.parent=shade;notificationHeader.parent=notificationRow;
+        notificationOwner.measure(notificationBattery,notificationImage,TrioAppearance.of(s));
+        check(notificationRow.params.height==40,"unrelated generic header containers keep their original bounds");
+        notificationOwner.release();
+        // A seamless frame replays the main row with no battery descendant of its own.
+        PhoneStatusBarView replaySourceBar=new PhoneStatusBarView();
+        replaySourceBar.parent=shade;replaySourceBar.height=48;replaySourceBar.width=420;
+        ViewGroup replaySource=child(replaySourceBar);replaySource.height=20;replaySource.id=7;
+        ViewGroup replayContent=child(replaySource);replayContent.height=20;
+        ViewGroup replayIcons=child(replayContent);replayIcons.id=1;replayIcons.height=20;
+        ViewGroup replayBattery=child(replayIcons);replayBattery.height=20;
+        View replayImage=icon(replayBattery,1);replayImage.height=16;replayImage.top=2;
+        ViewGroup replayRoot=child(shade);replayRoot.id=3;replayRoot.height=34;
+        replayRoot.width=420;replayRoot.params.height=34;
+        ViewGroup replayHolder=child(replayRoot);replayHolder.params.height=-2;
+        ViewGroup replayFrame=child(replayHolder);replayFrame.height=20;replayFrame.params.height=20;
+        ColorOsSizing replayOwner=new ColorOsSizing();s.glyphScale=150;
+        check(ColorOsSizing.trackMirror(replayFrame,replaySource),"a seamless binding installs its listener once");
+        check(!ColorOsSizing.trackMirror(replayFrame,replaySource),"native reset does not duplicate the mirror listener");
+        replayOwner.measure(replayBattery,replayImage,TrioAppearance.of(s));
+        check(replayFrame.params.height==30 && replayHolder.minimumHeight>=30,
+              "the first animation frame reserves glyph ink without reparenting the real battery");
+        check(ColorOsSizing.mirrorOffset(replayFrame)==5,"negative source ink is moved inside the expanded replay frame");
+        check(replaySourceBar.params.height==-2 && replaySource.minimumHeight==0,
+              "mirror allocation does not resize the real fixed status bar");
+        int cached=View.MeasureSpec.makeMeasureSpec(20,View.MeasureSpec.EXACTLY);
+        int retained=ColorOsSizing.retainMeasureSpec(replayFrame,cached);
+        check(View.MeasureSpec.getSize(retained)==30 && View.MeasureSpec.getMode(retained)==View.MeasureSpec.EXACTLY,
+              "a cached first-frame exact measure cannot shrink the replay allocation");
+        int enough=View.MeasureSpec.makeMeasureSpec(40,View.MeasureSpec.AT_MOST);
+        check(ColorOsSizing.retainMeasureSpec(replayFrame,enough)==enough,"sufficient parent measure constraints are unchanged");
+        check(ColorOsSizing.retainMeasureSpec(replaySourceBar,cached)==cached,"unowned status-window measurement is unchanged");
+        replayFrame.setLayoutParams(new ViewGroup.LayoutParams(-1,20));
+        check(replayFrame.params.height==30,"native replay resets keep the owned height before drawing");
+        java.awt.image.BufferedImage replayPixels=new java.awt.image.BufferedImage(60,30,java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        java.awt.Graphics2D graphics=replayPixels.createGraphics();
+        graphics.translate(0,ColorOsSizing.mirrorOffset(replayFrame));
+        graphics.setColor(java.awt.Color.WHITE);graphics.fillRect(10,-5,40,30);graphics.dispose();
+        int paintedRows=0;
+        for(int rowIndex=0;rowIndex<30;rowIndex++) if((replayPixels.getRGB(20,rowIndex)>>>24)!=0) paintedRows++;
+        check(paintedRows==30,"top and bottom ink survive replay inside the frame's own pixel bounds");
+        ColorOsSizing.mirrorAttached(replayFrame,false);
+        replayOwner.measure(replayBattery,replayImage,TrioAppearance.of(s));
+        check(replayFrame.params.height==20 && ColorOsSizing.mirrorOffset(replayFrame)==0,
+              "detaching a replay restores its height and offset immediately");
+        ColorOsSizing.mirrorAttached(replayFrame,true);
+        replayOwner.measure(replayBattery,replayImage,TrioAppearance.of(s));
+        check(replayFrame.params.height==30,"reattachment reserves the first frame synchronously");
+        ColorOsSizing.trackMirror(replayFrame,new View());
+        replayOwner.measure(replayBattery,replayImage,TrioAppearance.of(s));
+        check(replayFrame.params.height==20 && ColorOsSizing.mirrorOffset(replayFrame)==0,
+              "rebinding to an unrelated native source releases all old ownership");
+        ColorOsSizing.trackMirror(replayFrame,replaySource);
+        replayOwner.measure(replayBattery,replayImage,TrioAppearance.of(s));
+        replayOwner.release();
+        check(replayFrame.params.height==20 && replayHolder.minimumHeight==0 && ColorOsSizing.mirrorOffset(replayFrame)==0,
+              "disabling restores the real and replay trees together");
+        check(ColorOsSizing.retainMeasureSpec(replayFrame,cached)==cached,"released replay measurement is fully native");
+        ColorOsSizing.clearMirrors();
+        check(ColorOsSizing.trackedMirrors().isEmpty(),"retirement can remove every tracked replay listener");
         System.out.println("Production size limits and clipping ownership: "+checks+" checks passed");
     }
 }""",
