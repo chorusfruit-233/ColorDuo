@@ -361,6 +361,16 @@ final class ColorOsHooks {
         count += hook(module, Refl.method(ImageView.class, "getDrawable"), ColorOsHooks::readDrawable);
         count += hook(module, Refl.method(View.class, "getLayoutParams"), ColorOsHooks::readLayoutParams);
         count += hook(module, Refl.method(View.class, "setLayoutParams", ViewGroup.LayoutParams.class), ColorOsHooks::writeLayoutParams);
+        count += hook(module, Refl.method(View.class, "setMinimumHeight", int.class), chain -> {
+            int requested=(Integer)chain.getArg(0);
+            int retained=ColorOsSizing.retainMinimumHeight((View)chain.getThisObject(),requested);
+            return retained==requested?chain.proceed():chain.proceed(new Object[]{retained});
+        });
+        count += hook(module, Refl.method(View.class, "setClipBounds", android.graphics.Rect.class), chain -> {
+            android.graphics.Rect requested=(android.graphics.Rect)chain.getArg(0);
+            android.graphics.Rect retained=ColorOsSizing.retainClipBounds((View)chain.getThisObject(),requested);
+            return retained==requested?chain.proceed():chain.proceed(new Object[]{retained});
+        });
 
         for (Method method : meterClass.getDeclaredMethods()) {
             String name = method.getName();
@@ -600,7 +610,12 @@ final class ColorOsHooks {
     }
 
     private static Object writeLayoutParams(XposedInterface.Chain chain) throws Throwable {
-        Host owner=childOwner((View)chain.getThisObject());
+        View target=(View)chain.getThisObject();
+        if(target instanceof ViewGroup && chain.getArg(0) instanceof ViewGroup.LayoutParams) {
+            ColorOsSizing.retainLayoutParams(target,(ViewGroup.LayoutParams)chain.getArg(0));
+            return chain.proceed();
+        }
+        Host owner=childOwner(target);
         if(owner==null || owner.image!=chain.getThisObject() || owner.moduleWriting || !owner.active
                 || !(chain.getArg(0) instanceof LinearLayout.LayoutParams)) return chain.proceed();
         LinearLayout.LayoutParams requested=(LinearLayout.LayoutParams)chain.getArg(0);

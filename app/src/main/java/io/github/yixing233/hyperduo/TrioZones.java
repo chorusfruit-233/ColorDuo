@@ -131,24 +131,6 @@ public final class TrioZones {
         SIM_PAIR
     }
 
-    /** An explicit preset; installation and upgrades never apply it automatically. */
-    public static TrioSettings readableLayout(TrioSettings current) {
-        if(current==null) return null;
-        TrioSettings next=current.copy();
-        boolean customBolt=TrioAppearance.of(current).hasBolt();
-        next.glyphScale=150;
-        next.valueSize=next.trioStyle==Prefs.STYLE_CAPSULE?48:52;
-        next.showValue=true;
-        next.showWifi=true;
-        next.showMobile=next.showSim1=next.showSim2=true;
-        next.signalMode=Prefs.SIGNAL_IN_RING;
-        next.mobileTypeMode=Prefs.MOBILE_TYPE_IN_RING;
-        next.ringZones=Prefs.decodeLayout(customBolt?"4,1,5|3|9|":"1,5|3|9|");
-        if(next.trioStyle==Prefs.STYLE_CAPSULE)
-            next.ringZones[Zone.LEFT.ordinal()]=new int[]{Prefs.PART_CLOCK};
-        return next;
-    }
-
     public static final int BOLT_POSITION_HIDDEN = 0, BOLT_POSITION_NATIVE = 1;
 
     /** Positions in the same visual order as the settings menu. */

@@ -25,21 +25,18 @@ class LayoutControlsTest {
         assertEquals(100, s.glyphScale)
     }
 
-    @Test fun readablePresetIsExplicitAndKeepsTheInputForUndo() {
-        for (style in listOf(Prefs.STYLE_RING, Prefs.STYLE_CAPSULE)) {
-            val old = settings(style).apply { showBolt = false }
-            val saved = old.copy()
-            val next = TrioZones.readableLayout(old)
-            assertTrue(old == saved)
-            assertEquals(150, next.glyphScale)
-            assertArrayEquals(intArrayOf(Prefs.PART_VALUE), next.ringZones[TrioZones.Zone.CENTRE.ordinal])
-            assertTrue(next.showSim1 && next.showSim2 && next.showValue)
-            assertFalse(next.showBolt)
-            assertEquals(if (style == Prefs.STYLE_CAPSULE) 48 else 52, next.valueSize)
-            if (style == Prefs.STYLE_CAPSULE)
-                assertArrayEquals(intArrayOf(Prefs.PART_CLOCK), next.ringZones[TrioZones.Zone.LEFT.ordinal])
-            assertEquals(100, saved.glyphScale)
+    @Test fun overallScaleUpdatePreservesLayoutAndTypography() {
+        val original = settings().apply {
+            ringZones = Prefs.decodeLayout("4,3|1,5|7|")
+            valueSize = 40
+            showBolt = false
         }
+        val update = original.copy().apply { glyphScale = 250 }
+        assertTrue(original.applyKeyFrom(update, Prefs.KEY_GLYPH_SCALE))
+        assertEquals(250, original.glyphScale)
+        assertTrue(original.ringZones.contentDeepEquals(update.ringZones))
+        assertEquals(40, original.valueSize)
+        assertFalse(original.showBolt)
     }
 
     @Test fun capsuleStructureContainsOnlyItsFiveEditableParameters() {

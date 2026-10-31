@@ -13,15 +13,27 @@ fixtures = {
 public class Resources {
     public final android.util.DisplayMetrics metrics=new android.util.DisplayMetrics();
     public android.util.DisplayMetrics getDisplayMetrics(){return metrics;}
-    public String getResourceEntryName(int id){return id==1?"system_icons":id==2?"quick_qs_status_icons":"fixture";}
+    public String getResourceEntryName(int id){return id==1?"system_icons":id==2?"quick_qs_status_icons":id==3?"qs_status_bar_container_layout":id==4?"qs_fake_status_layout":"fixture";}
 }""",
     "android/view/View.java": """package android.view;
 public class View implements ViewParent {
     public static final int NO_ID=-1;
     public ViewParent parent;
-    public int width,height,y,id=NO_ID,paddingTop,paddingBottom;
+    public int width,height,y,id=NO_ID,paddingTop,paddingBottom,minimumHeight;
+    public ViewGroup.LayoutParams params=new ViewGroup.MarginLayoutParams(-2,-2);
+    public android.graphics.Rect clip;
     public final android.content.res.Resources resources=new android.content.res.Resources();
     public ViewParent getParent(){return parent;}
+    public View getRootView(){View v=this;while(v.parent instanceof View)v=(View)v.parent;return v;}
+    public ViewGroup.LayoutParams getLayoutParams(){return params;}
+    public static java.util.function.BiFunction<View,ViewGroup.LayoutParams,ViewGroup.LayoutParams> layoutFilter=(view,value)->value;
+    public static java.util.function.BiFunction<View,Integer,Integer> minimumFilter=(view,value)->value;
+    public static java.util.function.BiFunction<View,android.graphics.Rect,android.graphics.Rect> clipFilter=(view,value)->value;
+    public void setLayoutParams(ViewGroup.LayoutParams value){params=layoutFilter.apply(this,value);}
+    public int getMinimumHeight(){return minimumHeight;}
+    public void setMinimumHeight(int value){minimumHeight=minimumFilter.apply(this,value);}
+    public android.graphics.Rect getClipBounds(){return clip==null?null:new android.graphics.Rect(clip.left,clip.top,clip.right,clip.bottom);}
+    public void setClipBounds(android.graphics.Rect value){value=clipFilter.apply(this,value);clip=value==null?null:new android.graphics.Rect(value.left,value.top,value.right,value.bottom);}
     public int getWidth(){return width;} public int getHeight(){return height;}
     public int getPaddingTop(){return paddingTop;} public int getPaddingBottom(){return paddingBottom;}
     public int getId(){return id;}
@@ -31,11 +43,25 @@ public class View implements ViewParent {
 }""",
     "android/view/ViewGroup.java": """package android.view;
 public class ViewGroup extends View {
+    public static class LayoutParams {
+        public static final int WRAP_CONTENT=-2;
+        public int width,height;
+        public LayoutParams(int width,int height){this.width=width;this.height=height;}
+    }
+    public static class MarginLayoutParams extends LayoutParams {
+        public int topMargin,bottomMargin;
+        public MarginLayoutParams(int width,int height){super(width,height);}
+    }
     public boolean clipChildren=true,clipPadding=true;
     public boolean getClipChildren(){return clipChildren;}
     public boolean getClipToPadding(){return clipPadding;}
     public void setClipChildren(boolean value){clipChildren=value;}
     public void setClipToPadding(boolean value){clipPadding=value;}
+}""",
+    "androidx/constraintlayout/widget/ConstraintLayout.java": """package androidx.constraintlayout.widget;
+public class ConstraintLayout extends android.view.ViewGroup {
+    public int widgetMinimumHeight=20;
+    public int getMinHeight(){return widgetMinimumHeight;}
 }""",
     "io/github/yixing233/hyperduo/ColorOsSizingTest.java": """package io.github.yixing233.hyperduo;
 import android.view.View;
@@ -52,6 +78,9 @@ public final class ColorOsSizingTest {
         return v;
     }
     public static void main(String[] args){
+        View.layoutFilter=ColorOsSizing::retainLayoutParams;
+        View.minimumFilter=ColorOsSizing::retainMinimumHeight;
+        View.clipFilter=ColorOsSizing::retainClipBounds;
         for(float density:new float[]{1.5f,2f,3f,4f})
         for(ViewGroup surface:new ViewGroup[]{new PhoneStatusBarView(),new KeyguardStatusBarView(),new QuickStatusBarHeader()}) {
             surface.height=Math.round(48*density);surface.width=Math.round(420*density);
@@ -95,6 +124,73 @@ public final class ColorOsSizingTest {
         check(limited.height<=30 && limited.limited,"unknown QS headers never borrow the entire shade window");
         check(header.clipChildren && window.clipChildren,"fallback boundaries remain clipped");
         owner.release();
+        // The reference ROM has a 26dp header, 10dp top padding, a wrap-content
+        // ConstraintLayout row and a 0dp constrained battery meter.
+        ViewGroup shade=new ViewGroup();shade.height=800;shade.width=420;
+        QuickStatusBarHeader fixed=new QuickStatusBarHeader();fixed.parent=shade;
+        fixed.height=26;fixed.width=420;fixed.paddingTop=10;fixed.params.height=26;
+        fixed.setClipBounds(new android.graphics.Rect(0,0,420,26));
+        androidx.constraintlayout.widget.ConstraintLayout fixedRow=new androidx.constraintlayout.widget.ConstraintLayout();
+        fixedRow.parent=fixed;fixedRow.id=2;fixedRow.height=20;fixedRow.minimumHeight=20;
+        ViewGroup battery=child(fixedRow);battery.height=20;battery.params.height=0;
+        View batteryImage=icon(battery,1);((ViewGroup.MarginLayoutParams)batteryImage.params).bottomMargin=1;
+        ColorOsSizing small=new ColorOsSizing();
+        s.glyphScale=150;
+        TrioSizing.Metrics enlarged=small.measure(battery,batteryImage,TrioAppearance.of(s));
+        check(!enlarged.limited && enlarged.height==30,"the old 26dp QS header does not cap a 150% glyph");
+        check(fixedRow.minimumHeight>=31,"constrained rows reserve the glyph plus its native margin");
+        check(fixedRow.params.height>=31,"ConstraintLayout wrap-content rows get explicit height rather than an ineffective View minimum");
+        check(battery.params.height==0 && battery.minimumHeight>=31,"battery matching constraints are preserved");
+        check(fixed.params.height>=41,"QS header grows with padding and actual glyph occupation");
+        check(fixed.getClipBounds().bottom>=41,"full-height cached header clips follow the new height");
+        check(fixed.clipChildren,"the outer header keeps a real clipping boundary");
+        fixed.height=fixed.params.height;
+        ViewGroup.LayoutParams reset=new ViewGroup.LayoutParams(-1,26);
+        fixed.setLayoutParams(reset);
+        check(fixed.params.height>=41,"native layout writes cannot reintroduce the fixed header crop");
+        fixedRow.setMinimumHeight(20);
+        check(fixedRow.minimumHeight>=31,"native minimum-height writes retain the active glyph allocation");
+        fixed.setClipBounds(new android.graphics.Rect(0,0,420,26));
+        check(fixed.getClipBounds().bottom>=41,"native full-height clip writes follow the retained allocation immediately");
+        fixed.setLayoutParams(fixed.getLayoutParams());
+        fixedRow.setLayoutParams(fixedRow.getLayoutParams());
+        fixedRow.setMinimumHeight(fixedRow.getMinimumHeight());
+        fixed.setClipBounds(fixed.getClipBounds());
+        ViewGroup otherBattery=child(fixedRow);otherBattery.height=20;otherBattery.params.height=0;
+        View otherImage=icon(otherBattery,1);
+        ColorOsSizing large=new ColorOsSizing();s.glyphScale=300;
+        large.measure(otherBattery,otherImage,TrioAppearance.of(s));
+        check(fixed.params.height>=70,"shared headers reserve the largest active glyph");
+        large.release();
+        check(fixed.params.height>=41 && fixed.params.height<70,"releasing the larger owner shrinks to the remaining request");
+        fixed.params.height=28;fixedRow.minimumHeight=22;
+        s.glyphScale=150;small.measure(battery,batteryImage,TrioAppearance.of(s));
+        fixed.setClipBounds(new android.graphics.Rect(0,0,420,28));
+        check(fixed.getClipBounds().bottom>=41,"configuration changes keep the new full-height native clip expanded");
+        small.release();
+        check(fixed.params.height==28 && fixedRow.minimumHeight==22,"disable restores the latest native header height and row minimum");
+        check(fixedRow.params.height==-2 && fixedRow.widgetMinimumHeight==20,"native wrap-content and widget-specific minimum remain intact");
+        check(battery.params.height==0 && battery.minimumHeight==0,"native constrained meter height is restored");
+        check(fixed.getClipBounds().bottom==28,"the latest cached native clip is restored after the last owner exits");
+        fixed.setClipBounds(new android.graphics.Rect(0,5,420,18));
+        small.measure(battery,batteryImage,TrioAppearance.of(s));
+        check(fixed.getClipBounds().top==5 && fixed.getClipBounds().bottom==18,"partial animation clips remain under system control");
+        small.release();
+        ViewGroup separate=child(shade);separate.id=3;separate.height=20;separate.width=420;separate.params.height=20;
+        fixed.parent=separate;fixed.params.height=26;fixed.height=26;fixed.setClipBounds(null);
+        small.measure(battery,batteryImage,TrioAppearance.of(s));
+        check(separate.params.height>=41 && fixed.params.height>=41,"separate control-centre containers reserve the same full header height");
+        small.release();
+        check(separate.params.height==20 && fixed.params.height==26,"separate control-centre heights restore exactly");
+        ViewGroup fake=child(shade);fake.id=4;fake.height=26;fake.width=420;fake.params.height=26;
+        fixed.parent=fake;
+        small.measure(battery,batteryImage,TrioAppearance.of(s));
+        check(fake.params.height>=41,"notification animation status wrappers reserve their enlarged contents");
+        PhoneStatusBarView mainSurface=new PhoneStatusBarView();mainSurface.height=48;mainSurface.width=420;
+        ViewGroup mainRow=child(mainSurface);battery.parent=mainRow;batteryImage.y=16;
+        small.measure(battery,batteryImage,TrioAppearance.of(s));
+        check(fake.params.height==26 && fixed.params.height==26,"reparenting back to main releases old QS height ownership");
+        small.release();
         System.out.println("Production size limits and clipping ownership: "+checks+" checks passed");
     }
 }""",

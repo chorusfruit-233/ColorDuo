@@ -91,8 +91,8 @@ public final class LayoutReference {
         g.setFont(new Font("SansSerif",Font.PLAIN,14));g.setColor(new Color(0xB8C7D6));
         g.drawString("Production renderer. Density 2.0; simulated 40dp surface. Not a phone screenshot.",24,65);
         g.drawString("Left: actual pixel size. Right: 2x magnified for inspection.",24,88);
-        String[] names={"Classic / 100%", "Classic / 150%", "Large battery preset / 150%",
-                "Capsule / 100%", "Capsule large preset / 150%", "300% request / constrained"};
+        String[] names={"Classic / 100%", "Classic / 150%", "Classic / 200%",
+                "Capsule / 100%", "Capsule / 150%", "300% request / constrained"};
         for(int index=0;index<6;index++) {
             TrioSettings s=TrioSettings.defaults();s.enabled=true;
             s.trioStyle=index>=3&&index<5?Prefs.STYLE_CAPSULE:Prefs.STYLE_RING;
@@ -100,7 +100,8 @@ public final class LayoutReference {
             s.showWifi=s.showMobile=s.showSim1=s.showSim2=s.showValue=true;
             s.signalMode=Prefs.SIGNAL_IN_RING;s.mobileTypeMode=Prefs.MOBILE_TYPE_IN_RING;
             if(index==1)s.glyphScale=150;
-            if(index==2||index==4)s=TrioZones.readableLayout(s);
+            if(index==2)s.glyphScale=200;
+            if(index==4)s.glyphScale=150;
             if(index==5)s.glyphScale=300;
             TrioState state=new TrioState();state.level=84;state.mobileType="5G";
             state.slotLevels=new int[]{4,2};state.sims=2;state.mobileService=DuoPolicy.Radio.AVAILABLE;

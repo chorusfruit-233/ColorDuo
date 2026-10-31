@@ -72,6 +72,9 @@ class BindingTest {
             writeScaleType(new XposedInterface.Chain(this,a->{scale=(ScaleType)a[0];return null;},s));
         }
     }
+    static class ColorOsSizing {
+        static ViewGroup.LayoutParams retainLayoutParams(View view,ViewGroup.LayoutParams params){return params;}
+    }
     static final Map<View,Host> owners=new IdentityHashMap<>();
     static Host childOwner(View v){return owners.get(v);}
     static class Host {
