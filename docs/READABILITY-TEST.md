@@ -2,6 +2,8 @@
 
 本包为 **0.3.9 / 10029**，使用正式签名，可覆盖 0.3.5–0.3.8 并保留配置。安装后重启 SystemUI 或手机。
 
+[下载签名测试包](https://github.com/chorusfruit-233/ColorDuo/actions/runs/41231102399/artifacts/13053004608)（解压后安装 `ColorDuo-0.3.9.apk`）。[构建及检查记录](https://github.com/chorusfruit-233/ColorDuo/actions/runs/41231102399)。
+
 保持之前发生遮挡时的尺寸，检查：
 
 1. 缓慢下拉控制中心，停在原来出现 HD 的高度至少两秒，检查模块图标的上下边缘。
