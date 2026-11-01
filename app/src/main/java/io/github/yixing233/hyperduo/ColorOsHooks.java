@@ -66,6 +66,17 @@ final class ColorOsHooks {
     private static volatile Object chargeFlow;
     private static volatile Object savingFlow;
     private static volatile boolean installed;
+    private static boolean refreshingMirrors;
+    private static final View.OnAttachStateChangeListener MIRROR_ATTACH = new View.OnAttachStateChangeListener() {
+        @Override public void onViewAttachedToWindow(View view) {
+            ColorOsSizing.mirrorAttached((ViewGroup)view,true);
+            refreshMirrorSizes();
+        }
+        @Override public void onViewDetachedFromWindow(View view) {
+            ColorOsSizing.mirrorAttached((ViewGroup)view,false);
+            refreshMirrorSizes();
+        }
+    };
     private static boolean refreshQueued;
     private static boolean tickerStarted;
     private static Class<?> meterClass;
@@ -78,6 +89,12 @@ final class ColorOsHooks {
     private static HandlerThread batteryThread;
     private static ExecutorService chargerWorker;
     private static boolean batteryRefreshQueued;
+    private static boolean batteryReadActive;
+    private static boolean reloadPreparing;
+    private static boolean batteryWorkerStopped;
+    private static final List<Thread> stoppingBatteryThreads = new ArrayList<>();
+    private static final List<ExecutorService> stoppingChargerWorkers = new ArrayList<>();
+    private static ClassLoader chargerLoader;
     private static ColorOsCharger charger;
     private static long nextSimPoll;
     private static final ColorOsLayout.Tree<View> VIEW_TREE = new ColorOsLayout.Tree<>() {
@@ -100,10 +117,20 @@ final class ColorOsHooks {
 
     static void drainRetiredCallbacks() { MAIN.removeCallbacksAndMessages(null); }
 
-    /** Called on the main looper: leave only platform/SystemUI objects in the handoff. */
-    static Map<String, Object> retire() {
-        ColorOsReload.retiring = true;
-        MAIN.removeCallbacksAndMessages(null);
+    /** A busy sampler declines before touching views, callbacks or worker executors. */
+    static synchronized boolean prepareReload() {
+        stoppingBatteryThreads.removeIf(thread -> !thread.isAlive());
+        stoppingChargerWorkers.removeIf(ExecutorService::isTerminated);
+        if (reloadPreparing || batteryReadActive || !stoppingBatteryThreads.isEmpty()
+                || !stoppingChargerWorkers.isEmpty() || (charger != null && !charger.isIdle())) return false;
+        reloadPreparing = true;
+        if (batteryWorker != null) batteryWorker.removeCallbacksAndMessages(null);
+        batteryRefreshQueued = false;
+        return true;
+    }
+
+    /** Called on the main looper; no destructive changes before state validation succeeds. */
+    static Map<String, Object> snapshotForReload() {
         Map<String, Object> saved = new HashMap<>();
         saved.put("settings", TrioConfig.get().toBundle());
         saved.put("context", context);
@@ -123,16 +150,54 @@ final class ColorOsHooks {
             Host h = reference.get();
             if (h == null) continue;
             meters.add(new Object[] {h.meter, h.viewModel});
-            h.onViewDetachedFromWindow(h.meter);
-            h.meter.removeOnAttachStateChangeListener(h);
-            h.glyph.setCallback(null);
         }
         saved.put("meters", meters);
-        HOSTS.clear();
-        CHILDREN.clear();
-        ColorOsNetworkType.stop();
-        ColorOsReload.closeCallbacks();
         return saved;
+    }
+
+    static void retire() {
+        ColorOsReload.retiring = true;
+        try {
+            for (WeakReference<Host> reference : new ArrayList<>(HOSTS.values())) {
+                Host h = reference.get();
+                if (h == null) continue;
+                h.onViewDetachedFromWindow(h.meter);
+                h.meter.removeOnAttachStateChangeListener(h);
+                h.glyph.setCallback(null);
+            }
+            // Failed unregister operations restore already released registrations. Handlers
+            // are cancelled only after all external registrations have closed successfully.
+            ColorOsReload.closeCallbacks();
+            ColorOsNetworkType.stop();
+            stopMirrors();
+            MAIN.removeCallbacksAndMessages(null);
+        } finally {
+            HOSTS.clear();
+            CHILDREN.clear();
+        }
+    }
+
+    static void cancelReload(Map<String, Object> saved) {
+        boolean detached = ColorOsReload.retiring;
+        ColorOsReload.retiring = false;
+        synchronized (ColorOsHooks.class) {
+            reloadPreparing = false;
+            batteryRefreshQueued = false;
+            if (batteryThread != null && !batteryThread.isAlive()) {
+                batteryWorker = null;
+                batteryThread = null;
+            } else if (batteryThread != null && batteryWorkerStopped) {
+                stoppingBatteryThreads.add(batteryThread);
+                batteryWorker = null;
+                batteryThread = null;
+            }
+            if (chargerWorker != null && chargerWorker.isShutdown()) {
+                if (!chargerWorker.isTerminated()) stoppingChargerWorkers.add(chargerWorker);
+                startChargerWorker(chargerLoader);
+            }
+        }
+        if (detached && saved != null) resume(saved);
+        invalidateHosts();
     }
 
     /** Do not approve unloading while vendor IPC or a sampler is still executing old code. */
@@ -142,6 +207,7 @@ final class ColorOsHooks {
             thread = batteryThread;
             if (batteryWorker != null) batteryWorker.removeCallbacksAndMessages(null);
             if (thread != null) thread.quit();
+            batteryWorkerStopped = true;
         }
         if (chargerWorker != null) chargerWorker.shutdownNow();
         if (thread != null) thread.join(3000L);
@@ -178,21 +244,27 @@ final class ColorOsHooks {
 
     /** Coalesce ColorOS reads off the main thread; the inherited MIUI path stays synchronous. */
     static synchronized boolean dispatchBatteryRefresh(Runnable refresh) {
-        if (ColorOsReload.retiring) return true;
+        if (ColorOsReload.retiring || reloadPreparing) return true;
         if (!installed) return false;
         if (batteryWorker == null) {
             HandlerThread thread = new HandlerThread("ColorDuo-battery",
                     android.os.Process.THREAD_PRIORITY_BACKGROUND);
             thread.start();
             batteryThread = thread;
+            batteryWorkerStopped = false;
             batteryWorker = new Handler(thread.getLooper());
         }
         if (Looper.myLooper() == batteryWorker.getLooper()) return false;
         if (!batteryRefreshQueued) {
             batteryRefreshQueued = true;
             batteryWorker.post(() -> {
-                synchronized (ColorOsHooks.class) { batteryRefreshQueued = false; }
-                refresh.run();
+                synchronized (ColorOsHooks.class) {
+                    batteryRefreshQueued = false;
+                    if (reloadPreparing || ColorOsReload.retiring) return;
+                    batteryReadActive = true;
+                }
+                try { refresh.run(); }
+                finally { synchronized (ColorOsHooks.class) { batteryReadActive = false; } }
             });
         }
         return true;
@@ -207,6 +279,10 @@ final class ColorOsHooks {
 
     private static final ColorOsBattery BATTERY_SAMPLER = new ColorOsBattery();
     private static final ColorOsCharge CHARGE_SAMPLER = new ColorOsCharge();
+    private static final ColorOsChargeSpeed CHARGE_SPEED_SAMPLER = new ColorOsChargeSpeed();
+    private static volatile ColorOsChargeSpeed.Sample observedSpeed =
+            new ColorOsChargeSpeed.Sample(null, "unavailable");
+    private static String lastSpeedNote;
     private static final ColorOsRadio RADIO_SAMPLER = new ColorOsRadio();
     private static volatile DuoPolicy.Charge observedCharge = DuoPolicy.Charge.UNKNOWN;
     private static String lastChargeNote;
@@ -216,9 +292,14 @@ final class ColorOsHooks {
         if (plugged != lastBatteryPlugged) {
             lastBatteryPlugged = plugged;
             if (charger != null) charger.invalidate();
+            CHARGE_SPEED_SAMPLER.invalidate();
         }
         ColorOsCharge.Sample sample = CHARGE_SAMPLER.sample(status, plugged, SystemClock.elapsedRealtime());
         DuoPolicy.Charge next = sample.charge;
+        ColorOsChargeSpeed.Sample speed = CHARGE_SPEED_SAMPLER.sample(
+                next == DuoPolicy.Charge.CHARGING, plugged, SystemClock.elapsedRealtime());
+        boolean speedChanged = speed.speed != observedSpeed.speed || !speed.subtype.equals(observedSpeed.subtype);
+        observedSpeed = speed;
         String note = "ColorOS charging: state=" + next + " status=" + status + " plugged=" + plugged
                 + " plc=" + (sample.bypass == null ? "unavailable" : sample.bypass ? "enabled(3)" : "disabled(2)");
         if (next != observedCharge) {
@@ -228,6 +309,7 @@ final class ColorOsHooks {
         } else if (TrioConfig.debugLog() && !note.equals(lastChargeNote)) {
             TrioHooks.log(TrioHooks.LOG_INFO, note);
         }
+        if (speedChanged) invalidateHosts();
         lastChargeNote = note;
         return next == DuoPolicy.Charge.CHARGING;
     }
@@ -259,6 +341,19 @@ final class ColorOsHooks {
         return sample;
     }
 
+    private static void startChargerWorker(ClassLoader loader) {
+        chargerWorker = Executors.newSingleThreadExecutor(task -> {
+            Thread thread = new Thread(() -> {
+                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
+                task.run();
+            }, "ColorDuo-charger");
+            thread.setDaemon(true);
+            return thread;
+        });
+        charger = new ColorOsCharger(new ColorOsChargerClient(loader),
+                chargerWorker, SystemClock::elapsedRealtime);
+    }
+
     static void install(XposedModule module, ClassLoader loader) {
         meterClass = Refl.cls(METER_CLASS, loader);
         phoneBarClass = Refl.cls("com.android.systemui.statusbar.phone.PhoneStatusBarView", loader);
@@ -273,16 +368,8 @@ final class ColorOsHooks {
             throw new IllegalStateException("ColorOS battery/status bar classes unavailable");
         }
         TrioHooks.useLogger(module);
-        chargerWorker = Executors.newSingleThreadExecutor(task -> {
-                    Thread thread = new Thread(() -> {
-                        android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
-                        task.run();
-                    }, "ColorDuo-charger");
-                    thread.setDaemon(true);
-                    return thread;
-                });
-        charger = new ColorOsCharger(new ColorOsChargerClient(loader),
-                chargerWorker, SystemClock::elapsedRealtime);
+        chargerLoader = loader;
+        startChargerWorker(loader);
         installed = true;
         TrioConfig.install(module);
         TrioConfig.addListener(ColorOsHooks::invalidateHosts);
@@ -296,6 +383,60 @@ final class ColorOsHooks {
         count += hook(module, Refl.method(ImageView.class, "getDrawable"), ColorOsHooks::readDrawable);
         count += hook(module, Refl.method(View.class, "getLayoutParams"), ColorOsHooks::readLayoutParams);
         count += hook(module, Refl.method(View.class, "setLayoutParams", ViewGroup.LayoutParams.class), ColorOsHooks::writeLayoutParams);
+        count += hook(module, Refl.method(View.class, "setMinimumHeight", int.class), chain -> {
+            int requested=(Integer)chain.getArg(0);
+            int retained=ColorOsSizing.retainMinimumHeight((View)chain.getThisObject(),requested);
+            return retained==requested?chain.proceed():chain.proceed(new Object[]{retained});
+        });
+        count += hook(module, Refl.method(Refl.cls("androidx.constraintlayout.widget.ConstraintLayout",loader),
+                "setMinHeight",int.class), chain -> {
+            int requested=(Integer)chain.getArg(0);
+            int retained=ColorOsSizing.retainWidgetMinimumHeight((View)chain.getThisObject(),requested);
+            return retained==requested?chain.proceed():chain.proceed(new Object[]{retained});
+        });
+        count += hook(module, Refl.method(View.class, "setClipBounds", android.graphics.Rect.class), chain -> {
+            android.graphics.Rect requested=(android.graphics.Rect)chain.getArg(0);
+            android.graphics.Rect retained=ColorOsSizing.retainClipBounds((View)chain.getThisObject(),requested);
+            return retained==requested?chain.proceed():chain.proceed(new Object[]{retained});
+        });
+
+        Set<Method> sizingMeasures=new HashSet<>();
+        for(Class<?> type:new Class<?>[]{LinearLayout.class,android.widget.FrameLayout.class,meterClass,
+                Refl.cls("androidx.constraintlayout.widget.ConstraintLayout",loader),
+                Refl.cls("com.oplus.systemui.qs.OplusQuickStatusBarHeader",loader)}) {
+            Method measure=Refl.methodDeep(type,"onMeasure",int.class,int.class);
+            if(measure==null || !sizingMeasures.add(measure)) continue;
+            count += hook(module,measure,chain -> {
+                int requested=(Integer)chain.getArg(1);
+                int retained=ColorOsSizing.retainMeasureSpec((View)chain.getThisObject(),requested);
+                return retained==requested?chain.proceed():chain.proceed(new Object[]{chain.getArg(0),retained});
+            });
+        }
+
+        // Both seamless implementations redraw a different view tree during expansion.
+        // Register at binding/reset time, before the first measure and animation frame.
+        for (String name : new String[] {"StatusBarFakeFrame", "SystemIconFakeFrame"}) {
+            Class<?> frameClass=Refl.cls("com.oplus.systemui.seamless.widget."+name,loader);
+            if(frameClass==null) continue;
+            for(Method method:frameClass.getDeclaredMethods()) {
+                String methodName=method.getName();
+                if(methodName.equals("dispatchDraw") && method.getParameterCount()==1) {
+                    count += hook(module,method,ColorOsHooks::drawMirror);
+                } else if(methodName.equals("setFakeView") || methodName.equals("setMView")
+                        || methodName.equals("bindRealView") || methodName.equals("resetLayoutParams")
+                        || methodName.equals("clearFakeView")) {
+                    count += hook(module,method,chain -> {
+                        Object result=chain.proceed();
+                        ViewGroup frame=(ViewGroup)chain.getThisObject();
+                        Object source=Refl.callByName(frame,"getMView");
+                        if(ColorOsSizing.trackMirror(frame,source instanceof View?(View)source:null))
+                            frame.addOnAttachStateChangeListener(MIRROR_ATTACH);
+                        refreshMirrorSizes();
+                        return result;
+                    });
+                }
+            }
+        }
 
         for (Method method : meterClass.getDeclaredMethods()) {
             String name = method.getName();
@@ -483,6 +624,19 @@ final class ColorOsHooks {
         });
     }
 
+    private static Object drawMirror(XposedInterface.Chain chain) throws Throwable {
+        ViewGroup frame=(ViewGroup)chain.getThisObject();
+        boolean trace=TrioConfig.debugLog();
+        ViewGroup previous=trace?ColorOsDiagnostics.enterMirror(frame):null;
+        try {
+            float offset=ColorOsSizing.mirrorOffset(frame);
+            if(offset==0) return chain.proceed();
+            Canvas canvas=(Canvas)chain.getArg(0);
+            int save=canvas.save();canvas.translate(0,offset);
+            try { return chain.proceed(); } finally { canvas.restoreToCount(save); }
+        } finally { if(trace) ColorOsDiagnostics.leaveMirror(previous); }
+    }
+
     private static Object writeDrawable(XposedInterface.Chain chain) throws Throwable {
         Host owner = childOwner((View) chain.getThisObject());
         if (owner == null || owner.image != chain.getThisObject()
@@ -535,13 +689,19 @@ final class ColorOsHooks {
     }
 
     private static Object writeLayoutParams(XposedInterface.Chain chain) throws Throwable {
-        Host owner=childOwner((View)chain.getThisObject());
+        View target=(View)chain.getThisObject();
+        if(target instanceof ViewGroup && chain.getArg(0) instanceof ViewGroup.LayoutParams) {
+            ColorOsSizing.retainLayoutParams(target,(ViewGroup.LayoutParams)chain.getArg(0));
+            return chain.proceed();
+        }
+        Host owner=childOwner(target);
         if(owner==null || owner.image!=chain.getThisObject() || owner.moduleWriting || !owner.active
                 || !(chain.getArg(0) instanceof LinearLayout.LayoutParams)) return chain.proceed();
         LinearLayout.LayoutParams requested=(LinearLayout.LayoutParams)chain.getArg(0);
         owner.nativeParams=new LinearLayout.LayoutParams(requested);
         LinearLayout.LayoutParams visible=new LinearLayout.LayoutParams(requested);
         visible.width=owner.ownedWidth;visible.height=owner.ownedHeight;
+        visible.gravity=android.view.Gravity.CENTER_VERTICAL;
         return chain.proceed(new Object[]{visible});
     }
 
@@ -610,13 +770,35 @@ final class ColorOsHooks {
         });
     }
 
+    private static void refreshMirrorSizes() {
+        if(ColorOsReload.retiring || refreshingMirrors) return;
+        refreshingMirrors=true;
+        try {
+            for(WeakReference<Host> reference:new ArrayList<>(HOSTS.values())) {
+                Host host=reference.get();
+                if(host==null || !host.active || host.nativeDepth!=0) continue;
+                try {
+                    if(!TrioConfig.get().enabled || !host.meter.isAttachedToWindow()
+                            || host.meter.getVisibility()!=View.VISIBLE) host.apply();
+                    else host.resize(TrioConfig.appearance());
+                } catch(Throwable error) { host.fail(error); }
+            }
+        } finally { refreshingMirrors=false; }
+    }
+
+    private static void stopMirrors() {
+        for(ViewGroup frame:ColorOsSizing.trackedMirrors())
+            frame.removeOnAttachStateChangeListener(MIRROR_ATTACH);
+        ColorOsSizing.clearMirrors();
+    }
+
     private static void refreshHosts() {
         if (ColorOsReload.retiring) return;
         ClockTicker.refreshNow();
         for (WeakReference<Host> reference : new ArrayList<>(HOSTS.values())) {
             Host host = reference.get();
             if (host == null || host.nativeDepth != 0) continue;
-            try { host.apply(); }
+            try { host.apply();host.traceLayout(); }
             catch (Throwable error) { host.fail(error); }
         }
     }
@@ -729,6 +911,10 @@ final class ColorOsHooks {
         boolean moduleWriting;
         int ownedWidth;
         int ownedHeight;
+        float ownedScale;
+        final ColorOsSizing sizing = new ColorOsSizing();
+        final ColorOsDiagnostics diagnostics = new ColorOsDiagnostics();
+        String lastSizeNote;
         long nextSignalSample;
         String lastWifiNote;
         String lastWifiHandoff;
@@ -813,28 +999,16 @@ final class ColorOsHooks {
             if (!active) capture();
             active = true;
             TrioAppearance appearance = TrioConfig.appearance();
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(nativeParams);
-            int height = Math.round(20 * meter.getResources().getDisplayMetrics().density);
-            TrioGeometry.setCapsuleLength(appearance.capsuleLength);
-            params.height = appearance.capsule ? TrioGeometry.capHostHeightPx(height * 3 / 4) : height;
-            params.width = appearance.capsule ? TrioGeometry.capHostWidthPx(height * 3 / 4)
-                    : Math.round(24 * meter.getResources().getDisplayMetrics().density);
-            if (appearance.ring && (appearance.splitMode == 1 || appearance.drawsSimPair() || appearance.signalIconScale != 100)) {
-                TrioGeometry.SplitRing shape = new TrioGeometry.SplitRing(appearance);
-                params.width = Math.max(params.width, Math.round(height * shape.width()/shape.height()));
-            }
-            ownedWidth = params.width;
-            ownedHeight = params.height;
-            if (image.getLayoutParams().width != params.width || image.getLayoutParams().height != params.height) {
-                image.setLayoutParams(params);
-            }
+            resize(appearance);
             image.setScaleType(ImageView.ScaleType.FIT_XY);
             if (image.getDrawable() != glyph) image.setImageDrawable(glyph);
             visibilityOverrides.put(image, View.VISIBLE);
             image.setVisibility(View.VISIBLE);
             hide("battery_content", true);
             hide("battery_percentage_view", !appearance.handsBackPercentage());
-            hide("battery_charge_icon", appearance.hidesNativeBolt());
+            boolean hideNativeBolt = appearance.hidesNativeBolt() || (!state.charging && !state.chargingPaused);
+            hide("battery_charge_icon", hideNativeBolt);
+            hide("battery_charge_reverse", hideNativeBolt);
             hide(clockContainer, TrioRenderer.drawsClock(state, appearance));
             syncExtra(appearance);
             syncSlots(appearance);
@@ -848,6 +1022,55 @@ final class ColorOsHooks {
                         + " level=" + state.level + " wifiFlow=" + (wifiFlow != null)
                         + " wifiLevel=" + state.wifiLevel + " wifiPresent=" + state.wifiPresent
                         + " mobileSubscriptions=" + MOBILES.size());
+            }
+        }
+
+        /** Geometry-only refresh for native seamless binding/layout callbacks. */
+        void resize(TrioAppearance appearance) {
+            boolean previous=moduleWriting;
+            moduleWriting=true;
+            try {
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(nativeParams);
+                TrioSizing.Metrics dimensions = sizing.measure(meter,image,appearance);
+                params.height = dimensions.height;
+                params.width = dimensions.width;
+                params.gravity = android.view.Gravity.CENTER_VERTICAL;
+                ownedScale = dimensions.scale;
+                if (TrioConfig.debugLog()) {
+                    String note = "ColorOS size: requested=" + TrioConfig.get().glyphScale
+                            + " effective=" + Math.round(dimensions.effectivePercent)
+                            + " width=" + dimensions.width + " height=" + dimensions.height
+                            + " limited=" + dimensions.limited;
+                    if (!note.equals(lastSizeNote)) {
+                        lastSizeNote = note;
+                        TrioHooks.log(TrioHooks.LOG_INFO,note);
+                    }
+                }
+                ownedWidth = params.width;
+                ownedHeight = params.height;
+                if (image.getLayoutParams().width != params.width || image.getLayoutParams().height != params.height) {
+                    image.setLayoutParams(params);
+                }
+            } finally { moduleWriting=previous; }
+        }
+
+        void traceLayout() {
+            if(!TrioConfig.debugLog() || !active || image==null) return;
+            try {
+                diagnostics.layout(meter,image,ownedWidth,ownedHeight,ownedScale,sizing.mirrorFrames(),SystemClock.uptimeMillis(),
+                        note -> TrioHooks.log(TrioHooks.LOG_INFO,note));
+            } catch(Throwable error) {
+                TrioHooks.log(TrioHooks.LOG_WARN,"ColorDuoTrace layout unavailable: "+error);
+            }
+        }
+
+        void traceDraw(Canvas canvas,android.graphics.Rect bounds) {
+            if(!TrioConfig.debugLog()) return;
+            try {
+                diagnostics.draw(meter,image,canvas,bounds,ownedScale,SystemClock.uptimeMillis(),
+                        note -> TrioHooks.log(TrioHooks.LOG_INFO,note));
+            } catch(Throwable error) {
+                TrioHooks.log(TrioHooks.LOG_WARN,"ColorDuoTrace draw unavailable: "+error);
             }
         }
 
@@ -873,6 +1096,7 @@ final class ColorOsHooks {
                     LinearLayout.LayoutParams fixed = new LinearLayout.LayoutParams(nativeParams);
                     fixed.width = ownedWidth;
                     fixed.height = ownedHeight;
+                    fixed.gravity = android.view.Gravity.CENTER_VERTICAL;
                     image.setLayoutParams(fixed);
                 }
             } finally { moduleWriting = previous; }
@@ -886,6 +1110,7 @@ final class ColorOsHooks {
         }
 
         void restoreBatteryInternal() {
+            sizing.release();
             if (active && image != null) {
                 image.setImageDrawable(nativeDrawable);
                 image.setScaleType(nativeScaleType);
@@ -925,8 +1150,22 @@ final class ColorOsHooks {
                     ? bool(Refl.callByName(charge, "getCharging"), TrioState.sChargingAttached)
                     : observedCharge == DuoPolicy.Charge.CHARGING;
             state.chargingPaused = observedCharge == DuoPolicy.Charge.PAUSED;
-            state.quickCharging = state.charging && (bool(Refl.callByName(charge, "getSuperVoocCharging"), false)
-                    || bool(Refl.callByName(charge, "getWirelessVoocCharging"), false));
+            ColorOsChargeSpeed.NativeSample nativeSpeed = CHARGE_SPEED_SAMPLER.nativeSample(charge);
+            ColorOsChargeSpeed.Sample protocol = observedSpeed;
+            state.chargingSpeed = !state.charging ? ChargeSpeed.NORMAL
+                    : protocol.speed != null ? protocol.speed
+                    : nativeSpeed.speed != null ? nativeSpeed.speed : ChargeSpeed.NORMAL;
+            state.quickCharging = state.charging && state.chargingSpeed != ChargeSpeed.NORMAL;
+            String speedNote = "ColorOS charge speed: tier=" + state.chargingSpeed
+                    + " charging=" + state.charging + " fastChgType=" + protocol.subtype
+                    + " source=" + (!state.charging ? "disconnected"
+                        : protocol.speed != null ? "oplus_sysfs"
+                        : nativeSpeed.speed != null ? "native_flags" : "fallback_normal");
+            if (TrioConfig.debugLog()) speedNote += " native={" + nativeSpeed.flags + "}";
+            if (!speedNote.equals(lastSpeedNote)) {
+                lastSpeedNote = speedNote;
+                TrioHooks.log(TrioHooks.LOG_INFO, speedNote);
+            }
             state.powerSave = bool(value(savingFlow), bool(Refl.get(
                     Refl.field(viewModel == null ? null : viewModel.getClass(), "isSavingMode"), viewModel), false));
             state.low = state.level >= 0 && state.level <= 15;
@@ -998,8 +1237,8 @@ final class ColorOsHooks {
                     if (DuoPolicy.hasNotice(radio.services[slot])) state.slotLevels[slot] = 0;
                     if (id == dataId || (dataId < 0 && state.mobileLevel < 0)) {
                         state.mobileLevel = state.slotLevels[slot];
-                        String radioType = ColorOsNetworkType.read(id);
-                        state.mobileType = mobile == null ? radioType : mobile.networkType(radioType);
+                        state.mobileType = mobile == null ? "" : mobile.networkType("");
+                        if (state.mobileType.isEmpty()) state.mobileType = ColorOsNetworkType.read(id);
                         if (state.dataSlot < 0) state.dataSlot = slot;
                         if (state.mobileService == DuoPolicy.Radio.UNKNOWN && mobile != null) {
                             Object service = value(mobile.inService);
@@ -1066,10 +1305,12 @@ final class ColorOsHooks {
                 iconContainer = resolved instanceof ViewGroup ? (ViewGroup) resolved : null;
             }
             Set<String> wanted = new HashSet<>();
+            // Register before an HD child exists, so both shade hosts inherit the choice.
+            boolean noticeVisible = extra != null && extra.hasVisibleRadioNotice();
+            if (TrioConfig.get().hideHd) wanted.add("volte");
             if (iconContainer != null) for (int i = 0; i < iconContainer.getChildCount(); i++) {
                 Object slot = Refl.callByName(iconContainer.getChildAt(i), "getSlot");
                 if (!(slot instanceof String)) continue;
-                boolean noticeVisible = extra != null && extra.hasVisibleRadioNotice();
                 if (DuoPolicy.foldSlot((String) slot, appearance.foldsMobile(), state.sims,
                         state.mobileService, noticeVisible)) wanted.add((String) slot);
                 if (slot.equals("wifi") && appearance.ownsWifi() && state.wifiLevel >= 0) wanted.add((String) slot);
@@ -1117,7 +1358,7 @@ final class ColorOsHooks {
         }
 
         @Override public void onViewAttachedToWindow(View view) {
-            MAIN.post(() -> { try { apply(); } catch (Throwable error) { fail(error); } });
+            try { apply(); } catch (Throwable error) { fail(error); }
         }
         @Override public void onViewDetachedFromWindow(View view) {
             restore();
@@ -1137,6 +1378,7 @@ final class ColorOsHooks {
 
         @Override public void draw(Canvas canvas) {
             if (!host.active || host.failed || getBounds().isEmpty()) return;
+            host.traceDraw(canvas,getBounds());
             // The shared renderer clears its canvas. A clipped layer confines that clear to the
             // battery drawable, keeping neighbouring SystemUI icons on the parent canvas intact.
             int save = canvas.save();
@@ -1145,8 +1387,8 @@ final class ColorOsHooks {
                         getBounds().right, getBounds().bottom, layerPaint);
                 canvas.translate(getBounds().left, getBounds().top);
                 canvas.clipRect(0, 0, getBounds().width(), getBounds().height());
-                TrioRenderer.drawState(canvas, getBounds().width(), getBounds().height(),
-                        host.state, TrioConfig.get());
+                TrioRenderer.drawSizedState(canvas, getBounds().width(), getBounds().height(),
+                        host.state, TrioConfig.get(), host.ownedScale, true);
             } catch (Throwable error) {
                 host.failed = true;
                 MAIN.post(() -> host.fail(error));

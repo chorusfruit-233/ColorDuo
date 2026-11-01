@@ -12,6 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executor;
 
 /** RAT identity independent of SystemUI's visibility-filtered, WhileSubscribed icon flows. */
 final class ColorOsNetworkType {
@@ -32,7 +33,12 @@ final class ColorOsNetworkType {
             if (Build.VERSION.SDK_INT >= 31) {
                 try {
                     line.callback = new DisplayCallback(line);
-                    line.manager.registerTelephonyCallback(context.getMainExecutor(), line.callback);
+                    TelephonyCallback callback = line.callback;
+                    Executor executor = context.getMainExecutor();
+                    line.manager.registerTelephonyCallback(executor, callback);
+                    line.registration = ColorOsReload.watch(
+                            () -> line.manager.unregisterTelephonyCallback(callback),
+                            () -> line.manager.registerTelephonyCallback(executor, callback));
                 } catch (RuntimeException unavailable) {
                     line.callback = null;
                 }
@@ -63,11 +69,14 @@ final class ColorOsNetworkType {
     private static final class Line {
         final TelephonyManager manager;
         TelephonyCallback callback;
+        ColorOsReload.Registration registration;
         int network;
         int override;
         Line(TelephonyManager manager) { this.manager = manager; }
         void close() {
-            if (callback != null) manager.unregisterTelephonyCallback(callback);
+            if (registration != null) registration.release();
+            else if (callback != null) manager.unregisterTelephonyCallback(callback);
+            registration = null;
             callback = null;
         }
     }

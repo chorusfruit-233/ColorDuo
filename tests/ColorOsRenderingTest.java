@@ -21,6 +21,7 @@ public final class ColorOsRenderingTest {
         final List<float[]> circles = new ArrayList<>();
         final List<Integer> circleColors = new ArrayList<>();
         final List<Integer> pathColors = new ArrayList<>();
+        final List<java.awt.geom.Rectangle2D> pathBounds = new ArrayList<>();
         final List<Integer> arcColors = new ArrayList<>();
         final List<Integer> textColors = new ArrayList<>();
         final List<String> texts = new ArrayList<>();
@@ -44,6 +45,9 @@ public final class ColorOsRenderingTest {
         }
         @Override public void drawPath(Path path, Paint paint) {
             pathColors.add(paint.getColor());
+            RectF ink=new RectF();path.computeBounds(ink,true);
+            pathBounds.add(graphics.getTransform().createTransformedShape(new java.awt.geom.Rectangle2D.Float(
+                    ink.left,ink.top,ink.width(),ink.height())).getBounds2D());
             super.drawPath(path, paint);
         }
         @Override public void drawText(String text, float x, float y, Paint paint) {
@@ -62,6 +66,8 @@ public final class ColorOsRenderingTest {
     }
 
     public static void main(String[] args) throws Exception {
+        adaptiveRingOpenings();
+        physicalSizing();
         fullCapsule();
         clockHandoff();
         readableDefaults();
@@ -74,7 +80,205 @@ public final class ColorOsRenderingTest {
         wholeSignalScale();
         trueEllipseRendering();
         centrePairDuringCharging();
+        splitDefaultTextClearance();
+        capsulePairClockClearance();
+        mirroredPairRows();
         System.out.println("Capsule fill, live clock handoff and reachable percentage sizing passed: " + checks + " checks");
+    }
+
+
+    private static float renderedOpening(int part,int valueSize,int valueWeight,int boltScale) {
+        TrioSettings settings=TrioSettings.defaults();
+        settings.trioStyle=Prefs.STYLE_RING;settings.splitMode=0;
+        settings.ringZones=Prefs.decodeLayout(part+"|||");
+        settings.showValue=settings.showBolt=true;
+        settings.chargingShowsValue=false;
+        settings.valueSize=valueSize;settings.valueWeight=valueWeight;
+        settings.boltScale=boltScale;
+        TrioState state=new TrioState();state.level=64;
+        state.charging=part==Prefs.PART_BOLT;
+        try(Frame frame=new Frame()) {
+            TrioRenderer.drawState(frame,480,400,state,settings);
+            check(frame.arcs.size()>=2,"an occupied top opening draws both track segments");
+            return 360f-frame.arcs.get(0)-frame.arcs.get(1);
+        }
+    }
+
+    private static void adaptiveRingOpenings() {
+        String clock=TrioState.sClockText;
+        try {
+            TrioState.sClockText="19:41";
+            float digits=renderedOpening(Prefs.PART_VALUE,36,700,100);
+            float time=renderedOpening(Prefs.PART_CLOCK,36,700,100);
+            check(digits<time-10f,"issue #10: two battery digits must not reuse the clock's wide opening: digits="+digits+" clock="+time);
+            check(renderedOpening(Prefs.PART_VALUE,18,700,100)<digits,"the opening follows a smaller configured percentage font");
+            check(renderedOpening(Prefs.PART_VALUE,40,700,100)>=digits,"the opening makes room for a larger percentage font");
+            check(renderedOpening(Prefs.PART_VALUE,36,900,100)>=renderedOpening(Prefs.PART_VALUE,36,100,100),
+                    "a heavier percentage face cannot leave a narrower opening");
+            float bolt=renderedOpening(Prefs.PART_BOLT,36,700,100);
+            check(bolt<digits && bolt<time,"the bolt uses its own ink width instead of a text notch");
+            check(renderedOpening(Prefs.PART_BOLT,36,700,60)<bolt
+                    && renderedOpening(Prefs.PART_BOLT,36,700,160)>bolt,"bolt scale immediately changes the arc endpoints");
+            for(int zone:new int[]{0,2}) for(int part:new int[]{Prefs.PART_VALUE,Prefs.PART_BOLT,Prefs.PART_CLOCK,Prefs.PART_TYPE})
+            for(int stroke:new int[]{4,14,16}) for(int weight:new int[]{100,700,900}) for(int level:new int[]{8,64,100}) {
+                TrioSettings settings=TrioSettings.defaults();settings.splitMode=0;settings.ringStroke=stroke;
+                settings.ringZones=Prefs.decodeLayout("|||");settings.ringZones[zone]=new int[]{part};
+                settings.showValue=settings.showBolt=true;settings.chargingShowsValue=false;
+                settings.mobileTypeMode=Prefs.MOBILE_TYPE_IN_RING;settings.typeHideOnWifi=false;
+                settings.valueWeight=settings.clockWeight=settings.typeWeight=weight;
+                settings.valueSize=settings.clockSize=settings.typeSize=weight==100?18:weight==700?36:60;
+                settings.typeSuffixScale=60;settings.boltScale=weight==100?60:weight==700?100:160;
+                TrioState state=new TrioState();state.level=level;state.mobileType="5GA";
+                state.charging=part==Prefs.PART_BOLT;
+                TrioAppearance a=TrioAppearance.of(settings);
+                float[] transform=new float[3];TrioRenderer.designTransform(480,400,a,transform);
+                try(Frame frame=new Frame()) {
+                    TrioRenderer.drawState(frame,480,400,state,settings);
+                    int trackSegments=zone==0?2:1;
+                    float track=0,lit=0;
+                    for(int n=0;n<frame.arcs.size();n++) { if(n<trackSegments)track+=frame.arcs.get(n);else lit+=frame.arcs.get(n); }
+                    check(track>0 && Math.abs(lit/track-level/100f)<.0001,"percentage fill is measured over the newly visible arc length");
+                    java.awt.geom.Rectangle2D ink=null;
+                    for(var box:part==Prefs.PART_BOLT?frame.pathBounds:frame.textBounds)
+                        ink=ink==null?box:ink.createUnion(box);
+                    check(ink!=null,"the selected opening component actually paints ink");
+                    float first=frame.ellipseArcs.get(0)[2];
+                    float end=first+frame.ellipseArcs.get(0)[3];
+                    double closest=Double.POSITIVE_INFINITY;
+                    for(float angle:zone==0?new float[]{end,frame.ellipseArcs.get(1)[2]}:new float[]{first,end}) {
+                        double x=(TrioGeometry.B_CX+TrioGeometry.B_R*Math.cos(Math.toRadians(angle)))*transform[0]+transform[1];
+                        double y=(TrioGeometry.B_CY+TrioGeometry.B_R*Math.sin(Math.toRadians(angle)))*transform[0]+transform[2];
+                        double dx=Math.max(0,Math.max(ink.getMinX()-x,x-ink.getMaxX()));
+                        double dy=Math.max(0,Math.max(ink.getMinY()-y,y-ink.getMaxY()));
+                        double clearance=Math.hypot(dx,dy)/transform[0]-stroke/2f;
+                        check(clearance>=1.9,"arc caps clear actual weighted text/path ink: zone="+zone+" part="+part+" stroke="+stroke+" clearance="+clearance);
+                        closest=Math.min(closest,clearance);
+                    }
+                    if(part==Prefs.PART_VALUE && weight==700 && level==64)
+                        check(closest<4,"ordinary percentage digits keep a compact visible clearance");
+                    float top=zone==0?360f-track:0f,bottom=zone==2?360f-track:0f;
+                    float angle=zone==0?270f+top/2f+2f:90f+bottom/2f+2f;
+                    float x=(TrioGeometry.B_CX+TrioGeometry.B_R*(float)Math.cos(Math.toRadians(angle)))*transform[0]+transform[1];
+                    float y=(TrioGeometry.B_CY+TrioGeometry.B_R*(float)Math.sin(Math.toRadians(angle)))*transform[0]+transform[2];
+                    check(TrioZones.batteryRingAt(transform,a,top,bottom,x,y),"preview hit testing follows the visible arc near its measured endpoint");
+                    x=TrioGeometry.B_CX*transform[0]+transform[1];
+                    y=(TrioGeometry.B_CY+(zone==0?-TrioGeometry.B_R:TrioGeometry.B_R))*transform[0]+transform[2];
+                    check(!TrioZones.batteryRingAt(transform,a,top,bottom,x,y),"the component's open centre remains editable instead of selecting the battery arc");
+                }
+            }
+            TrioSettings signal=TrioSettings.defaults();signal.ringZones=Prefs.decodeLayout("3||7|");
+            signal.showSim1=signal.showMobile=true;signal.signalMode=Prefs.SIGNAL_IN_RING;
+            TrioState state=new TrioState();state.level=64;state.sims=1;state.slotLevels=new int[]{4,-1};state.mobileLevel=4;
+            try(Frame frame=new Frame()) {
+                TrioRenderer.drawState(frame,480,400,state,signal);
+                check(Math.abs((frame.ellipseArcs.get(0)[2]-90f)*2f-96f)<.001,"the opposite signal notch keeps its established bead geometry");
+                check(frame.circles.size()==4,"measuring a text opening leaves all four signal beads visible");
+            }
+        } finally { TrioState.sClockText=clock; }
+    }
+
+    private static void splitDefaultTextClearance() {
+        TrioSettings settings=TrioSettings.defaults();settings.splitMode=1;
+        settings.ringZones=Prefs.decodeLayout("3|||");
+        for(int value:new int[]{8,84,100}) {
+            TrioState state=new TrioState();state.level=value;
+            TrioAppearance appearance=TrioAppearance.of(settings);
+            float[] transform=new float[3];TrioRenderer.designTransform(480,400,appearance,transform);
+            TrioGeometry.EllipseSide left=new TrioGeometry.EllipseSide(appearance,0);
+            TrioGeometry.EllipseSide right=new TrioGeometry.EllipseSide(appearance,1);
+            try(Frame frame=new Frame()) {
+                TrioRenderer.drawState(frame,480,400,state,settings);
+                var ink=frame.textBounds.get(0);
+                float start=(left.x(1)+appearance.ringStroke/2f+1)*transform[0]+transform[1];
+                float end=(right.x(0)-appearance.ringStroke/2f-1)*transform[0]+transform[1];
+                check(ink.getMinX()>=start-.1 && ink.getMaxX()<=end+.1,
+                        "default split opening clears battery digits: "+value+" ink="+ink+" gap="+start+":"+end+" font="+frame.textSize);
+                check(Math.abs(frame.textSize-Prefs.DEF_VALUE_SIZE)<.05,
+                        "default split opening fits the actual default battery font size: value="+value+" actual="+frame.textSize+" ink="+ink+" opening="+TrioGeometry.splitOpeningWidth(appearance,0));
+            }
+        }
+        for(int link:new int[]{0,1})for(int distance:new int[]{10,24})for(int opening:new int[]{16,48}) {
+            settings.splitLink=link;settings.splitLeftDistance=distance;settings.splitLeftTop=opening;
+            TrioState state=new TrioState();state.level=100;
+            TrioAppearance appearance=TrioAppearance.of(settings);float[] transform=new float[3];
+            TrioRenderer.designTransform(480,400,appearance,transform);
+            var left=new TrioGeometry.EllipseSide(appearance,0);var right=new TrioGeometry.EllipseSide(appearance,1);
+            try(Frame frame=new Frame()) {
+                TrioRenderer.drawState(frame,480,400,state,settings);
+                var ink=frame.textBounds.get(0);
+                float from=(left.x(1)+appearance.ringStroke/2f+1)*transform[0]+transform[1];
+                float to=(right.x(0)-appearance.ringStroke/2f-1)*transform[0]+transform[1];
+                check(ink.getMinX()>=from-.1 && ink.getMaxX()<=to+.1,
+                        "narrow split opening fits actual centred glyph overhang: d="+distance+" o="+opening+" ink="+ink+" gap="+from+":"+to+" font="+frame.textSize);
+            }
+        }
+    }
+
+    private static void capsulePairClockClearance() {
+        TrioState state=new TrioState();state.level=84;state.slotLevels=new int[]{4,2};
+        state.sims=2;state.mobileService=DuoPolicy.Radio.AVAILABLE;TrioState.sClockText="09:41";
+        for(int length:new int[]{-30,0,60})for(int size:new int[]{50,100,200}) {
+            TrioSettings settings=pairedSettings(Prefs.STYLE_CAPSULE,1,50);
+            settings.capsuleLength=length;settings.signalIconScale=size;
+            settings.ringZones[TrioZones.Zone.LEFT.ordinal()]=new int[]{Prefs.PART_CLOCK};
+            try(Frame frame=new Frame()) {
+                TrioRenderer.drawState(frame,480,400,state,settings);
+                check(frame.circles.size()==8,"capsule centre keeps both rows beside the clock");
+                float pairLeft=Float.MAX_VALUE;
+                for(float[] dot:frame.circles)pairLeft=Math.min(pairLeft,dot[0]-dot[2]);
+                var clock=frame.textBounds.get(0);
+                check(clock.getMaxX()+.1<pairLeft,
+                        "capsule centre pair reserves the clock's real ink: length="+length+", size="+size);
+            }
+        }
+    }
+
+
+    private static void mirroredPairRows() {
+        TrioState state=new TrioState();state.level=84;state.mobileService=DuoPolicy.Radio.AVAILABLE;
+        for(int style:new int[]{Prefs.STYLE_RING,Prefs.STYLE_CAPSULE})
+        for(int zone:new int[]{0,1,2})for(int[] levels:new int[][]{{4,-1},{-1,2},{4,2}})
+        for(int reverse:new int[]{0,1}) {
+            state.slotLevels=levels;state.sims=levels[0]>=0&&levels[1]>=0?2:1;
+            TrioSettings off=pairedSettings(style,zone,50);off.pairBend=30;off.pairReverse=reverse;
+            off.splitMode=style==Prefs.STYLE_RING?1:0;
+            TrioSettings on=off.copy();on.pairMirror=1;
+            float[] a=new float[3],b=new float[3];
+            TrioRenderer.designTransform(480,400,TrioAppearance.of(off),a);
+            TrioRenderer.designTransform(480,400,TrioAppearance.of(on),b);
+            try(Frame before=new Frame();Frame after=new Frame()) {
+                TrioRenderer.drawState(before,480,400,state,off);
+                TrioRenderer.drawState(after,480,400,state,on);
+                check(before.circles.size()==state.sims*4&&after.circles.size()==state.sims*4,
+                        "mirroring never creates a missing SIM row");
+                check(before.circleColors.equals(after.circleColors),"mirroring retains each physical SIM's own level");
+                for(int row=0;row<state.sims;row++) {
+                    float[] p=designDot(before.circles.get(row*4),a),q=designDot(before.circles.get(row*4+1),a);
+                    float[] r=designDot(after.circles.get(row*4),b),t=designDot(after.circles.get(row*4+1),b);
+                    check(q[1]-p[1]>0&&Math.abs((q[1]-p[1])+(t[1]-r[1]))<.05,
+                            "every visible row flips its curvature, including a lone SIM1");
+                    check(Math.abs((q[0]-p[0])-(t[0]-r[0]))<.05&&Math.abs(p[2]-r[2])<.05,
+                            "mirror changes neither dot pitch nor diameter");
+                }
+                if(state.sims==2) {
+                    float rowPitch=designDot(after.circles.get(4),b)[1]-designDot(after.circles.get(0),b)[1];
+                    check((reverse==0?rowPitch:-rowPitch)>0,"mirror keeps the selected SIM order");
+                    for(int dot=0;dot<4;dot++) {
+                        float[] upper=designDot(after.circles.get(dot),b),lower=designDot(after.circles.get(dot+4),b);
+                        check(Math.abs((lower[1]-upper[1])-rowPitch)<.05,"mirrored rows remain parallel rather than crossing");
+                        check(Math.abs(rowPitch)+.05>=upper[2]+lower[2],"rows leave room for their actual bead diameter");
+                    }
+                }
+            }
+        }
+        state.slotLevels=new int[]{4,2};state.sims=2;
+        TrioSettings thick=pairedSettings(Prefs.STYLE_RING,1,0);thick.dotScale=200;thick.pairMirror=1;
+        float[] transform=new float[3];TrioRenderer.designTransform(480,400,TrioAppearance.of(thick),transform);
+        try(Frame frame=new Frame()) {
+            TrioRenderer.drawState(frame,480,400,state,thick);
+            float[] one=designDot(frame.circles.get(1),transform),two=designDot(frame.circles.get(5),transform);
+            check(Math.abs(two[1]-one[1])+.05>=one[2]+two[2],"zero requested gap still prevents thick rows overlapping");
+        }
     }
 
     private static TrioSettings pairedSettings(int style, int zone, int gap) {
@@ -172,6 +376,7 @@ public final class ColorOsRenderingTest {
         state.useTint = true;
         state.tintColor = 0xff44ccff;
         state.chargingPaused = true;
+        settings.pausedGrayAll = false;
         try (Frame ring = new Frame(); Frame all = new Frame()) {
             TrioRenderer.drawState(ring, 480, 400, state, settings);
             settings.pausedGrayAll = true;
@@ -387,13 +592,13 @@ public final class ColorOsRenderingTest {
         settings.showSim1 = true;
         TrioAppearance.Ring topText = TrioAppearance.of(settings).ring(88, false, -1, "5G", 2, false);
         check(Math.abs((topText.gapEnd() - topText.gapStart()) * topText.sweep() - 128f) < 0.01f,
-                "text widens the top opening to clear the digits");
+                "text fitting retains its maximum opening budget");
         check(Math.abs(360f - topText.sweep() - 96f) < 0.01f,
                 "signal beads keep their original opening and spacing");
         settings.ringZones = Prefs.decodeLayout("7|6|3|");
         TrioAppearance.Ring bottomText = TrioAppearance.of(settings).ring(88, false, -1, "5G", 2, false);
         check(Math.abs(360f - bottomText.sweep() - 128f) < 0.01f,
-                "bottom text has the same opening width as top text");
+                "top and bottom text share the same maximum fitting budget");
         check(TrioGeometry.zoneTextRoomH(1, bottomText.parts)
                         <= 2f * (TrioGeometry.ZONE_CUT_BOTTOM - TrioGeometry.ZONE_CY[1] - 2.5f),
                 "middle text cannot consume an occupied bottom band");
@@ -524,6 +729,56 @@ public final class ColorOsRenderingTest {
     private static float[] designDot(float[] dot, float[] transform) {
         return new float[]{(dot[0]-transform[1])/transform[0],(dot[1]-transform[2])/transform[0],dot[2]/transform[0]};
     }
+    private static void physicalSizing() {
+        for(int style:new int[]{Prefs.STYLE_RING,Prefs.STYLE_CAPSULE})
+        for(float density:new float[]{1.5f,2f,3f,4f}) {
+            TrioSettings s=TrioSettings.defaults();s.enabled=true;s.trioStyle=style;
+            s=TrioZones.withPiece(s,1,TrioZones.Part.VALUE);
+            TrioState state=new TrioState();state.level=84;state.useTint=true;state.tintColor=0xffffffff;
+            double initial=0, initialInk=0;
+            for(int percent:new int[]{100,150,200,300}) {
+                s.glyphScale=percent;
+                TrioSizing.Metrics m=TrioSizing.measure(TrioAppearance.of(s),density,2000,3000);
+                check(!m.limited,"unbounded physical scale remains available");
+                if(percent==100) initial=m.scale;
+                check(Math.abs(m.scale/initial-percent/100.0)<.001,"overall scaling is applied exactly once");
+                try(Frame frame=new Frame(new BufferedImage(m.width,m.height,BufferedImage.TYPE_INT_ARGB).createGraphics())) {
+                    TrioRenderer.drawSizedState(frame,m.width,m.height,state,s,m.scale,false);
+                    double height=frame.textBounds.get(0).getHeight();
+                    if(percent==100) initialInk=height;
+                    check(Math.abs(height/initialInk-percent/100.0)<.01,
+                            "actual painted digits enlarge by the requested percentage without double scaling");
+                    check(frame.texts.contains("84"),"physical-size renderer paints the configured percentage");
+                    for(java.awt.geom.Rectangle2D ink:frame.textBounds)
+                        check(ink.getMinX()>=-1 && ink.getMinY()>=-1 && ink.getMaxX()<=m.width+1 && ink.getMaxY()<=m.height+1,
+                                "measured physical host contains the actual text");
+                }
+            }
+            s.glyphScale=150;
+            s=TrioZones.withPiece(s,2,TrioZones.Part.SIM_PAIR);
+            TrioSizing.Metrics before=TrioSizing.measure(TrioAppearance.of(s),density,2000,3000);
+            s.signalIconScale=200;s.simStackGap=300;s.pairBend=30;
+            TrioSizing.Metrics after=TrioSizing.measure(TrioAppearance.of(s),density,2000,3000);
+            check(Math.abs(before.scale-after.scale)<.0001,"larger signal does not shrink battery text when space exists");
+            check(after.height>=before.height && after.width>=before.width,"signal growth reserves additional host space");
+            s.glyphScale=300;
+            int capacity=Math.round(24*density);
+            TrioSizing.Metrics bounded=TrioSizing.measure(TrioAppearance.of(s),density,capacity,2000);
+            check(bounded.limited && bounded.height<=capacity,"surface-height limit is explicit and respected");
+            TrioSizing.Bounds bounds=TrioSizing.bounds(TrioAppearance.of(s));
+            check(bounds.height*bounded.scale<=capacity+.01,"limited scale fits the actual full ink bounds");
+            float[] granted=new float[3];
+            check(TrioSizing.transform(18,12,TrioAppearance.of(s),bounded.scale,granted),
+                    "a temporarily smaller vendor drawable still has a transform");
+            check(bounds.width*granted[0]<=18.01 && bounds.height*granted[0]<=12.01,
+                    "the final drawable bounds cannot crop a larger requested scale");
+            TrioSizing.Metrics narrow=TrioSizing.measure(TrioAppearance.of(s),density,2000,30);
+            check(narrow.limited && narrow.width<=30,"horizontal space is bounded too");
+            s.glyphScale=300;
+            check(TrioSettings.fromBundle(s.toBundle()).glyphScale==300,"300 percent survives framework transport");
+        }
+    }
+
     private static void wholeSignalScale() {
         TrioState state=new TrioState();state.level=70;state.slotLevels=new int[]{4,2};
         state.mobileService=DuoPolicy.Radio.AVAILABLE;

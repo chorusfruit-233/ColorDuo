@@ -33,6 +33,8 @@ public final class TrioRenderer {
     private static final Paint FILL = new Paint(Paint.ANTI_ALIAS_FLAG);
     private static final Paint TEXT = new Paint(Paint.ANTI_ALIAS_FLAG);
     private static final Path BOLT = buildBolt();
+    private static final RectF BOLT_BOUNDS = new RectF();
+    static { BOLT.computeBounds(BOLT_BOUNDS, true); }
     private static final Path WIFI_DOT = buildWifiDot();
     private static final RectF ARC = new RectF();
     /** Scratch for the rectangular battery bar; rewritten every frame, never kept. */
@@ -327,7 +329,17 @@ public final class TrioRenderer {
         drawInto(canvas, w, h, s.level, s.charging, s.quickCharging, s.powerSave, s.low,
                 s.wifiPresent ? s.wifiLevel : -1, s.mobileLevel, s.slotLevels, s.mobileType,
                 s.foreground(), cfg, true, s.wifiPresent, s.dataSlot, s.chargingPaused,
-                s.mobileService == DuoPolicy.Radio.REGISTERING);
+                s.mobileService == DuoPolicy.Radio.REGISTERING, s.chargingSpeed);
+    }
+
+    /** Draw a frame using the exact scale already measured for its SystemUI host. */
+    static void drawSizedState(Canvas canvas,int w,int h,TrioState s,TrioSettings cfg,
+                               float scale,boolean clear) {
+        if(w<=0 || h<=0 || s==null || cfg==null || scale<=0) return;
+        drawInto(canvas,w,h,s.level,s.charging,s.quickCharging,s.powerSave,s.low,
+                s.wifiPresent?s.wifiLevel:-1,s.mobileLevel,s.slotLevels,s.mobileType,
+                s.foreground(),cfg,clear,s.wifiPresent,s.dataSlot,s.chargingPaused,
+                s.mobileService==DuoPolicy.Radio.REGISTERING,scale,s.chargingSpeed);
     }
 
     /**
@@ -389,14 +401,36 @@ public final class TrioRenderer {
                          boolean wifiConnected, int dataSlot, boolean chargingPaused) {
         drawInto(canvas, w, h, level, charging, quickCharging, powerSave, low,
                 wifiLevel, mobileLevel, slotLevels, mobileType, fg, cfg, clearWhenDone,
-                wifiConnected, dataSlot, chargingPaused, false);
+                wifiConnected, dataSlot, chargingPaused, false,
+                quickCharging ? ChargeSpeed.QUICK : ChargeSpeed.NORMAL);
+    }
+
+    static void drawInto(Canvas canvas, int w, int h, int level, boolean charging,
+                         boolean quickCharging, boolean powerSave, boolean low,
+                         int wifiLevel, int mobileLevel, int[] slotLevels, String mobileType,
+                         int fg, TrioSettings cfg, boolean clearWhenDone,
+                         boolean wifiConnected, int dataSlot, boolean chargingPaused,
+                         ChargeSpeed chargingSpeed) {
+        drawInto(canvas, w, h, level, charging, quickCharging, powerSave, low,
+                wifiLevel, mobileLevel, slotLevels, mobileType, fg, cfg, clearWhenDone,
+                wifiConnected, dataSlot, chargingPaused, false, chargingSpeed);
     }
 
     private static void drawInto(Canvas canvas, int w, int h, int level, boolean charging,
                                  boolean quickCharging, boolean powerSave, boolean low,
                                  int wifiLevel, int mobileLevel, int[] slotLevels, String mobileType,
                                  int fg, TrioSettings cfg, boolean clearWhenDone,
-                                 boolean wifiConnected, int dataSlot, boolean chargingPaused, boolean radioMuted) {
+                                 boolean wifiConnected, int dataSlot, boolean chargingPaused, boolean radioMuted, ChargeSpeed chargingSpeed) {
+        drawInto(canvas,w,h,level,charging,quickCharging,powerSave,low,wifiLevel,mobileLevel,
+                slotLevels,mobileType,fg,cfg,clearWhenDone,wifiConnected,dataSlot,chargingPaused,radioMuted,0f,chargingSpeed);
+    }
+
+    private static void drawInto(Canvas canvas, int w, int h, int level, boolean charging,
+                                 boolean quickCharging, boolean powerSave, boolean low,
+                                 int wifiLevel, int mobileLevel, int[] slotLevels, String mobileType,
+                                 int fg, TrioSettings cfg, boolean clearWhenDone,
+                                 boolean wifiConnected, int dataSlot, boolean chargingPaused, boolean radioMuted,
+                                 float physicalScale, ChargeSpeed chargingSpeed) {
         if (w <= 0 || h <= 0 || cfg == null) {
             return;
         }
@@ -436,7 +470,9 @@ public final class TrioRenderer {
         // hit-test with - is precisely how a hot spot drifts off the thing it
         // names. See designTransform.
         final float[] transform = new float[3];
-        if (!designTransform(w, h, appearance, transform)) {
+        if (!(physicalScale>0
+                ? TrioSizing.transform(w,h,appearance,physicalScale,transform)
+                : designTransform(w,h,appearance,transform))) {
             return;
         }
         final float scale = transform[0];
@@ -459,7 +495,9 @@ public final class TrioRenderer {
             canvas.drawColor(0, PorterDuff.Mode.CLEAR);
         }
 
-        final int role = chargingPaused ? DuoPolicy.pausedColor(fg) : roleColor(appearance, level, charging, powerSave, low, fg);
+        final int role = chargingPaused ? DuoPolicy.pausedColor(fg)
+                : roleColor(appearance, level, charging, powerSave, low, fg, chargingSpeed);
+        final int boltColor = boltColor(appearance, chargingSpeed, fg, chargingPaused);
 
         // A slot with no reading counts as absent, so a single-SIM device - or a
         // poll that has not answered yet - is not mistaken for a second SIM.
@@ -473,13 +511,13 @@ public final class TrioRenderer {
         canvas.scale(scale, scale);
 
         if (capsule) {
-            drawCapsuleLayout(canvas, level, charging, quickCharging, wifiLevel, mobileLevel, shownType,
+            drawCapsuleLayout(canvas, level, charging, boltColor, wifiLevel, mobileLevel, shownType,
                     slots, sims, role, fg, appearance, wifiConnected, dataSlot, radioMuted);
         } else if (rect) {
-            drawRectLayout(canvas, level, charging, quickCharging, wifiLevel, mobileLevel,
+            drawRectLayout(canvas, level, charging, boltColor, wifiLevel, mobileLevel,
                     DuoPolicy.automaticLevels(slots, dataSlot), sims, shownType, role, fg, appearance, radioMuted);
         } else {
-            drawRingLayout(canvas, level, charging, quickCharging, wifiLevel, mobileLevel,
+            drawRingLayout(canvas, level, charging, boltColor, wifiLevel, mobileLevel,
                     slots, sims, shownType, role, fg, appearance, wifiConnected, radioMuted);
         }
 
@@ -496,20 +534,25 @@ public final class TrioRenderer {
      * already resolved the three slots. This method only draws.
      */
     private static void drawRingLayout(Canvas canvas, int level, boolean charging,
-                                       boolean quickCharging, int wifiLevel, int mobileLevel,
+                                       int boltColor, int wifiLevel, int mobileLevel,
                                        int[] slotLevels, int sims, String mobileType, int role,
                                        int fg, TrioAppearance a, boolean wifiConnected, boolean radioMuted) {
         final TrioAppearance.Ring r = a.ring(level, charging, wifiLevel, mobileType, sims,
                 wifiConnected);
-        drawFreeRing(canvas, level, quickCharging, wifiLevel, mobileLevel,
+        drawFreeRing(canvas, level, boltColor, wifiLevel, mobileLevel,
                 slotLevels, mobileType, role, fg, a, r, radioMuted);
     }
 
     /** Explicit slots share the editor's thirds and fit ink on BOTH axes. */
-    private static void drawFreeRing(Canvas c, int level, boolean quickCharging, int wifiLevel,
+    private static void drawFreeRing(Canvas c, int level, int boltColor, int wifiLevel,
                                      int mobileLevel, int[] levels, String type, int role, int fg,
                                      TrioAppearance a, TrioAppearance.Ring r, boolean radioMuted) {
-        drawBattery(c, level, role, fg, a, r.gapStart(), r.gapEnd(), r.sweep(), r.arcStart());
+        final float topOpening = ringOpeningDegrees(a,r,0,level,type);
+        final float bottomOpening = ringOpeningDegrees(a,r,2,level,type);
+        final float sweep = 360f-bottomOpening;
+        final float gapStart = topOpening<=0f?0f:0.5f-topOpening/(2f*sweep);
+        final float gapEnd = topOpening<=0f?0f:0.5f+topOpening/(2f*sweep);
+        drawBattery(c,level,role,fg,a,gapStart,gapEnd,sweep,270f-sweep/2f);
         for (int z = 0; z < 3; z++) {
             final int part = r.parts[z];
             if (part == Prefs.PART_NONE) continue;
@@ -527,7 +570,9 @@ public final class TrioRenderer {
                 // must count before scaling, otherwise the arcs escape their slot.
                 final float extra = Math.max(0f, a.arcStroke - TrioGeometry.W_STROKE);
                 // The slot fit, then the user's own size inside it.
-                final float scale = Math.min(width / (TrioGeometry.W_INK_W + extra),
+                final float room = a.splitMode == 1 && z != 1
+                        ? Math.min(width, TrioGeometry.splitOpeningWidth(a,z)) : width;
+                final float scale = Math.min(room / (TrioGeometry.W_INK_W + extra),
                         height / (TrioGeometry.W_INK_H + extra)) * a.wifiScaleFactor();
                 if(a.splitMode==1)c.translate(0,alignedY(a,z,(TrioGeometry.W_INK_H+extra)*scale/2)-cy);
                 c.scale(scale, scale);
@@ -543,7 +588,7 @@ public final class TrioRenderer {
                 if(a.splitMode==1)c.translate(0,alignedY(a,z,TrioGeometry.BOLT_INK_H*scale/2)-cy);
                 c.scale(scale, scale);
                 c.translate(-TrioGeometry.BOLT_CX_REF, -TrioGeometry.BOLT_INK_CY);
-                FILL.setColor(quickCharging ? TrioGeometry.QUICK_CHARGE : fg);
+                FILL.setColor(boltColor);
                 c.drawPath(BOLT, FILL);
             } else if (part == Prefs.PART_SIM_PAIR) {
                 drawSimPairRing(c, levels, z,
@@ -595,7 +640,10 @@ public final class TrioRenderer {
                     // about 58% of the room it really had, and the bottom third came
                     // out around a third of the size asked for.
                     final int suffixScale = part == Prefs.PART_TYPE ? a.typeSuffixScale : 100;
-                    final float fitted = ringTextSize(text, requested, z, a.ringStroke, suffixScale, r.parts);
+                    float fitted = ringTextSize(text, requested, z, a.ringStroke, suffixScale, r.parts);
+                    if (a.splitMode == 1 && z != 1) {
+                        fitted = fitSplitText(text, fitted, TrioGeometry.splitOpeningWidth(a,z), suffixScale);
+                    }
                     // Centred in the band, and on its INK rather than its metrics: the
                     // metrics reserve leading above the capitals that a digits-only
                     // string never draws, so a metrics-centred line sits high enough to
@@ -619,6 +667,84 @@ public final class TrioRenderer {
             }
             c.restoreToCount(save);
         }
+    }
+
+    /** Measured circle openings, shared by drawing and preview hit testing. */
+    static float ringOpeningDegrees(TrioAppearance a,TrioAppearance.Ring ring,int zone,
+                                    int level,String type) {
+        if(zone!=0 && zone!=2) return 0f;
+        final int part=ring.parts[zone];
+        if(part==Prefs.PART_NONE) return 0f;
+        if(a.splitMode==1) return TrioGeometry.ringOpeningDegrees(part);
+        final float reach,edgeY;
+        if(part==Prefs.PART_BOLT) {
+            final float height=zone==0?TrioGeometry.DOT_BOX_TOP:TrioGeometry.DOT_BOX_BOTTOM;
+            final float scale=Math.min((78f-a.ringStroke)/15f,height/TrioGeometry.BOLT_INK_H)
+                    *a.boltScaleFactor();
+            reach=Math.max(TrioGeometry.BOLT_CX_REF-BOLT_BOUNDS.left,
+                    BOLT_BOUNDS.right-TrioGeometry.BOLT_CX_REF)*scale;
+            edgeY=TrioGeometry.ZONE_CY[zone]+((zone==0?BOLT_BOUNDS.bottom:BOLT_BOUNDS.top)
+                    -TrioGeometry.BOLT_INK_CY)*scale;
+        } else if(part==Prefs.PART_VALUE || part==Prefs.PART_TYPE || part==Prefs.PART_CLOCK) {
+            final String text=part==Prefs.PART_VALUE?String.valueOf(level)
+                    :part==Prefs.PART_TYPE?type:TrioState.sClockText;
+            if(text==null || text.isEmpty()) return 0f;
+            applyWeight(part==Prefs.PART_VALUE?a.valueWeight:part==Prefs.PART_TYPE?a.typeWeight:a.clockWeight);
+            final float requested=part==Prefs.PART_VALUE?a.valueSize:part==Prefs.PART_TYPE?a.typeSize:a.clockSize;
+            final int suffix=part==Prefs.PART_TYPE?a.typeSuffixScale:100;
+            final float size=ringTextSize(text,requested,zone,a.ringStroke,suffix,ring.parts);
+            reach=centredTextReach(text,size,suffix);
+            final float halfHeight=textInkHeight(text,size)/2f;
+            edgeY=TrioGeometry.zoneTextCy(zone,a.ringStroke)+(zone==0?halfHeight:-halfHeight);
+        } else {
+            // Signal rows keep their angular bead spacing; Wi-Fi keeps its existing slot.
+            return TrioGeometry.ringOpeningDegrees(part);
+        }
+        // The round cap reaches half a stroke into the mouth. Keep two design units
+        // of visible clearance at the actual ink edge, including font overhang.
+        final float clearance=a.ringStroke/2f+2f;
+        final double horizontal=Math.asin(Math.min(1f,(Math.max(0f,reach)+clearance)/TrioGeometry.B_R));
+        final float edgeDistance=zone==0?TrioGeometry.B_CY-edgeY-clearance
+                :edgeY-clearance-TrioGeometry.B_CY;
+        final double vertical=Math.acos(Math.max(-1f,Math.min(1f,edgeDistance/TrioGeometry.B_R)));
+        return (float)Math.toDegrees(2.0*Math.min(horizontal,vertical));
+    }
+
+    private static float centredTextReach(String text,float size,int suffixScale) {
+        final float advance=measureType(text,size,suffixScale);
+        final float left=-advance/2f;
+        if(!TrioGeometry.hasShrunkSuffix(text,suffixScale)) {
+            TEXT.setTextSize(size);
+            TEXT.getTextBounds(text,0,text.length(),TEXT_INK);
+            return Math.max(-left-TEXT_INK.left,left+TEXT_INK.right);
+        }
+        final String base=TrioGeometry.typeBase(text);
+        final String suffix=String.valueOf(TrioGeometry.TYPE_SUFFIX);
+        TEXT.setTextSize(size);
+        final float baseAdvance=TEXT.measureText(base);
+        TEXT.getTextBounds(base,0,base.length(),TEXT_INK);
+        float min=left+TEXT_INK.left,max=left+TEXT_INK.right;
+        TEXT.setTextSize(size*suffixScale/100f);
+        TEXT.getTextBounds(suffix,0,suffix.length(),TEXT_INK);
+        min=Math.min(min,left+baseAdvance+TEXT_INK.left);
+        max=Math.max(max,left+baseAdvance+TEXT_INK.right);
+        TEXT.setTextSize(size);
+        return Math.max(-min,max);
+    }
+
+    /** Advance width alone misses asymmetric glyph overhang at a centred opening. */
+    private static float fitSplitText(String text,float requested,float room,int suffixScale) {
+        float size=fitSize(text,requested,room,suffixScale);
+        if (TrioGeometry.hasShrunkSuffix(text,suffixScale)) return size;
+        for (int pass=0;pass<8;pass++) {
+            TEXT.setTextSize(size);
+            float advance=TEXT.measureText(text);
+            TEXT.getTextBounds(text,0,text.length(),TEXT_INK);
+            float reach=Math.max(advance/2f-TEXT_INK.left,TEXT_INK.right-advance/2f);
+            if (reach*2<=room || reach<=0) break;
+            size*=Math.max(.01f,room-1f)/(reach*2);
+        }
+        return size;
     }
 
     private static float alignedY(TrioAppearance a,int zone,float halfHeight) {
@@ -681,9 +807,7 @@ public final class TrioRenderer {
                 int row=a.pairReverse==1?1-slot:slot;
                 float dy=one&&two || a.pairSingle==1 ? (row-.5f)*pitch : 0;
                 for(int dot=0;dot<4;dot++) {
-                    float t=(dot-1.5f)/1.5f;
-                    float bend=a.pairShape==1?0:a.pairBend*(1-t*t);
-                    if(a.pairMirror==1 && row==1)bend=-bend;
+                    float bend=a.simDotBend(dot);
                     low=Math.min(low,dy+bend-radius);high=Math.max(high,dy+bend+radius);
                 }
             }
@@ -704,9 +828,7 @@ public final class TrioRenderer {
             int row = a.pairReverse == 1 ? 1-slot : slot;
             float dy = one && two || a.pairSingle == 1 ? (row-.5f)*pitch : 0;
             for (int dot=0; dot<4; dot++) {
-                float t=(dot-1.5f)/1.5f;
-                float bend=a.pairShape == 1 ? 0 : a.pairBend*(1-t*t);
-                if (a.pairMirror == 1 && row == 1) bend=-bend;
+                float bend=a.simDotBend(dot);
                 FILL.setColor(dot < Math.min(4,levels[slot]) ? fg : withAlpha(fg,a.trackAlpha));
                 c.drawCircle(cx+a.pairX+(dot-1.5f)*12f*a.pairPitch/100f*scale,
                         cy+a.pairY+(dy+bend)*scale, radius*scale, FILL);
@@ -782,7 +904,7 @@ public final class TrioRenderer {
      * silently ignoring it.
      */
     private static void drawRectLayout(Canvas canvas, int level, boolean charging,
-                                       boolean quickCharging, int wifiLevel, int mobileLevel,
+                                       int boltColor, int wifiLevel, int mobileLevel,
                                        int[] slotLevels, int sims, String mobileType, int role,
                                        int fg, TrioAppearance a, boolean radioMuted) {
         final TrioAppearance.Rect r = a.rect(level, charging, wifiLevel, mobileType, sims);
@@ -796,7 +918,7 @@ public final class TrioRenderer {
         // the network type, which shares that slot rather than claiming a second
         // line of its own.
         if (r.bolt) {
-            drawRectBolt(canvas, quickCharging ? TrioGeometry.QUICK_CHARGE : fg, a);
+            drawRectBolt(canvas, boltColor, a);
         } else if (r.wifi) {
             drawRectWifi(canvas, wifiLevel, fg, a);
         } else if (r.type) {
@@ -829,7 +951,7 @@ public final class TrioRenderer {
      * move and the readings simply sit side by side.
      */
     private static void drawCapsuleLayout(Canvas canvas, int level, boolean charging,
-                                          boolean quickCharging, int wifiLevel, int mobileLevel, String mobileType,
+                                          int boltColor, int wifiLevel, int mobileLevel, String mobileType,
                                           int[] slotLevels, int sims, int role, int fg,
                                           TrioAppearance a, boolean wifiConnected, int dataSlot, boolean radioMuted) {
         final float stroke = a.ringStroke * TrioGeometry.CAP_STROKE_RATIO;
@@ -873,15 +995,15 @@ public final class TrioRenderer {
         // Three bands, the same three the ring has: the two openings and the interior.
         // The interior's two cells divide its width by what they actually draw, so a size the
         // user asks for is not capped by width reserved for a string that is not on screen.
-        drawCapsuleCell(canvas, stroke, TrioZones.Zone.TOP, cap, level, quickCharging,
+        drawCapsuleCell(canvas, stroke, TrioZones.Zone.TOP, cap, level, boltColor,
                 wifiLevel, mobileType, fg, a);
-        drawCapsuleCell(canvas, stroke, TrioZones.Zone.CENTRE, cap, level, quickCharging,
+        drawCapsuleCell(canvas, stroke, TrioZones.Zone.CENTRE, cap, level, boltColor,
                 wifiLevel, mobileType, fg, a);
-        drawCapsuleCell(canvas, stroke, TrioZones.Zone.BOTTOM, cap, level, quickCharging,
+        drawCapsuleCell(canvas, stroke, TrioZones.Zone.BOTTOM, cap, level, boltColor,
                 wifiLevel, mobileType, fg, a);
 
         if (!radioMuted && cap.dotParts[TrioZones.Zone.CENTRE.ordinal()] == Prefs.PART_SIM_PAIR) {
-            drawPair(canvas, slotLevels, TrioGeometry.capDotCx() + a.capsuleRightDx,
+            drawPair(canvas, slotLevels, TrioGeometry.capPairCx(stroke,a) + a.capsuleRightDx,
                     TrioGeometry.capInteriorCy(stroke) + a.capsuleRightDy,
                     4f * a.dotScaleFactor(), fg, a);
         }
@@ -889,7 +1011,7 @@ public final class TrioRenderer {
         // Drawn AFTER the three cells on purpose: the left column and the interior can
         // both hold a reading now, and painting the column last is what keeps a wide
         // piece (the arcs) from being covered by the interior's own ink.
-        drawCapsuleLeft(canvas, stroke, cap, level, quickCharging, wifiLevel, mobileLevel,
+        drawCapsuleLeft(canvas, stroke, cap, level, boltColor, wifiLevel, mobileLevel,
                 slotLevels, mobileType, fg, a);
     }
 
@@ -903,7 +1025,7 @@ public final class TrioRenderer {
      * can hold a dot row, which a band can and the interior cannot.
      */
     private static void drawCapsuleLeft(Canvas c, float stroke, TrioAppearance.Capsule cap,
-                                       int level, boolean quickCharging, int wifiLevel,
+                                       int level, int boltColor, int wifiLevel,
                                        int mobileLevel, int[] slotLevels, String type,
                                        int fg, TrioAppearance a) {
         // From the layout's LEFT cell, the same place the three bands read theirs:
@@ -935,23 +1057,24 @@ public final class TrioRenderer {
         // Dot rows are not offered in this column: drawCapsuleDots paints the two OPENINGS,
         // whose y come from the outline geometry. A row here would need its own baseline.
         // LEFT on every branch: this cell reads from its inner edge, nudge or no nudge.
+        final float leftWidth = capsuleLeftWidth(cap,stroke,a);
         switch (part) {
             case Prefs.PART_CLOCK:
-                drawCapsuleTime(c, stroke, fg, a, cx, cy, -1f, SlotAlign.LEFT);
+                drawCapsuleTime(c, stroke, fg, a, cx, cy, -1f, SlotAlign.LEFT, leftWidth);
                 break;
             case Prefs.PART_VALUE:
-                drawCapsuleValue(c, stroke, level, fg, a, cx, cy, -1f, SlotAlign.LEFT);
+                drawCapsuleValue(c, stroke, level, fg, a, cx, cy, -1f, SlotAlign.LEFT, leftWidth);
                 break;
             case Prefs.PART_TYPE:
                 drawCapsuleType(c, stroke, type, fg, a, cx, cy, -1f,
-                        TrioGeometry.capReadingTrackWidth(stroke),
+                        leftWidth,
                         bodyTypeSize(a), SlotAlign.LEFT);
                 break;
             case Prefs.PART_WIFI:
                 drawCapsuleWifi(c, stroke, wifiLevel, fg, a, cx, cy);
                 break;
             case Prefs.PART_BOLT:
-                drawCapsuleBolt(c, stroke, quickCharging ? TrioGeometry.QUICK_CHARGE : fg,
+                drawCapsuleBolt(c, stroke, boltColor,
                         a, cx, cy);
                 break;
             default:
@@ -970,7 +1093,7 @@ public final class TrioRenderer {
      */
     private static void drawCapsuleCell(Canvas c, float stroke, TrioZones.Zone band,
                                         TrioAppearance.Capsule cap, int level,
-                                        boolean quickCharging, int wifiLevel, String type,
+                                        int boltColor, int wifiLevel, String type,
                                         int fg, TrioAppearance a) {
         // A cell that draws nothing. The LEFT cell is deliberately not routed here:
         // it has its own centre and its own dispatcher, because it is the one cell
@@ -1013,7 +1136,7 @@ public final class TrioRenderer {
         }
         switch (part) {
             case Prefs.PART_BOLT:
-                drawCapsuleBolt(c, stroke, quickCharging ? TrioGeometry.QUICK_CHARGE : fg, a, cx, cy);
+                drawCapsuleBolt(c, stroke, boltColor, a, cx, cy);
                 break;
             case Prefs.PART_WIFI:
                 drawCapsuleWifi(c, stroke, wifiLevel, fg, a, cx, cy);
@@ -1341,9 +1464,23 @@ public final class TrioRenderer {
     }
 
     /** The time of day, in a capsule cell centred on {@code (cx, cy)}. */
+    private static float capsuleLeftWidth(TrioAppearance.Capsule cap,float stroke,TrioAppearance a) {
+        if (cap.dotParts[TrioZones.Zone.CENTRE.ordinal()] != Prefs.PART_SIM_PAIR)
+            return TrioGeometry.capReadingTrackWidth(stroke);
+        float pairLeft=TrioGeometry.capPairCx(stroke,a)+a.capsuleRightDx+a.pairX
+                -TrioGeometry.capPairHalfWidth(a);
+        return Math.max(1f,pairLeft-TrioGeometry.CAP_TEXT_GAP
+                -TrioGeometry.capLeftAlignedX(stroke)-a.capsuleLeftDx);
+    }
+
+    private static void drawCapsuleTime(Canvas c, float stroke, int fg, TrioAppearance a,
+                                        float cx, float cy, float heightHint, SlotAlign align) {
+        drawCapsuleTime(c,stroke,fg,a,cx,cy,heightHint,align,Float.POSITIVE_INFINITY);
+    }
+
     private static void drawCapsuleTime(Canvas c, float stroke, int fg, TrioAppearance a,
                                         float cx, float cy, float heightHint,
-                                        SlotAlign align) {
+                                        SlotAlign align, float widthLimit) {
         final String text = TrioState.sClockText;
         if (text == null || text.isEmpty()) {
             return;
@@ -1356,7 +1493,7 @@ public final class TrioRenderer {
         // again as long as "100" at the same size, so an even split capped the clock
         // at a setting of about 36 whatever the slider said.
         final float size = capsuleTextSize(text, a.clockSize, stroke,
-                capsuleSlotWidth(TrioZones.Zone.CENTRE, heightHint, stroke, true),
+                Math.min(widthLimit,capsuleSlotWidth(TrioZones.Zone.CENTRE, heightHint, stroke, true)),
                 100, effectiveHeightLimit(heightHint, stroke));
         TEXT.setTextSize(size);
         TEXT.setColor(fg);
@@ -1368,10 +1505,16 @@ public final class TrioRenderer {
     private static void drawCapsuleValue(Canvas c, float stroke, int level, int fg,
                                          TrioAppearance a, float cx, float cy,
                                          float heightHint, SlotAlign align) {
+        drawCapsuleValue(c,stroke,level,fg,a,cx,cy,heightHint,align,Float.POSITIVE_INFINITY);
+    }
+
+    private static void drawCapsuleValue(Canvas c, float stroke, int level, int fg,
+                                         TrioAppearance a, float cx, float cy,
+                                         float heightHint, SlotAlign align, float widthLimit) {
         final String text = String.valueOf(level);
         applyWeight(a.valueWeight);
         final float size = capsuleTextSize(text, a.valueSize, stroke,
-                capsuleSlotWidth(TrioZones.Zone.CENTRE, heightHint, stroke, false),
+                Math.min(widthLimit,capsuleSlotWidth(TrioZones.Zone.CENTRE, heightHint, stroke, false)),
                 100, effectiveHeightLimit(heightHint, stroke));
         TEXT.setTextSize(size);
         TEXT.setColor(fg);
@@ -1613,27 +1756,48 @@ public final class TrioRenderer {
     /**
      * The colour of the lit part of the ring and the value text.
      *
-     * <p>Priority: critical battery, then power-save/low battery, then charging,
+     * <p>Priority: charging, then critical battery, then power-save/low battery,
      * then the framework's own foreground. {@code isDarkBackground(fg)} tells
      * which variant of a role colour to use: a light icon colour means the status
      * bar is dark, so the light-background variant applies.
      */
     static int roleColor(TrioAppearance a, int level, boolean charging,
                          boolean powerSave, boolean low, int fg) {
+        return roleColor(a, level, charging, powerSave, low, fg, ChargeSpeed.NORMAL);
+    }
+
+    static int roleColor(TrioAppearance a, int level, boolean charging,
+                         boolean powerSave, boolean low, int fg, ChargeSpeed speed) {
         if (a == null || !a.roleColors) {
             return fg;
         }
         final boolean dark = isDarkBackground(fg);
+        if (charging) {
+            return chargingColor(a, speed, fg);
+        }
         if (level >= 0 && level < TrioGeometry.CRITICAL_LEVEL) {
             return dark ? a.criticalOnDark : a.criticalOnLight;
         }
         if (powerSave || low || (level >= 0 && level <= a.lowThreshold)) {
             return dark ? a.lowOnDark : a.lowOnLight;
         }
-        if (charging) {
-            return dark ? a.chargingOnDark : a.chargingOnLight;
-        }
         return fg;
+    }
+
+    static int boltColor(TrioAppearance a, ChargeSpeed speed, int fg, boolean paused) {
+        return paused ? (a.pausedGrayAll ? DuoPolicy.pausedColor(fg) : fg) : chargingColor(a, speed, fg);
+    }
+
+    static int chargingColor(TrioAppearance a, ChargeSpeed speed, int fg) {
+        if (a == null) return fg;
+        // Preserve the pre-role-colour fast-charge bolt when the global role
+        // colour switch is off. Normal charging keeps using the foreground.
+        if (!a.roleColors) return speed == ChargeSpeed.QUICK ? TrioGeometry.QUICK_CHARGE : fg;
+        boolean dark = isDarkBackground(fg);
+        if (speed == ChargeSpeed.SUPER) return dark ? a.superChargingOnDark : a.superChargingOnLight;
+        if (speed == ChargeSpeed.FLASH) return dark ? a.flashChargingOnDark : a.flashChargingOnLight;
+        if (speed == ChargeSpeed.QUICK) return dark ? a.quickChargingOnDark : a.quickChargingOnLight;
+        return dark ? a.chargingOnDark : a.chargingOnLight;
     }
 
     // ----------------------------------------------------------------- battery
@@ -2232,65 +2396,9 @@ public final class TrioRenderer {
         if (w <= 0 || h <= 0 || appearance == null || out == null || out.length < 3) {
             return false;
         }
-        final boolean rect = appearance.rect;
-        // The overall-size setting is applied to the fit rather than to the design
-        // units: the glyph's whole geometry is expressed in one 120x120 box, so
-        // scaling the fit scales every stroke, arc and digit by the same factor
-        // and the translate keeps it centred. Doing it anywhere else - a second
-        // canvas.scale around the layout calls, say - would scale the stroke
-        // widths differently from the radii and the glyph would come apart.
-        final TrioGeometry.SplitRing split = appearance.ring && (appearance.splitMode == 1 || appearance.drawsSimPair() || appearance.signalIconScale != 100)
-                ? new TrioGeometry.SplitRing(appearance) : null;
-        float capMinX=TrioGeometry.CAP_INK_X, capMaxX=capMinX+TrioGeometry.capInkW();
-        float capMinY=TrioGeometry.CAP_INK_TOP, capMaxY=TrioGeometry.CAP_INK_BOTTOM;
-        if (appearance.capsule && appearance.drawsSimPair()) {
-            float radius=4f*appearance.dotScaleFactor();
-            float pitch=appearance.simStackPitch(radius);
-            float rx=(18f*appearance.pairPitch/100f+radius)*appearance.signalIconScaleFactor();
-            float ry=(pitch/2+radius+(appearance.pairShape==1?0:Math.abs(appearance.pairBend)))*appearance.signalIconScaleFactor();
-            for(int z=0;z<3;z++) {
-                boolean placed=false;
-                for(int part:appearance.ringZones[z]) if(part==Prefs.PART_SIM_PAIR)placed=true;
-                if(!placed)continue;
-                float cy=z==0 ? TrioGeometry.capDotTopY()+pitch/2 : z==2
-                        ? TrioGeometry.capDotBottomY()-pitch/2
-                        : TrioGeometry.capInteriorCy(appearance.ringStroke*TrioGeometry.CAP_STROKE_RATIO)+appearance.capsuleRightDy;
-                float cx=TrioGeometry.capDotCx()+(z==1?appearance.capsuleRightDx:0);
-                capMinX=Math.min(capMinX,cx+appearance.pairX-rx);capMaxX=Math.max(capMaxX,cx+appearance.pairX+rx);
-                capMinY=Math.min(capMinY,cy+appearance.pairY-ry);capMaxY=Math.max(capMaxY,cy+appearance.pairY+ry);
-            }
-        }
-        if(appearance.capsule && appearance.signalDots()) {
-            float scale=appearance.signalIconScaleFactor();
-            float radius=TrioGeometry.CAP_DOT_R*appearance.dotScaleFactor()*scale;
-            float rx=TrioGeometry.CAP_DOT_PITCH*1.5f*scale+radius;
-            capMinX=Math.min(capMinX,TrioGeometry.capDotCx()-rx);capMaxX=Math.max(capMaxX,TrioGeometry.capDotCx()+rx);
-            capMinY=Math.min(capMinY,TrioGeometry.capDotTopY()-radius);
-            capMaxY=Math.max(capMaxY,TrioGeometry.capDotBottomY()+radius);
-        }
-        final float scale = (split != null ? inkScale(w,h,split.width(),split.height())
-                : appearance.capsule ? inkScale(w,h,capMaxX-capMinX,capMaxY-capMinY)
-                : inkScale(w,h,appearance.style)) * appearance.glyphFit();
-        if (scale <= 0f) {
-            return false;
-        }
-        out[0] = scale;
-        if (split != null) {
-            out[1] = (w-split.width()*scale)/2f-split.minX*scale;
-            out[2] = (h-split.height()*scale)/2f-split.minY*scale;
-        } else if (appearance.capsule) {
-            out[1]=(w-(capMaxX-capMinX)*scale)/2f-capMinX*scale;
-            out[2]=(h-(capMaxY-capMinY)*scale)/2f-capMinY*scale;
-        } else if (rect) {
-            out[1] = (w - TrioGeometry.RECT_INK_W * scale) / 2f
-                    - TrioGeometry.RECT_INK_X * scale;
-            out[2] = (h - TrioGeometry.RECT_INK_H * scale) / 2f
-                    - TrioGeometry.RECT_INK_Y * scale;
-        } else {
-            out[1] = (w - TrioGeometry.INK_W * scale) / 2f - TrioGeometry.INK_X * scale;
-            out[2] = (h - TrioGeometry.INK_H * scale) / 2f - TrioGeometry.INK_Y * scale;
-        }
-        return true;
+        TrioSizing.Bounds bounds=TrioSizing.bounds(appearance);
+        float scale=inkScale(w,h,bounds.width,bounds.height)*Math.min(1f,appearance.glyphFit());
+        return TrioSizing.transform(w,h,appearance,scale,out);
     }
 
     /**

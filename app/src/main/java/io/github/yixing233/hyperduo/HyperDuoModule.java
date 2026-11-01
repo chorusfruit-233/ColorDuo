@@ -54,22 +54,30 @@ public final class HyperDuoModule extends XposedModule {
     public boolean onHotReloading(XposedModuleInterface.HotReloadingParam param) {
         // The inherited MIUI adapter has a different ownership model. Never unload it unsafely.
         if (targetLoader == null || !ColorOsHooks.isInstalled()) return false;
+        if (!ColorOsHooks.prepareReload()) {
+            log(LOG_WARN, "hot reload deferred: battery work is active; restart SystemUI to apply the update");
+            return false;
+        }
+        Map<String, Object> saved = null;
         try {
-            Map<String, Object> saved = ColorOsReload.onMain(ColorOsHooks::retire);
+            saved = ColorOsReload.onMain(ColorOsHooks::snapshotForReload);
             saved.put("loader", targetLoader);
+            // Validate the handoff before releasing any live views or registrations.
+            param.setSavedInstanceState(saved);
             if (!ColorOsHooks.stopWorkers()) {
-                log(LOG_WARN, "hot reload refused: background work has not stopped; retry or restart SystemUI");
-                return false;
+                throw new IllegalStateException("background work has not stopped");
             }
-            // A worker can pass its publish guard just before retire() sets the flag.
-            // Drain its final main-looper work after join, before releasing the generation.
             ColorOsReload.onMain(() -> {
+                ColorOsHooks.retire();
                 ColorOsHooks.drainRetiredCallbacks();
                 return null;
             });
-            param.setSavedInstanceState(saved);
             return true;
         } catch (Exception failure) {
+            final Map<String, Object> snapshot = saved;
+            try {
+                ColorOsReload.onMain(() -> { ColorOsHooks.cancelReload(snapshot); return null; });
+            } catch (Exception rollback) { failure.addSuppressed(rollback); }
             log(LOG_WARN, "hot reload cleanup failed: " + failure);
             return false;
         }

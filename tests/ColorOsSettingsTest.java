@@ -9,10 +9,12 @@ import java.util.Arrays;
 /** Executes real settings transport, ownership and rendering with the existing desktop shims. */
 public final class ColorOsSettingsTest {
     public static void main(String[] args) {
+        hdVisibilitySettings();
         adjustableGeometry();
         signalIconScaleSettings();
         ellipticalSides();
         centreOwnershipAndBoltVisibility();
+        boltPositionSelection();
         TrioSettings fresh = TrioSettings.defaults();
         check(fresh.simStackGap==Prefs.DEF_SIM_STACK_GAP,"paired spacing has a stable upgrade default");
         TrioSettings stacked=fresh.copy();stacked.simStackGap=300;
@@ -36,7 +38,8 @@ public final class ColorOsSettingsTest {
             check(placed.ringZones[0].length==0&&placed.ringZones[2][0]==Prefs.PART_SIM_1,"independent placement removes the paired component");
         }
 
-        check(!fresh.pausedGrayAll, "paused charge defaults to battery ring only");
+        check(fresh.pausedGrayAll, "upgrade retains the existing all-icons paused grayscale");
+        fresh.pausedGrayAll = false;
         TrioSettings pausedSettings = fresh.copy();
         pausedSettings.pausedGrayAll = true;
         check(!pausedSettings.equals(fresh), "grayscale preference participates in change detection");
@@ -301,6 +304,7 @@ public final class ColorOsSettingsTest {
         TrioSettings targetsplitRightY=TrioSettings.defaults();
         check(targetsplitRightY.applyKeyFrom(source,Prefs.KEY_SPLIT_RIGHT_Y) && targetsplitRightY.splitRightY==40,"splitRightY hot reload");
         TrioSettings a=TrioSettings.defaults(); a.splitMode=1;
+        a.splitLeftTop=a.splitLeftBottom=0;
         TrioGeometry.SplitRing original=new TrioGeometry.SplitRing(TrioAppearance.of(a));
         a.splitLeftDistance+=20;
         TrioGeometry.SplitRing moved=new TrioGeometry.SplitRing(TrioAppearance.of(a));
@@ -340,6 +344,56 @@ public final class ColorOsSettingsTest {
         check(side.x(0)==side.x(.5f)&&side.x(1)==side.x(.5f),"zero bend degenerates into a straight line");
     }
 
+    private static void boltPositionSelection() {
+        for (int style : new int[] {Prefs.STYLE_RING, Prefs.STYLE_CAPSULE}) {
+            TrioSettings empty = TrioSettings.defaults();
+            empty.enabled = true;
+            empty.trioStyle = style;
+            empty.chargingShowsValue = false;
+            for (int mode : new int[] {TrioZones.BOLT_POSITION_HIDDEN, TrioZones.BOLT_POSITION_NATIVE}) {
+                TrioSettings selected = TrioZones.withBoltPosition(empty, mode);
+                TrioAppearance a = TrioAppearance.of(selected);
+                check(TrioZones.boltPosition(selected) == mode, "empty layout retains the chosen bolt mode");
+                check(!a.drawsBolt(), "empty capsule cannot invent a module bolt in native or hidden mode");
+                check(a.hidesNativeBolt() == (mode == TrioZones.BOLT_POSITION_HIDDEN),
+                        "native and hidden modes have different system-icon ownership");
+                if (style == Prefs.STYLE_CAPSULE) check(!a.capsule(70, true, 3, "5G", 2).bolt,
+                        "legacy empty capsule fallback respects native and hidden choices");
+            }
+            TrioZones.Zone[] slots = TrioZones.boltPositionZones(style);
+            for (int i = 0; i < slots.length; i++) {
+                TrioSettings original = TrioZones.withPiece(empty, slots[i].ordinal(), TrioZones.Part.WIFI);
+                original = TrioZones.withPiece(original, slots[i].ordinal(), TrioZones.Part.VALUE);
+                int[][] previous = TrioSettings.copyZones(original.ringZones);
+                TrioSettings placed = TrioZones.withBoltPosition(original, i + 2);
+                check(Arrays.deepEquals(original.ringZones, previous), "bolt menu leaves its input snapshot intact");
+                check(placed.ringZones[slots[i].ordinal()][0] == Prefs.PART_BOLT,
+                        "the menu's displayed position is the actual zone");
+                check(TrioZones.boltPosition(placed) == i + 2, "position selection is read back consistently");
+                TrioAppearance a = TrioAppearance.of(placed);
+                check(a.drawsBolt() && a.hidesNativeBolt(), "placed module bolt suppresses the native duplicate");
+                int[] charging = style == Prefs.STYLE_RING ? a.ring(70, true, 3, "5G", 2).parts
+                        : a.capsule(70, true, 3, "5G", 2).parts;
+                int[] unplugged = style == Prefs.STYLE_RING ? a.ring(70, false, 3, "5G", 2).parts
+                        : a.capsule(70, false, 3, "5G", 2).parts;
+                check(charging[slots[i].ordinal()] == Prefs.PART_BOLT, "charging draws the bolt in the selected zone");
+                check(unplugged[slots[i].ordinal()] == Prefs.PART_VALUE, "unplugging restores the next priority entry");
+                for (int mode : new int[] {TrioZones.BOLT_POSITION_HIDDEN, TrioZones.BOLT_POSITION_NATIVE}) {
+                    TrioSettings selected = TrioZones.withBoltPosition(placed, mode);
+                    check(Arrays.deepEquals(selected.ringZones, previous), "hiding or releasing the bolt preserves all other entries");
+                    TrioSettings restored = TrioSettings.fromBundle(selected.toBundle());
+                    check(TrioZones.boltPosition(restored) == mode, "combined choice survives framework transport");
+                    check(!TrioAppearance.of(restored).drawsBolt(), "transport does not restore a removed module bolt");
+                }
+                TrioSettings hidden = placed.copy(); hidden.showBolt = false;
+                check(TrioZones.boltPosition(hidden) == TrioZones.BOLT_POSITION_HIDDEN,
+                        "legacy hidden values take precedence over a saved placement");
+            }
+            check(TrioZones.withBoltPosition(empty, -1) == empty, "invalid position cannot erase the layout");
+            check(TrioZones.withBoltPosition(empty, slots.length + 2) == empty, "unknown position cannot erase the layout");
+        }
+    }
+
     private static void centreOwnershipAndBoltVisibility() {
         for(int style:new int[]{Prefs.STYLE_RING,Prefs.STYLE_CAPSULE}) {
             TrioSettings old=TrioSettings.defaults();old.trioStyle=style;
@@ -374,4 +428,30 @@ public final class ColorOsSettingsTest {
         old.putInt(Prefs.KEY_SIGNAL_ICON_SCALE,999);
         check(TrioSettings.fromBundle(old).signalIconScale==200,"oversized icon scales clamp safely");
     }
+    private static void hdVisibilitySettings() {
+        TrioSettings system=TrioSettings.defaults();
+        check(!system.hideHd,"HD defaults to the system, including old installations without the key");
+        TrioSettings hidden=system.copy();hidden.hideHd=true;
+        check(hidden.copy().hideHd && !hidden.equals(system),"HD choice survives snapshots and change detection");
+        check(TrioSettings.fromBundle(hidden.toBundle()).hideHd,"HD choice survives full hot reload");
+        check(!TrioSettings.fromBundle(new Bundle()).hideHd,"empty framework settings retain the system HD icon");
+        TrioSettings live=system.copy();
+        check(live.applyKeyFrom(hidden,Prefs.KEY_HIDE_HD) && live.hideHd,"HD hide applies as a live single-key update");
+        check(live.applyKeyFrom(system,Prefs.KEY_HIDE_HD) && !live.hideHd,"HD handoff applies without restarting SystemUI");
+        check(live.equals(system),"toggling HD leaves network type and all other preferences unchanged");
+        android.content.SharedPreferences stored=(android.content.SharedPreferences)java.lang.reflect.Proxy.newProxyInstance(
+                android.content.SharedPreferences.class.getClassLoader(),
+                new Class<?>[]{android.content.SharedPreferences.class},(proxy,method,args)->switch(method.getName()) {
+                    case "getBoolean" -> Prefs.KEY_HIDE_HD.equals(args[0])?true:args[1];
+                    case "getInt", "getString" -> args[1];
+                    case "contains" -> Prefs.KEY_HIDE_HD.equals(args[0]);
+                    default -> throw new UnsupportedOperationException(method.getName());
+                });
+        for(int style:new int[]{Prefs.STYLE_RING,Prefs.STYLE_CAPSULE}) {
+            check(TrioSettings.from(stored,1f,style).hideHd,"both styles read the same saved HD switch");
+            check(Prefs.styledKey(Prefs.KEY_HIDE_HD,style).equals(Prefs.KEY_HIDE_HD),"HD choice is global across styles");
+            check(hidden.withComponentsFrom(system,style).hideHd,"loading another style's components keeps the global HD choice");
+        }
+    }
+
 }

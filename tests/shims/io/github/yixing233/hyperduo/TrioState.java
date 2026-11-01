@@ -31,6 +31,7 @@ final class TrioState {
     int tintColor;
     boolean charging;
     boolean quickCharging;
+    ChargeSpeed chargingSpeed = ChargeSpeed.NORMAL;
     boolean chargingPaused;
     int dataSlot = -1;
     DuoPolicy.Radio mobileService = DuoPolicy.Radio.UNKNOWN;

@@ -131,6 +131,43 @@ public final class TrioZones {
         SIM_PAIR
     }
 
+    public static final int BOLT_POSITION_HIDDEN = 0, BOLT_POSITION_NATIVE = 1;
+
+    /** Positions in the same visual order as the settings menu. */
+    public static Zone[] boltPositionZones(int style) {
+        return style == Prefs.STYLE_CAPSULE
+                ? new Zone[] {Zone.TOP, Zone.LEFT, Zone.CENTRE, Zone.BOTTOM}
+                : new Zone[] {Zone.TOP, Zone.CENTRE, Zone.BOTTOM};
+    }
+
+    /** Hidden, native, then the arrangement's positions; old visibility values remain valid. */
+    public static int boltPosition(TrioSettings current) {
+        if (current == null || !current.showBolt) return BOLT_POSITION_HIDDEN;
+        Zone[] zones = boltPositionZones(current.trioStyle);
+        for (int i = 0; i < zones.length; i++) {
+            for (int part : current.ringZones[zones[i].ordinal()]) {
+                if (part == Prefs.PART_BOLT) return i + 2;
+            }
+        }
+        return BOLT_POSITION_NATIVE;
+    }
+
+    /** Update visibility and placement together, preserving every other priority entry. */
+    public static TrioSettings withBoltPosition(TrioSettings current, int position) {
+        if (current == null) return null;
+        Zone[] zones = boltPositionZones(current.trioStyle);
+        if (position < BOLT_POSITION_HIDDEN || position >= zones.length + 2) return current;
+        if (position >= 2) return withPiece(current, zones[position - 2].ordinal(), Part.BOLT);
+        TrioSettings next = current.copy();
+        next.showBolt = position == BOLT_POSITION_NATIVE;
+        next.ringZones = TrioSettings.copyZones(current.ringZones);
+        for (int zone = 0; zone < next.ringZones.length; zone++) {
+            next.ringZones[zone] = java.util.Arrays.stream(next.ringZones[zone])
+                    .filter(part -> part != Prefs.PART_BOLT).toArray();
+        }
+        return next;
+    }
+
     // ------------------------------------------------------------------ bounds
     //
     // The cut lines below are measured against the ink the pieces actually
@@ -631,8 +668,16 @@ public final class TrioZones {
     /** Hit only the battery arc, including its round caps, leaving component gaps editable. */
     public static boolean batteryRingAt(float[] transform, TrioAppearance a,
             TrioAppearance.Ring ring, float viewX, float viewY) {
+        if(ring==null) return false;
+        return batteryRingAt(transform,a,(ring.gapEnd()-ring.gapStart())*ring.sweep(),
+                360f-ring.sweep(),viewX,viewY);
+    }
+
+    /** Hit the same measured openings used by the renderer. */
+    public static boolean batteryRingAt(float[] transform,TrioAppearance a,float topOpening,
+            float bottomOpening,float viewX,float viewY) {
         if (transform == null || transform.length < 3 || transform[0] <= 0f
-                || a == null || !a.ring || ring == null) return false;
+                || a == null || !a.ring) return false;
         double x = (viewX - transform[1]) / transform[0] - TrioGeometry.B_CX;
         double y = (viewY - transform[2]) / transform[0] - TrioGeometry.B_CY;
         double tolerance = Math.max(5f, a.ringStroke * .5f + 2f);
@@ -641,15 +686,15 @@ public final class TrioZones {
         // The sweep follows the arc actually drawn: with the bottom closed there is ink all
         // the way round, so a tap down there has to land on the ring. The three ZONE bands
         // stay where they are - this only decides "is this tap on the battery outline".
-        final float sweep = ring.sweep();
-        final float start = ring.arcStart();
+        final float sweep = 360f-bottomOpening;
+        final float start = 270f-sweep/2f;
         double angle = (Math.toDegrees(Math.atan2(y, x)) - start + 360) % 360;
         if (angle > 360 - cap) angle -= 360;
         if (angle < -cap || angle > sweep + cap) return false;
         double progress = angle / sweep;
         double pad = cap / sweep;
-        return ring.gapStart() == ring.gapEnd()
-                || progress <= ring.gapStart() + pad || progress >= ring.gapEnd() - pad;
+        return topOpening<=0f || progress<=0.5f-topOpening/(2f*sweep)+pad
+                || progress>=0.5f+topOpening/(2f*sweep)-pad;
     }
 
     // ------------------------------------------------------- placement rules
@@ -879,6 +924,41 @@ public final class TrioZones {
      * one write, so none of them can store a layout the renderer would then draw as a
      * smudge.
      */
+    /** Arrangement is encoded by placement, so settings and drawing have one source of truth. */
+    public static TrioSettings withSignalArrangement(TrioSettings current, boolean paired) {
+        if (current == null) return null;
+        if (paired) {
+            int zone=Zone.CENTRE.ordinal();
+            boolean alreadyPaired=false;
+            for (int z=0;z<current.ringZones.length;z++)
+                for (int part:current.ringZones[z]) if (part==Prefs.PART_SIM_PAIR) { zone=z; alreadyPaired=true; }
+            TrioSettings next=withPiece(current,zone,Part.SIM_PAIR);
+            if (alreadyPaired || current.showSim1 || current.showSim2) {
+                next.showSim1=current.showSim1;
+                next.showSim2=current.showSim2;
+            }
+            return next;
+        }
+        boolean wasPaired=false;
+        TrioSettings next=current.copy();
+        next.ringZones=TrioSettings.copyZones(current.ringZones);
+        for (int z=0;z<next.ringZones.length;z++) {
+            java.util.List<Integer> kept=new java.util.ArrayList<>();
+            for (int part:next.ringZones[z]) {
+                if (part==Prefs.PART_SIM_PAIR) wasPaired=true;
+                else kept.add(part);
+            }
+            next.ringZones[z]=kept.stream().mapToInt(Integer::intValue).toArray();
+        }
+        if (wasPaired) {
+            if (current.showSim1) next=withPiece(next,Zone.TOP.ordinal(),Part.SIM_1);
+            if (current.showSim2) next=withPiece(next,Zone.BOTTOM.ordinal(),Part.SIM_2);
+        }
+        next.showMobile=true;
+        next.signalMode=Prefs.SIGNAL_IN_RING;
+        return next;
+    }
+
     public static TrioSettings withPiece(TrioSettings current, int zone, Part want) {
         if (current == null || zone < 0 || zone >= Prefs.ZONE_COUNT) {
             return current;
@@ -901,8 +981,10 @@ public final class TrioZones {
                 // Drop the id everywhere, then re-add it at the target's front: that single
                 // rule gives add, promote and move without three separate paths.
                 if (existing == id
-                        || (want == Part.SIM_PAIR && (existing == Prefs.PART_SIM_1 || existing == Prefs.PART_SIM_2))
-                        || ((want == Part.SIM_1 || want == Part.SIM_2) && existing == Prefs.PART_SIM_PAIR)) {
+                        || (want == Part.SIM_PAIR && Prefs.isSignalRow(existing))
+                        || ((want == Part.SIM_1 || want == Part.SIM_2)
+                            && (existing == Prefs.PART_SIM_PAIR || existing == Prefs.PART_MOBILE))
+                        || (want == Part.MOBILE && Prefs.isSignalRow(existing))) {
                     continue;
                 }
                 list.add(existing);

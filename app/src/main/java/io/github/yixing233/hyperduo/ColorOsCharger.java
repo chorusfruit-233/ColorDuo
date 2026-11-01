@@ -89,6 +89,8 @@ final class ColorOsCharger {
         nextQuery = Long.MIN_VALUE;
     }
 
+    synchronized boolean isIdle() { return !inFlight; }
+
     private void query(long requestGeneration) {
         long started = clock.getAsLong();
         Reading next = null;

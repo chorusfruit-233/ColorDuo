@@ -243,7 +243,7 @@ public final class TrioConfig {
             }
             TrioHooks.log(TrioHooks.LOG_INFO, "reload receiver registered");
             // ColorDuo reload lifecycle.
-            ColorOsReload.watch(target, receiver);
+            ColorOsReload.watch(target, receiver, filter);
             // End ColorDuo reload lifecycle.
         } catch (Throwable t) {
             sReceiverInstalled = false;

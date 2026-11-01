@@ -63,24 +63,13 @@ public final class Prefs {
 
     // ------------------------------------------------------------------ keys
     public static final String KEY_ENABLED = "enabled";
+    public static final String KEY_HIDE_HD = "hide_hd";
     /**
      * Overall size of the trio glyph, as a percentage of the size the host box
      * already implies.
      *
-     * <p><em>Shrink-only</em> - the range stops at 100 - because the bar's own
-     * box is the limit: MIUI measures the battery icon at
-     * {@code battery_meter_width} x {@code status_bar_icon_height} (28dp by 20dp
-     * on the test device) and the glyph is fitted inside it. Asking for more than
-     * the box holds cannot make the box grow, so the only honest thing a
-     * percentage above 100 could do is draw past the view's bounds, and whether
-     * that is clipped is MIUI's decision rather than this module's.
-     *
-     * <p>A percentage rather than a dp: the drawing already scales to whatever
-     * box it is handed, so the setting that means anything is "how much of that
-     * fit to use". A dp size would have to be converted back into a share of a
-     * box the module does not own.
-     *
-     * <p>A brand-new key with a brand-new name.
+     * <p>60..300. ColorOS reserves the measured pixel bounds and applies this scale
+     * once; each surface limits the effective size to its available space.
      */
     public static final String KEY_GLYPH_SCALE = "glyph_scale_pct";
     public static final String KEY_SHOW_WIFI = "show_wifi";
@@ -818,6 +807,12 @@ public final class Prefs {
     public static final String KEY_COLOR_CRITICAL_ON_LIGHT = "color_critical_on_light";
     public static final String KEY_COLOR_CHARGING_ON_DARK = "color_charging_on_dark";
     public static final String KEY_COLOR_CHARGING_ON_LIGHT = "color_charging_on_light";
+    public static final String KEY_COLOR_QUICK_CHARGING_ON_DARK = "color_quick_charging_on_dark";
+    public static final String KEY_COLOR_QUICK_CHARGING_ON_LIGHT = "color_quick_charging_on_light";
+    public static final String KEY_COLOR_FLASH_CHARGING_ON_DARK = "color_flash_charging_on_dark";
+    public static final String KEY_COLOR_FLASH_CHARGING_ON_LIGHT = "color_flash_charging_on_light";
+    public static final String KEY_COLOR_SUPER_CHARGING_ON_DARK = "color_super_charging_on_dark";
+    public static final String KEY_COLOR_SUPER_CHARGING_ON_LIGHT = "color_super_charging_on_light";
     public static final String KEY_COLOR_LOW_ON_DARK = "color_low_on_dark";
     public static final String KEY_COLOR_LOW_ON_LIGHT = "color_low_on_light";
     public static final String KEY_LOW_THRESHOLD = "low_threshold";
@@ -1149,7 +1144,7 @@ public final class Prefs {
     public static final boolean DEF_CHARGING_SHOWS_VALUE = false;
 
     public static final String KEY_PAUSED_GRAY_ALL = "paused_gray_all";
-    public static final boolean DEF_PAUSED_GRAY_ALL = false;
+    public static final boolean DEF_PAUSED_GRAY_ALL = true;
     public static final boolean DEF_TYPE_HIDE_ON_WIFI = false;
     /**
      * Size of the ring's level-dot rows, as a percentage of the bead the stroke implies.
@@ -1198,27 +1193,27 @@ public final class Prefs {
     public static final String KEY_PAIR_Y = "pair_y";
     public static final int DEF_PAIR_Y = 0, MIN_PAIR_Y = -40, MAX_PAIR_Y = 40;
     public static final String KEY_SPLIT_LEFT_DISTANCE = "split_left_distance";
-    public static final int DEF_SPLIT_LEFT_DISTANCE = 10, MIN_SPLIT_LEFT_DISTANCE = 0, MAX_SPLIT_LEFT_DISTANCE = 80;
+    public static final int DEF_SPLIT_LEFT_DISTANCE = 28, MIN_SPLIT_LEFT_DISTANCE = 0, MAX_SPLIT_LEFT_DISTANCE = 80;
     public static final String KEY_SPLIT_LEFT_BEND = "split_left_bend";
     public static final int DEF_SPLIT_LEFT_BEND = 40, MIN_SPLIT_LEFT_BEND = 0, MAX_SPLIT_LEFT_BEND = 80;
     public static final String KEY_SPLIT_LEFT_HEIGHT = "split_left_height";
-    public static final int DEF_SPLIT_LEFT_HEIGHT = 96, MIN_SPLIT_LEFT_HEIGHT = 20, MAX_SPLIT_LEFT_HEIGHT = 110;
+    public static final int DEF_SPLIT_LEFT_HEIGHT = 110, MIN_SPLIT_LEFT_HEIGHT = 20, MAX_SPLIT_LEFT_HEIGHT = 110;
     public static final String KEY_SPLIT_LEFT_TOP = "split_left_top";
-    public static final int DEF_SPLIT_LEFT_TOP = 16, MIN_SPLIT_LEFT_TOP = 0, MAX_SPLIT_LEFT_TOP = 80;
+    public static final int DEF_SPLIT_LEFT_TOP = 48, MIN_SPLIT_LEFT_TOP = 0, MAX_SPLIT_LEFT_TOP = 80;
     public static final String KEY_SPLIT_LEFT_BOTTOM = "split_left_bottom";
-    public static final int DEF_SPLIT_LEFT_BOTTOM = 16, MIN_SPLIT_LEFT_BOTTOM = 0, MAX_SPLIT_LEFT_BOTTOM = 80;
+    public static final int DEF_SPLIT_LEFT_BOTTOM = 48, MIN_SPLIT_LEFT_BOTTOM = 0, MAX_SPLIT_LEFT_BOTTOM = 80;
     public static final String KEY_SPLIT_LEFT_Y = "split_left_y";
     public static final int DEF_SPLIT_LEFT_Y = 0, MIN_SPLIT_LEFT_Y = -40, MAX_SPLIT_LEFT_Y = 40;
     public static final String KEY_SPLIT_RIGHT_DISTANCE = "split_right_distance";
-    public static final int DEF_SPLIT_RIGHT_DISTANCE = 10, MIN_SPLIT_RIGHT_DISTANCE = 0, MAX_SPLIT_RIGHT_DISTANCE = 80;
+    public static final int DEF_SPLIT_RIGHT_DISTANCE = 28, MIN_SPLIT_RIGHT_DISTANCE = 0, MAX_SPLIT_RIGHT_DISTANCE = 80;
     public static final String KEY_SPLIT_RIGHT_BEND = "split_right_bend";
     public static final int DEF_SPLIT_RIGHT_BEND = 40, MIN_SPLIT_RIGHT_BEND = 0, MAX_SPLIT_RIGHT_BEND = 80;
     public static final String KEY_SPLIT_RIGHT_HEIGHT = "split_right_height";
-    public static final int DEF_SPLIT_RIGHT_HEIGHT = 96, MIN_SPLIT_RIGHT_HEIGHT = 20, MAX_SPLIT_RIGHT_HEIGHT = 110;
+    public static final int DEF_SPLIT_RIGHT_HEIGHT = 110, MIN_SPLIT_RIGHT_HEIGHT = 20, MAX_SPLIT_RIGHT_HEIGHT = 110;
     public static final String KEY_SPLIT_RIGHT_TOP = "split_right_top";
-    public static final int DEF_SPLIT_RIGHT_TOP = 16, MIN_SPLIT_RIGHT_TOP = 0, MAX_SPLIT_RIGHT_TOP = 80;
+    public static final int DEF_SPLIT_RIGHT_TOP = 48, MIN_SPLIT_RIGHT_TOP = 0, MAX_SPLIT_RIGHT_TOP = 80;
     public static final String KEY_SPLIT_RIGHT_BOTTOM = "split_right_bottom";
-    public static final int DEF_SPLIT_RIGHT_BOTTOM = 16, MIN_SPLIT_RIGHT_BOTTOM = 0, MAX_SPLIT_RIGHT_BOTTOM = 80;
+    public static final int DEF_SPLIT_RIGHT_BOTTOM = 48, MIN_SPLIT_RIGHT_BOTTOM = 0, MAX_SPLIT_RIGHT_BOTTOM = 80;
     public static final String KEY_SPLIT_RIGHT_Y = "split_right_y";
     public static final int DEF_SPLIT_RIGHT_Y = 0, MIN_SPLIT_RIGHT_Y = -40, MAX_SPLIT_RIGHT_Y = 40;
     public static final String KEY_SIGNAL_ICON_SCALE = "signal_icon_scale";
@@ -1250,6 +1245,7 @@ public final class Prefs {
 
     // -------------------------------------------------------------- defaults
     public static final boolean DEF_ENABLED = true;
+    public static final boolean DEF_HIDE_HD = false;
     public static final boolean DEF_SHOW_WIFI = true;
     public static final boolean DEF_SHOW_MOBILE = true;
     public static final boolean DEF_SHOW_VALUE = true;
@@ -1520,6 +1516,12 @@ public final class Prefs {
     public static final int DEF_COLOR_CRITICAL_ON_LIGHT = 0xFFFF3B30;
     public static final int DEF_COLOR_CHARGING_ON_DARK = 0xFF34C759;
     public static final int DEF_COLOR_CHARGING_ON_LIGHT = 0xFF1F8F3D;
+    public static final int DEF_COLOR_QUICK_CHARGING_ON_DARK = 0xFF00FF00;
+    public static final int DEF_COLOR_QUICK_CHARGING_ON_LIGHT = 0xFF00FF00;
+    public static final int DEF_COLOR_FLASH_CHARGING_ON_DARK = 0xFF000080;
+    public static final int DEF_COLOR_FLASH_CHARGING_ON_LIGHT = 0xFF000080;
+    public static final int DEF_COLOR_SUPER_CHARGING_ON_DARK = 0xFF800080;
+    public static final int DEF_COLOR_SUPER_CHARGING_ON_LIGHT = 0xFF800080;
     public static final int DEF_COLOR_LOW_ON_DARK = 0xFFF2B900;
     public static final int DEF_COLOR_LOW_ON_LIGHT = 0xFFC99700;
     public static final int DEF_LOW_THRESHOLD = 20;
@@ -1804,12 +1806,11 @@ public final class Prefs {
     /**
      * The glyph-size span, in percent of the fit the host box implies.
      *
-     * <p>60..100: the ceiling is the box - see {@link #KEY_GLYPH_SCALE} for why
-     * growing past it was refused - and 60 is as small as the glyph goes while
-     * the level dots and the ring stroke are still separable at status-bar size.
+     * <p>60..300; the effective size is constrained by the current SystemUI surface.
+     * Values through 100 retain their stored meaning.
      */
     public static final int MIN_GLYPH_SCALE = 60;
-    public static final int MAX_GLYPH_SCALE = 100;
+    public static final int MAX_GLYPH_SCALE = 300;
     /**
      * The performance-readout size span, in percent of the size the adaptive fit
      * settles on.

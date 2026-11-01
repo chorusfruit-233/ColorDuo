@@ -2017,6 +2017,19 @@ final class TrioGeometry {
      */
     static final int QUICK_CHARGE = 0xFFFFBA28;
 
+    /** The two centre rows belong to the right-hand body cell, beside the clock. */
+    static float capPairHalfWidth(TrioAppearance a) {
+        return (18f*a.pairPitch/100f+4f*a.dotScaleFactor())*a.signalIconScaleFactor();
+    }
+    static float capPairCx(float stroke, TrioAppearance a) {
+        return capRightCx(stroke);
+    }
+    static float splitOpeningWidth(TrioAppearance a, int zone) {
+        EllipseSide left=new EllipseSide(a,0),right=new EllipseSide(a,1);
+        float xLeft=left.x(zone==0?1:0),xRight=right.x(zone==0?0:1);
+        return Math.max(1f,2f*Math.min(B_CX-xLeft,xRight-B_CX)-a.ringStroke-2f);
+    }
+
     /** Unscaled ink bounds of the legacy four-dot ring row, in design coordinates. */
     static float[] signalRowBounds(int zone,TrioAppearance a) {
         float radius=arcRowDotR(zone,a.ringStroke,78f-a.ringStroke,a.dotScaleFactor());
@@ -2111,9 +2124,7 @@ final class TrioGeometry {
                 if(a.splitMode==1) {
                     float low=Float.MAX_VALUE,high=-Float.MAX_VALUE;
                     for(int row=0;row<2;row++)for(int dot=0;dot<4;dot++) {
-                        float t=(dot-1.5f)/1.5f;
-                        float bend=a.pairShape==1?0:a.pairBend*(1-t*t);
-                        if(a.pairMirror==1 && row==1)bend=-bend;
+                        float bend=a.simDotBend(dot);
                         float y=(row-.5f)*pitch+bend;
                         low=Math.min(low,y-radius);high=Math.max(high,y+radius);
                     }

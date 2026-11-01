@@ -93,7 +93,7 @@ final class BatteryPresence {
             }
             registered = true;
             // ColorDuo reload lifecycle.
-            ColorOsReload.watch(context, receiver);
+            ColorOsReload.watch(context, receiver, filter);
             // End ColorDuo reload lifecycle.
             refresh(context);
         } catch (RuntimeException ignored) {

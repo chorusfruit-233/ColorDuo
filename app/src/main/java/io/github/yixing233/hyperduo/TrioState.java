@@ -213,6 +213,7 @@ final class TrioState {
     int level = -1;
     boolean charging;
     boolean quickCharging;
+    ChargeSpeed chargingSpeed = ChargeSpeed.NORMAL;
     boolean chargingPaused;
     boolean low;
     boolean powerSave;
@@ -279,6 +280,7 @@ final class TrioState {
         level = Refl.getInt(fLevel, host, level);
         charging = Refl.getBool(fCharging, host, charging);
         quickCharging = Refl.getBool(fQuick, host, quickCharging);
+        chargingSpeed = charging && quickCharging ? ChargeSpeed.QUICK : ChargeSpeed.NORMAL;
         low = Refl.getBool(fLow, host, low);
         powerSave = Refl.getBool(fPowerSave, host, powerSave);
         performanceMode = Refl.getBool(fPerformance, host, performanceMode);

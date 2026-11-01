@@ -30,7 +30,7 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/android
       - name: Build
-        run: ./gradlew --no-daemon :app:assembleDebug
+        run: ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug
       - name: Verify and package
         id: package
         run: python3 scripts/ci/artifacts.py package --variant debug

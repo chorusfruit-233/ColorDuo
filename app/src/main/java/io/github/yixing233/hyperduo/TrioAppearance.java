@@ -149,7 +149,7 @@ public final class TrioAppearance {
      */
     public final boolean perfPower;
     /** The battery temperature is drawn in the same out-of-ring strip. */
-    public final boolean perfTemp;
+    public final boolean perfTemp;
     /** Drops the temperature unless a charger is attached; see {@link Prefs#KEY_PERF_TEMP_CHARGING_ONLY}. */
     public final boolean perfTempChargingOnly;
     /**
@@ -183,6 +183,12 @@ public final class TrioAppearance {
     public final int criticalOnLight;
     public final int chargingOnDark;
     public final int chargingOnLight;
+    public final int quickChargingOnDark;
+    public final int quickChargingOnLight;
+    public final int flashChargingOnDark;
+    public final int flashChargingOnLight;
+    public final int superChargingOnDark;
+    public final int superChargingOnLight;
     public final int lowOnDark;
     public final int lowOnLight;
     public final int lowThreshold;
@@ -323,7 +329,7 @@ public final class TrioAppearance {
         chargingShowsValue = c.chargingShowsValue;
         fontPath = c.fontPath == null ? "" : c.fontPath;
         perfPower = c.perfPower;
-        perfTemp = c.perfTemp;
+        perfTemp = c.perfTemp;
         perfTempChargingOnly = c.perfTempChargingOnly;
         perfScale = c.perfScale;
         perfWeight = c.perfWeight;
@@ -334,6 +340,12 @@ public final class TrioAppearance {
         criticalOnLight = c.criticalOnLight;
         chargingOnDark = c.chargingOnDark;
         chargingOnLight = c.chargingOnLight;
+        quickChargingOnDark = c.quickChargingOnDark;
+        quickChargingOnLight = c.quickChargingOnLight;
+        flashChargingOnDark = c.flashChargingOnDark;
+        flashChargingOnLight = c.flashChargingOnLight;
+        superChargingOnDark = c.superChargingOnDark;
+        superChargingOnLight = c.superChargingOnLight;
         lowOnDark = c.lowOnDark;
         lowOnLight = c.lowOnLight;
         lowThreshold = c.lowThreshold;
@@ -390,72 +402,14 @@ public final class TrioAppearance {
         return new TrioAppearance(cfg == null ? TrioSettings.defaults() : cfg);
     }
 
-    /**
-     * Whether the glyph owns the bolt.
-     *
-     * <p>The two arrangements answer differently, and the difference is real rather
-     * than leftover:
-     *
-     * <ul>
-     *   <li>The <b>ring</b> places pieces in three slots, so the bolt appears exactly
-     *       where a slot names it ({@code PART_BOLT}). It is no longer tied to the
-     *       percentage: with slots, "show the bolt" and "show the number" are two
-     *       independent placements, and tying them would make one switch silently
-     *       govern the other's slot.
-     *   <li>The <b>capsule</b> has no slots - its right-hand reading is arbitrated
-     *       (bolt, then arcs, then percentage, then type) - so there the bolt keeps
-     *       following the percentage switch, which is what "charging replaces the
-     *       number" means in that arrangement.
-     * </ul>
-     *
-     * <p>Not gated on {@link #glyph}, because the preview keeps drawing the chosen
-     * arrangement while the master switch is off.
-     */
-    /**
-     * Whether the bolt is PLACED anywhere, ignoring whether a charger is attached.
-     *
-     * <p>The question the settings rows need: "would a charger show a bolt", asked of the
-     * arrangement rather than of this frame. Distinct from {@link #drawsBolt()}, which folds
-     * in the current charge state and would grey a row out the moment the cable came out.
-     */
+    /** Whether a layout position owns the charging bolt, even while unplugged. */
     public boolean hasBolt() {
-        return hasRingPart(Prefs.PART_BOLT) || hasCapsulePart(Prefs.PART_BOLT);
+        return hasRingPart(Prefs.PART_BOLT);
     }
 
+    /** An unplaced bolt belongs to the system, including in an empty capsule. */
     public boolean drawsBolt() {
-        // Placement alone, in both arrangements. The capsule used to tie the bolt to the
-        // percentage switch, which was the only way to ask for "charging replaces the number";
-        // now the user says it by placing the bolt, and the empty-layout fallback below still
-        // reproduces the old look for an install that has never placed anything.
-        return boltWanted && (hasRingPart(Prefs.PART_BOLT)
-                || (capsule && hasCapsulePart(Prefs.PART_BOLT))
-                || (capsule && !anyPlacedInCapsule() && value));
-    }
-    
-    /** Whether the capsule's body holds this piece anywhere, left column included. */
-    private boolean hasCapsulePart(int part) {
-        return capsuleParts().contains(part);
-    }
-    
-    /** Every piece the capsule's four cells name, in the order they were placed. */
-    private java.util.Set<Integer> capsuleParts() {
-        final java.util.Set<Integer> out = new java.util.HashSet<>();
-        for (int[] chain : ringZones) {
-            for (int id : chain) {
-                out.add(id);
-            }
-        }
-        return out;
-    }
-    
-    /** True when no capsule cell holds anything, i.e. the shipped look is in force. */
-    private boolean anyPlacedInCapsule() {
-        for (int[] chain : ringZones) {
-            if (chain.length > 0) {
-                return true;
-            }
-        }
-        return false;
+        return boltWanted && hasBolt();
     }
 
     /**
@@ -512,10 +466,7 @@ public final class TrioAppearance {
         return glyph && ring && !ownsValue();
     }
 
-    /**
-     * Whether MIUI's own charging bolt has to stay out of the way, which is
-     * exactly while this module is on <em>and</em> draws one of its own.
-     */
+    /** Hide the system bolt when hidden by choice or owned by a module position. */
     public boolean hidesNativeBolt() {
         return glyph && (!boltWanted || drawsBolt());
     }
@@ -641,9 +592,17 @@ public final class TrioAppearance {
         return mobile && (showSim1 || showSim2) && slotted && !signalOutOfRing && hasRingPart(Prefs.PART_SIM_PAIR);
     }
 
-    /** Centre-to-centre pitch; at zero gap the bead edges touch. */
+    /** Requested standard-diameter pitch, with room for the actual bead diameter. */
     public float simStackPitch(float radius) {
-        return 8f * (1f + simStackGap / 100f);
+        return Math.max(2f*radius,8f*(1f+simStackGap/100f));
+    }
+
+    /** Mirror each row about its own baseline, preserving physical SIM order and row spacing. */
+    public float simDotBend(int dot) {
+        if (pairShape == 1) return 0f;
+        float t=(dot-1.5f)/1.5f;
+        float bend=pairBend*(1f-t*t);
+        return pairMirror == 1 ? -bend : bend;
     }
 
     public boolean drawsAnySimRow() {
@@ -837,7 +796,7 @@ public final class TrioAppearance {
          */
         public final boolean dual;
 
-        /** The renderer and editor open the ring around the same resolved component. */
+        /** Reference opening for fitting; drawing and hit testing measure the component ink. */
         public float gapStart() {
             return !gapUsed ? TrioGeometry.GAP_NONE
                     : 0.5f - TrioGeometry.ringOpeningDegrees(parts[0]) / (2f * sweep());

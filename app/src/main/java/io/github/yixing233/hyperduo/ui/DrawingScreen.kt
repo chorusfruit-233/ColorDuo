@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
@@ -72,6 +73,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import io.github.yixing233.hyperduo.ChargeSpeed
 import io.github.yixing233.hyperduo.Prefs
 import io.github.yixing233.hyperduo.R
 import io.github.yixing233.hyperduo.TrioAppearance
@@ -169,6 +171,7 @@ private enum class PreviewScene(
     val level: Int,
     val charging: Boolean = false,
     val quickCharging: Boolean = false,
+    val chargingSpeed: ChargeSpeed = ChargeSpeed.NORMAL,
     val powerSave: Boolean = false,
     val low: Boolean = false,
     val wifiLevel: Int = WIFI_ON_LEVEL,
@@ -177,7 +180,12 @@ private enum class PreviewScene(
 ) {
     Normal(R.string.drawing_scene_normal, 64),
     Charging(R.string.drawing_scene_charging, 88, charging = true),
-    QuickCharging(R.string.drawing_scene_quick, 88, charging = true, quickCharging = true),
+    QuickCharging(R.string.drawing_scene_quick, 88, charging = true, quickCharging = true,
+        chargingSpeed = ChargeSpeed.QUICK),
+    FlashCharging(R.string.drawing_scene_flash, 88, charging = true, quickCharging = true,
+        chargingSpeed = ChargeSpeed.FLASH),
+    SuperCharging(R.string.drawing_scene_super, 88, charging = true, quickCharging = true,
+        chargingSpeed = ChargeSpeed.SUPER),
     ChargingPaused(R.string.drawing_scene_paused, 88, charging = true, chargingPaused = true),
     Low(R.string.drawing_scene_low, 24, powerSave = true, low = true),
     Critical(R.string.drawing_scene_critical, 12, low = true),
@@ -388,6 +396,8 @@ private fun DrawingEditorCard(
                 modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
             )
 
+            DrawingSizeControls(settings,scene,dark,update)
+
             // The capsule container's shape, under Quick Edit because that is where the style
             // tiles are: picking the capsule and then sizing it are the same decision, and the
             // component-order section is about where pieces GO, not what holds them. Behind a
@@ -523,7 +533,9 @@ private fun DrawingEditorCard(
             title = stringResource(R.string.capsule_container_title),
             onDismissRequest = { containerSheet = false },
         ) {
-            Column(modifier = Modifier.fillMaxWidth().padding(bottom = bottomInset)) {
+            Column(modifier = Modifier.fillMaxWidth()
+                .heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.72f).dp)
+                .verticalScroll(rememberScrollState()).padding(bottom = bottomInset)) {
                 CapsuleContainerRows(settings, update, Modifier.padding(horizontal = 4.dp))
             }
         }
@@ -803,6 +815,7 @@ private fun applyPreviewState(
     view.setState(scene.level, scene.charging, scene.quickCharging, scene.powerSave,
         scene.low, scene.wifiLevel, MOBILE_LEVEL, scene.previewSlots, PREVIEW_TYPE)
     view.setChargingPaused(scene.chargingPaused)
+    view.setChargingSpeed(scene.chargingSpeed)
 }
 
 @Composable
@@ -1610,6 +1623,40 @@ private fun OrderButton(
  * current lambda; one captured at composition would close over an older snapshot
  * and flip a switch based on what was on screen several edits ago.
  */
+@Composable
+private fun DrawingSizeControls(
+    settings: TrioSettings,
+    scene: PreviewScene,
+    dark: Boolean,
+    update: ((SettingsRepository) -> Unit) -> Unit,
+) {
+    val a=TrioAppearance.of(settings)
+    val density=LocalDensity.current
+    val inset=WindowInsets.statusBars.getTop(density)
+    val height=if(inset>0) inset else with(density) { 32.dp.roundToPx() }
+    val scale=geometrySliders().first { it.titleRes(a)==R.string.glyph_scale_title }
+    SliderRow(scale,settings,update)
+    Text(stringResource(R.string.readability_size_limit),
+        style=MiuixTheme.textStyles.footnote2,
+        color=MiuixTheme.colorScheme.onSurfaceVariantSummary)
+    Text(stringResource(R.string.readability_actual_preview),style=MiuixTheme.textStyles.subtitle)
+    AndroidView(
+        modifier=Modifier.fillMaxWidth().height(72.dp).clip(RoundedCornerShape(12.dp)),
+        factory={ context -> TrioPreviewView(context).also {
+            it.setPhysicalHeightLimit(height)
+            applyPreviewState(it,settings,scene,dark)
+        } },
+        update={ view ->
+            view.setPhysicalHeightLimit(height)
+            applyPreviewState(view,settings,scene,dark)
+        },
+    )
+    Text(stringResource(R.string.readability_actual_hint),
+        style=MiuixTheme.textStyles.footnote2,
+        color=MiuixTheme.colorScheme.onSurfaceVariantSummary)
+
+}
+
 @Composable
 private fun DrawingGlyph(
     settings: TrioSettings,
