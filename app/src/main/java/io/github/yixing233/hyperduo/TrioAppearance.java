@@ -178,6 +178,7 @@ public final class TrioAppearance {
      */
     public final int glyphScale;
 
+    public final boolean pausedGrayAll;
     public final boolean roleColors;
     public final int criticalOnDark;
     public final int criticalOnLight;
@@ -335,6 +336,7 @@ public final class TrioAppearance {
         perfWeight = c.perfWeight;
         glyphScale = c.glyphScale;
 
+        pausedGrayAll = c.pausedGrayAll;
         roleColors = c.roleColors;
         criticalOnDark = c.criticalOnDark;
         criticalOnLight = c.criticalOnLight;
