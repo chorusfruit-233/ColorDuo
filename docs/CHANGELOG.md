@@ -12,6 +12,8 @@
 
 关联 [#10](https://github.com/chorusfruit-233/ColorDuo/issues/10)。正式签名可覆盖升级，安装后重启 SystemUI 或手机。
 
+已发布：[源码仓库](https://github.com/chorusfruit-233/ColorDuo/releases/tag/v0.3.12) · [Xposed 模块仓](https://github.com/Xposed-Modules-Repo/io.github.chorusfruit_233.colorduo/releases/tag/10032-0.3.12)。
+
 ## 0.3.11
 
 - 整体尺寸调节范围扩展至 60%–300%，按实际绘制尺寸预留空间，并增加随当前 DPI 绘制的尺寸参考；升级保留原有布局和配置。
