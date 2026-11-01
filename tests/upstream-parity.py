@@ -20,6 +20,7 @@ DUO_FILES = {
     "TrioPreviewView.java",       # Preview the same paused rendering path.
     "ui/DrawingScreen.kt",        # Charging-paused preview scene.
     "TrioHooks.java",            # Split-ring host measurement.
+    "ui/SettingsScreen.kt",       # Protocol colour editor, exercised by charging regressions.
     "ui/PartControls.kt",         # Percentage range follows the actual rendered slot.
     "OutRingLayout.java",         # Recompute reserve after dropping optional readings.
 }
