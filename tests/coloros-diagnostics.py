@@ -77,7 +77,7 @@ with tempfile.TemporaryDirectory(prefix="colorduo-diagnostics-") as directory:
                 if path.relative_to(ROOT / "tests/shims").as_posix() not in fixtures]
     sources += [SOURCE / (name + ".java") for name in (
         "Prefs", "TrioSettings", "TrioAppearance", "TrioGeometry", "TrioZones", "TrioSizing",
-        "TrioRenderer", "DuoPolicy", "ColorOsSizing", "ColorOsDiagnostics")]
+        "TrioRenderer", "DuoPolicy", "ColorOsSizing", "ColorOsDiagnostics", "ChargeSpeed")]
     subprocess.run(["javac", "-encoding", "UTF-8", "-d", directory, *map(str, sources)], check=True)
     subprocess.run(["java", "-Djava.awt.headless=true", "-cp", directory,
                     "io.github.yixing233.hyperduo.ColorOsDiagnosticsTest"], check=True)
