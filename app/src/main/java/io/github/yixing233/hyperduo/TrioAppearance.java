@@ -784,7 +784,7 @@ public final class TrioAppearance {
          */
         public final boolean dual;
 
-        /** The renderer and editor open the ring around the same resolved component. */
+        /** Reference opening for fitting; drawing and hit testing measure the component ink. */
         public float gapStart() {
             return !gapUsed ? TrioGeometry.GAP_NONE
                     : 0.5f - TrioGeometry.ringOpeningDegrees(parts[0]) / (2f * sweep());

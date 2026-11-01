@@ -326,10 +326,13 @@ public final class TrioPreviewView extends View {
     public boolean isBatteryRingAt(float x, float y) {
         if (outTypeOnly || outSignalOnly) return false;
         TrioAppearance a = TrioAppearance.of(settings);
+        if (!a.ring) return false;
         int sims = 0;
         if (slotLevels != null) for (int signal : slotLevels) if (signal >= 0) sims++;
-        return TrioZones.batteryRingAt(zoneTransform(getWidth(), getHeight(), inset, settings),
-                a, a.ring(level, charging, wifiLevel, mobileType, sims), x, y);
+        TrioAppearance.Ring ring=a.ring(level,charging,wifiLevel,mobileType,sims);
+        return TrioZones.batteryRingAt(zoneTransform(getWidth(),getHeight(),inset,settings),a,
+                TrioRenderer.ringOpeningDegrees(a,ring,0,level,mobileType),
+                TrioRenderer.ringOpeningDegrees(a,ring,2,level,mobileType),x,y);
     }
 
     /**

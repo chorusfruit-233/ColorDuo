@@ -33,6 +33,8 @@ public final class TrioRenderer {
     private static final Paint FILL = new Paint(Paint.ANTI_ALIAS_FLAG);
     private static final Paint TEXT = new Paint(Paint.ANTI_ALIAS_FLAG);
     private static final Path BOLT = buildBolt();
+    private static final RectF BOLT_BOUNDS = new RectF();
+    static { BOLT.computeBounds(BOLT_BOUNDS, true); }
     private static final Path WIFI_DOT = buildWifiDot();
     private static final RectF ARC = new RectF();
     /** Scratch for the rectangular battery bar; rewritten every frame, never kept. */
@@ -531,7 +533,12 @@ public final class TrioRenderer {
     private static void drawFreeRing(Canvas c, int level, boolean quickCharging, int wifiLevel,
                                      int mobileLevel, int[] levels, String type, int role, int fg,
                                      TrioAppearance a, TrioAppearance.Ring r, boolean radioMuted) {
-        drawBattery(c, level, role, fg, a, r.gapStart(), r.gapEnd(), r.sweep(), r.arcStart());
+        final float topOpening = ringOpeningDegrees(a,r,0,level,type);
+        final float bottomOpening = ringOpeningDegrees(a,r,2,level,type);
+        final float sweep = 360f-bottomOpening;
+        final float gapStart = topOpening<=0f?0f:0.5f-topOpening/(2f*sweep);
+        final float gapEnd = topOpening<=0f?0f:0.5f+topOpening/(2f*sweep);
+        drawBattery(c,level,role,fg,a,gapStart,gapEnd,sweep,270f-sweep/2f);
         for (int z = 0; z < 3; z++) {
             final int part = r.parts[z];
             if (part == Prefs.PART_NONE) continue;
@@ -646,6 +653,69 @@ public final class TrioRenderer {
             }
             c.restoreToCount(save);
         }
+    }
+
+    /** Measured circle openings, shared by drawing and preview hit testing. */
+    static float ringOpeningDegrees(TrioAppearance a,TrioAppearance.Ring ring,int zone,
+                                    int level,String type) {
+        if(zone!=0 && zone!=2) return 0f;
+        final int part=ring.parts[zone];
+        if(part==Prefs.PART_NONE) return 0f;
+        if(a.splitMode==1) return TrioGeometry.ringOpeningDegrees(part);
+        final float reach,edgeY;
+        if(part==Prefs.PART_BOLT) {
+            final float height=zone==0?TrioGeometry.DOT_BOX_TOP:TrioGeometry.DOT_BOX_BOTTOM;
+            final float scale=Math.min((78f-a.ringStroke)/15f,height/TrioGeometry.BOLT_INK_H)
+                    *a.boltScaleFactor();
+            reach=Math.max(TrioGeometry.BOLT_CX_REF-BOLT_BOUNDS.left,
+                    BOLT_BOUNDS.right-TrioGeometry.BOLT_CX_REF)*scale;
+            edgeY=TrioGeometry.ZONE_CY[zone]+((zone==0?BOLT_BOUNDS.bottom:BOLT_BOUNDS.top)
+                    -TrioGeometry.BOLT_INK_CY)*scale;
+        } else if(part==Prefs.PART_VALUE || part==Prefs.PART_TYPE || part==Prefs.PART_CLOCK) {
+            final String text=part==Prefs.PART_VALUE?String.valueOf(level)
+                    :part==Prefs.PART_TYPE?type:TrioState.sClockText;
+            if(text==null || text.isEmpty()) return 0f;
+            applyWeight(part==Prefs.PART_VALUE?a.valueWeight:part==Prefs.PART_TYPE?a.typeWeight:a.clockWeight);
+            final float requested=part==Prefs.PART_VALUE?a.valueSize:part==Prefs.PART_TYPE?a.typeSize:a.clockSize;
+            final int suffix=part==Prefs.PART_TYPE?a.typeSuffixScale:100;
+            final float size=ringTextSize(text,requested,zone,a.ringStroke,suffix,ring.parts);
+            reach=centredTextReach(text,size,suffix);
+            final float halfHeight=textInkHeight(text,size)/2f;
+            edgeY=TrioGeometry.zoneTextCy(zone,a.ringStroke)+(zone==0?halfHeight:-halfHeight);
+        } else {
+            // Signal rows keep their angular bead spacing; Wi-Fi keeps its existing slot.
+            return TrioGeometry.ringOpeningDegrees(part);
+        }
+        // The round cap reaches half a stroke into the mouth. Keep two design units
+        // of visible clearance at the actual ink edge, including font overhang.
+        final float clearance=a.ringStroke/2f+2f;
+        final double horizontal=Math.asin(Math.min(1f,(Math.max(0f,reach)+clearance)/TrioGeometry.B_R));
+        final float edgeDistance=zone==0?TrioGeometry.B_CY-edgeY-clearance
+                :edgeY-clearance-TrioGeometry.B_CY;
+        final double vertical=Math.acos(Math.max(-1f,Math.min(1f,edgeDistance/TrioGeometry.B_R)));
+        return (float)Math.toDegrees(2.0*Math.min(horizontal,vertical));
+    }
+
+    private static float centredTextReach(String text,float size,int suffixScale) {
+        final float advance=measureType(text,size,suffixScale);
+        final float left=-advance/2f;
+        if(!TrioGeometry.hasShrunkSuffix(text,suffixScale)) {
+            TEXT.setTextSize(size);
+            TEXT.getTextBounds(text,0,text.length(),TEXT_INK);
+            return Math.max(-left-TEXT_INK.left,left+TEXT_INK.right);
+        }
+        final String base=TrioGeometry.typeBase(text);
+        final String suffix=String.valueOf(TrioGeometry.TYPE_SUFFIX);
+        TEXT.setTextSize(size);
+        final float baseAdvance=TEXT.measureText(base);
+        TEXT.getTextBounds(base,0,base.length(),TEXT_INK);
+        float min=left+TEXT_INK.left,max=left+TEXT_INK.right;
+        TEXT.setTextSize(size*suffixScale/100f);
+        TEXT.getTextBounds(suffix,0,suffix.length(),TEXT_INK);
+        min=Math.min(min,left+baseAdvance+TEXT_INK.left);
+        max=Math.max(max,left+baseAdvance+TEXT_INK.right);
+        TEXT.setTextSize(size);
+        return Math.max(-min,max);
     }
 
     /** Advance width alone misses asymmetric glyph overhang at a centred opening. */
