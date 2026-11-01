@@ -753,7 +753,8 @@ internal fun slidersForEditor(part: TrioSettingsPart, a: TrioAppearance): List<S
  */
 internal fun roleColorsForPart(part: TrioZones.Part): List<RoleColor> = when (part) {
     TrioZones.Part.VALUE -> listOf(RoleColor.Low, RoleColor.Critical)
-    TrioZones.Part.BOLT -> listOf(RoleColor.Charging)
+    TrioZones.Part.BOLT -> listOf(RoleColor.Charging, RoleColor.QuickCharging,
+        RoleColor.FlashCharging, RoleColor.SuperCharging)
     else -> emptyList()
 }
 
@@ -913,7 +914,7 @@ internal fun PartSettingsSheet(
 
 /** One size row, rendered from its spec. Shared by the page and this dialog. */
 @Composable
-private fun SliderRow(
+internal fun SliderRow(
     spec: SliderSpec,
     settings: TrioSettings,
     update: ((SettingsRepository) -> Unit) -> Unit,

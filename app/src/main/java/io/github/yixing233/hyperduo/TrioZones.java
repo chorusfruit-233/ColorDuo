@@ -668,8 +668,16 @@ public final class TrioZones {
     /** Hit only the battery arc, including its round caps, leaving component gaps editable. */
     public static boolean batteryRingAt(float[] transform, TrioAppearance a,
             TrioAppearance.Ring ring, float viewX, float viewY) {
+        if(ring==null) return false;
+        return batteryRingAt(transform,a,(ring.gapEnd()-ring.gapStart())*ring.sweep(),
+                360f-ring.sweep(),viewX,viewY);
+    }
+
+    /** Hit the same measured openings used by the renderer. */
+    public static boolean batteryRingAt(float[] transform,TrioAppearance a,float topOpening,
+            float bottomOpening,float viewX,float viewY) {
         if (transform == null || transform.length < 3 || transform[0] <= 0f
-                || a == null || !a.ring || ring == null) return false;
+                || a == null || !a.ring) return false;
         double x = (viewX - transform[1]) / transform[0] - TrioGeometry.B_CX;
         double y = (viewY - transform[2]) / transform[0] - TrioGeometry.B_CY;
         double tolerance = Math.max(5f, a.ringStroke * .5f + 2f);
@@ -678,15 +686,15 @@ public final class TrioZones {
         // The sweep follows the arc actually drawn: with the bottom closed there is ink all
         // the way round, so a tap down there has to land on the ring. The three ZONE bands
         // stay where they are - this only decides "is this tap on the battery outline".
-        final float sweep = ring.sweep();
-        final float start = ring.arcStart();
+        final float sweep = 360f-bottomOpening;
+        final float start = 270f-sweep/2f;
         double angle = (Math.toDegrees(Math.atan2(y, x)) - start + 360) % 360;
         if (angle > 360 - cap) angle -= 360;
         if (angle < -cap || angle > sweep + cap) return false;
         double progress = angle / sweep;
         double pad = cap / sweep;
-        return ring.gapStart() == ring.gapEnd()
-                || progress <= ring.gapStart() + pad || progress >= ring.gapEnd() - pad;
+        return topOpening<=0f || progress<=0.5f-topOpening/(2f*sweep)+pad
+                || progress>=0.5f+topOpening/(2f*sweep)-pad;
     }
 
     // ------------------------------------------------------- placement rules

@@ -44,7 +44,7 @@
     <string name="drawing_pick_title">%1$s: currently %2$s</string>
     <string name="drawing_pick_none_summary">Remove optional components from this area; the ring and battery bar stay.</string>
     <string name="drawing_feedback_charging">%1$s is set in %2$s; the charging bolt takes priority while charging. Select Normal to preview it.</string>
-    <string name="drawing_feedback_bolt">%1$s is set in %2$s; select Charging or Fast charging to preview it.</string>
+    <string name="drawing_feedback_bolt">%1$s is set in %2$s; select Charging, Fast charging, Flash charging or Super flash charging to preview it.</string>
     <string name="drawing_feedback_wifi">%1$s is set in %2$s; there is no Wi-Fi in this preview. Select Normal to see it.</string>
     <string name="drawing_feedback_other">%1$s is set in %2$s; this preview currently shows %3$s. Change the preview state to see it.</string>
     <string name="drawing_pick_impossible">This component does not fit in the %1$s.</string>
@@ -56,6 +56,8 @@
     <string name="drawing_scene_normal">Normal</string>
     <string name="drawing_scene_charging">Charging</string>
     <string name="drawing_scene_quick">Fast charging</string>
+    <string name="drawing_scene_flash">Flash charging</string>
+    <string name="drawing_scene_super">Super flash charging</string>
     <string name="drawing_scene_low">Low battery</string>
     <string name="drawing_scene_critical">Critical</string>
     <string name="drawing_scene_no_wifi">No Wi-Fi</string>
@@ -149,6 +151,9 @@
 
     <string name="color_low_title">Low battery color</string>
     <string name="color_charging_title">Charging color</string>
+    <string name="color_quick_charging_title">Fast charging color (PD)</string>
+    <string name="color_flash_charging_title">Flash charging color (UFCS)</string>
+    <string name="color_super_charging_title">Super flash charging color (SVOOC)</string>
     <string name="color_critical_title">Critical battery color</string>
     <string name="color_field_summary">Tap to pick a color</string>
     <string name="color_on_dark">Dark background</string>
@@ -300,8 +305,8 @@
     <string name="perf_temp_charging_only_summary">On, the temperature appears and disappears together with the wattage.</string>
     <string name="drawing_hint_left">Left</string>
     <string name="drawing_hint_right">Right</string>
-        
-    
+
+
     <!-- Capsule interior cell nudges, in design units. -->
     <string name="capsule_container_title">Capsule shape</string>
     <string name="capsule_container_summary">Length, and where each cell sits.</string>
@@ -378,4 +383,9 @@
     <string name="bolt_native">System icon</string>
     <string name="signal_icon_scale_title">Signal icon size</string>
     <string name="signal_icon_scale_summary">Default %1$d%%, range %2$d–%3$d%%. Scales dots, spacing, curvature and SIM row spacing together; position offsets stay unchanged.</string>
+    <string name="readability_size_limit">Enlarging the icon reserves matching space in the shade header. Visible window bounds still apply.</string>
+    <string name="readability_actual_preview">Actual-size reference</string>
+    <string name="readability_actual_hint">Simulated readings at the current DPI. Available space on the actual status bar may differ. The large preview above is for editing.</string>
+    <string name="hide_hd_title">Hide HD icon</string>
+    <string name="hide_hd_summary">Hide the system HD icon when enabled; return control to the system when disabled.</string>
 </resources>

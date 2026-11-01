@@ -21,7 +21,7 @@ def method(name):
     return match.group()
 
 
-methods = "\n".join(method(name) for name in ("applyInternal", "restoreBatteryInternal", "syncExtra"))
+methods = "\n".join(method(name) for name in ("applyInternal", "resize", "restoreBatteryInternal", "syncExtra"))
 harness = r'''
 package io.github.yixing233.hyperduo;
 import java.util.*;
@@ -59,6 +59,7 @@ public final class ColorOsHostTest {
     }
     static class LinearLayout extends ViewGroup {
         static class LayoutParams extends ViewGroup.LayoutParams {
+            int gravity;
             LayoutParams(int w,int h){super(w,h);}
             LayoutParams(LayoutParams p){this(p.width,p.height);}
         }
@@ -72,26 +73,41 @@ public final class ColorOsHostTest {
         void setScaleType(ScaleType value){scale=value;}
     }
     static class Glyph extends Drawable { void invalidateSelf(){} }
-    static class State { int level=65,wifiLevel=3;boolean wifiPresent=true,clock; }
+    static class State { int level=65,wifiLevel=3;boolean wifiPresent=true,clock,charging=true,chargingPaused; }
     static class TrioRenderer {
         static boolean drawsClock(State state,TrioAppearance appearance){return state.clock;}
     }
-    static class Config { boolean enabled=true; }
+    static class Config { boolean enabled=true; int glyphScale=100; }
     static class TrioConfig {
         static Config config=new Config();
         static TrioAppearance appearance=new TrioAppearance();
+        static boolean debugLog(){return false;}
         static Config get(){return config;}
         static TrioAppearance appearance(){return appearance;}
     }
     static class TrioAppearance {
-        boolean capsule,ring=true;
+        boolean capsule,ring=true,hideBolt;
         int splitMode;
         int signalIconScale=100;
         boolean drawsSimPair(){return false;}
         int capsuleLength=100;
         boolean handsBackPercentage(){return false;}
-        boolean hidesNativeBolt(){return false;}
+        boolean hidesNativeBolt(){return hideBolt;}
         boolean hidesStatusClock(){return false;}
+    }
+    static class TrioSizing {
+        static class Metrics {
+            int width,height;float scale=1,effectivePercent=100;boolean limited;
+            Metrics(int width,int height){this.width=width;this.height=height;}
+        }
+    }
+    static class ColorOsSizing {
+        boolean released;
+        TrioSizing.Metrics measure(ViewGroup meter,View image,TrioAppearance a){
+            released=false;
+            return new TrioSizing.Metrics(a.splitMode==1?40:24,20);
+        }
+        void release(){released=true;}
     }
     static class TrioGeometry {
         static class SplitRing { SplitRing(TrioAppearance a){} float width(){return 240;} float height(){return 120;} }
@@ -99,7 +115,10 @@ public final class ColorOsHostTest {
         static int capHostHeightPx(int v){return v;}
         static int capHostWidthPx(int v){return v*3;}
     }
-    static class TrioState { static String sClockText="12:34"; }
+    static class TrioState { boolean charging=true,chargingPaused;
+        static String sClockText="12:34";
+
+    }
     static class TrioHooks {
         static final int LOG_INFO=4;
         static void log(int level,String note){}
@@ -129,10 +148,14 @@ public final class ColorOsHostTest {
         final ImageView.ScaleType nativeScaleType=ImageView.ScaleType.CENTER;
         final Map<View,Integer> nativeVisibility=new IdentityHashMap<>();
         final Map<View,Integer> visibilityOverrides=new IdentityHashMap<>();
+        final Map<String,Boolean> namedHidden=new HashMap<>();
         ColorOsReadings extra;
         View clockContainer=new View();
         int nativeDepth,ownedWidth,ownedHeight;
-        boolean active,failed,logged;
+        float ownedScale;
+        final ColorOsSizing sizing=new ColorOsSizing();
+        String lastSizeNote;
+        boolean active,failed,logged,moduleWriting;
         final boolean main;
         Host(boolean main,boolean constraintParent){
             this.main=main;
@@ -146,7 +169,7 @@ public final class ColorOsHostTest {
         boolean primaryBar(){return main;}
         void capture(){}
         void readState(){}
-        void hide(String name,boolean hidden){}
+        void hide(String name,boolean hidden){namedHidden.put(name,hidden);}
         void hide(View view,boolean hidden){if(view!=null)view.setVisibility(hidden?View.GONE:nativeVisibility.get(view));}
         void syncSlots(TrioAppearance appearance){}
         void restore(){restoreBatteryInternal();}
@@ -164,6 +187,21 @@ public final class ColorOsHostTest {
             check(host.active&&host.image.drawable==host.glyph,"all four contexts must display the shared glyph");
             check(host.extra!=null,"every supported context mounts its readouts");
         }
+        check(Boolean.FALSE.equals(main.namedHidden.get("battery_charge_icon"))
+                &&Boolean.FALSE.equals(main.namedHidden.get("battery_charge_reverse")),
+                "handed-back SuperVOOC keeps both native bolt layers while charging");
+        main.state.charging=false;
+        main.applyInternal();
+        check(Boolean.TRUE.equals(main.namedHidden.get("battery_charge_icon"))
+                &&Boolean.TRUE.equals(main.namedHidden.get("battery_charge_reverse")),
+                "unplugging hides both SuperVOOC bolt layers");
+        main.state.charging=true;
+        TrioConfig.appearance.hideBolt=true;
+        main.applyInternal();
+        check(Boolean.TRUE.equals(main.namedHidden.get("battery_charge_icon"))
+                &&Boolean.TRUE.equals(main.namedHidden.get("battery_charge_reverse")),
+                "module ownership hides both native layers to avoid overlaying its own bolt");
+        TrioConfig.appearance.hideBolt=false;
         check(main.extra.parent==main.meter.parent,"standard rows reserve a sibling strip");
         check(keyguard.extra.parent==keyguard.meter.parent,"keyguard owns its own strip");
         check(notification.extra.parent==notification.meter,"notification ConstraintLayout reserves inside its meter");
@@ -191,6 +229,7 @@ public final class ColorOsHostTest {
         check(!controls.active&&controls.image.drawable==controls.nativeDrawable,"detached host restores native drawing");
         check(controls.image.params.width==18&&controls.image.params.height==16,"native dimensions are restored");
         check(controls.image.scale==ImageView.ScaleType.CENTER,"native scale type is restored");
+        check(controls.sizing.released,"detached hosts release ancestor clipping");
         controls.meter.attached=true;
         controls.applyInternal();
         check(controls.active,"reattached control panel reclaims its own glyph");
@@ -210,6 +249,6 @@ with tempfile.TemporaryDirectory(prefix="colorduo-hosts-") as directory:
     fixture.write_text(harness)
     compiler=[shutil.which("javac")] if shutil.which("javac") else ["java","-m","jdk.compiler/com.sun.tools.javac.Main"]
     subprocess.run(compiler+["-encoding","UTF-8","-d",directory,str(SOURCE/"ColorOsLayout.java"),
-                             str(ROOT/"tests/ColorOsLayoutTest.java"),str(fixture)],check=True)
+                             str(ROOT/"tests/ColorOsLayoutTest.java"),str(ROOT/"tests/shims/android/view/Gravity.java"),str(fixture)],check=True)
     for test in ("ColorOsLayoutTest","ColorOsHostTest"):
         subprocess.run(["java","-cp",directory,"io.github.yixing233.hyperduo."+test],check=True)

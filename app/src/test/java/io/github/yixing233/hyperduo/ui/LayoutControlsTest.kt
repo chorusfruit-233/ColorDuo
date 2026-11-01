@@ -16,6 +16,29 @@ class LayoutControlsTest {
         signalMode = Prefs.SIGNAL_IN_RING
     }
 
+    @Test fun overallScaleControlAllowsThreeHundredPercent() {
+        val s = settings()
+        val a = TrioAppearance.of(s)
+        val row = geometrySliders().single { it.titleRes(a) == R.string.glyph_scale_title }
+        assertEquals(60, row.min)
+        assertEquals(300, row.maxFor(a))
+        assertEquals(100, s.glyphScale)
+    }
+
+    @Test fun overallScaleUpdatePreservesLayoutAndTypography() {
+        val original = settings().apply {
+            ringZones = Prefs.decodeLayout("4,3|1,5|7|")
+            valueSize = 40
+            showBolt = false
+        }
+        val update = original.copy().apply { glyphScale = 250 }
+        assertTrue(original.applyKeyFrom(update, Prefs.KEY_GLYPH_SCALE))
+        assertEquals(250, original.glyphScale)
+        assertTrue(original.ringZones.contentDeepEquals(update.ringZones))
+        assertEquals(40, original.valueSize)
+        assertFalse(original.showBolt)
+    }
+
     @Test fun capsuleStructureContainsOnlyItsFiveEditableParameters() {
         val a = TrioAppearance.of(settings(Prefs.STYLE_CAPSULE))
         val rows = capsuleContainerSliders()
@@ -102,6 +125,17 @@ class LayoutControlsTest {
         val old = settings().apply { ringZones = Prefs.decodeLayout("2|||") }
         val next = TrioZones.withSignalArrangement(old, true)
         assertEquals(listOf(Prefs.PART_SIM_PAIR), next.ringZones.flatMap { it.toList() }.filter { Prefs.isSignalRow(it) })
+    }
+
+    @Test fun hdVisibilityHasOneIndependentSwitchEvenWhenNetworkTypeIsOff() {
+        for (style in listOf(Prefs.STYLE_RING, Prefs.STYLE_CAPSULE)) {
+            val s = settings(style).apply { mobileTypeMode = Prefs.MOBILE_TYPE_OFF }
+            assertEquals(1, contentControlsFor(TrioSettingsPart.Type, s)
+                .count { it == ContentControl.HideHd })
+            s.hideHd = true
+            assertEquals(1, contentControlsFor(TrioSettingsPart.Type, s)
+                .count { it == ContentControl.HideHd })
+        }
     }
 
     @Test fun boltHasOneMenuWithHiddenNativeAndTheActualStylePositions() {

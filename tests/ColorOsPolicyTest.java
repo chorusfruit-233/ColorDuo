@@ -102,6 +102,16 @@ public final class ColorOsPolicyTest {
         check(legacySlots.size() == 3, "pre-existing list entries are not duplicated");
         check(legacyOwner.sync(legacySlots, Set.of()), "list-backed ownership releases only our additions");
         check(legacySlots.equals(java.util.List.of("wifi", "alarm_clock")), "existing native policy survives release");
+        ColorOsPolicy.SlotOwnership hdOwner = new ColorOsPolicy.SlotOwnership();
+        Set<String> hdSlots = new HashSet<>(Set.of("alarm_clock"));
+        check(hdOwner.sync(hdSlots, Set.of("volte")), "HD hide is registered before a native child exists");
+        check(!hdOwner.sync(hdSlots, Set.of("volte")), "repeated HD hide is stable");
+        check(hdOwner.sync(hdSlots, Set.of()), "HD switch off hands the native slot back immediately");
+        check(hdSlots.equals(Set.of("alarm_clock")), "HD handoff preserves unrelated native slots");
+        hdSlots.add("volte");
+        check(!hdOwner.sync(hdSlots, Set.of("volte")), "an existing system HD block is not claimed");
+        check(!hdOwner.sync(hdSlots, Set.of()) && hdSlots.contains("volte"),
+                "HD handoff leaves a user's native hidden-HD setting intact");
         System.out.println("ColorOS network models, Wi-Fi resolution, signal normalization and slot restoration passed");
     }
 

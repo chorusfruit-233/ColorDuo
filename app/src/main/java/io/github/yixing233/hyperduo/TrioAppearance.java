@@ -149,7 +149,7 @@ public final class TrioAppearance {
      */
     public final boolean perfPower;
     /** The battery temperature is drawn in the same out-of-ring strip. */
-    public final boolean perfTemp;
+    public final boolean perfTemp;
     /** Drops the temperature unless a charger is attached; see {@link Prefs#KEY_PERF_TEMP_CHARGING_ONLY}. */
     public final boolean perfTempChargingOnly;
     /**
@@ -183,6 +183,12 @@ public final class TrioAppearance {
     public final int criticalOnLight;
     public final int chargingOnDark;
     public final int chargingOnLight;
+    public final int quickChargingOnDark;
+    public final int quickChargingOnLight;
+    public final int flashChargingOnDark;
+    public final int flashChargingOnLight;
+    public final int superChargingOnDark;
+    public final int superChargingOnLight;
     public final int lowOnDark;
     public final int lowOnLight;
     public final int lowThreshold;
@@ -323,7 +329,7 @@ public final class TrioAppearance {
         chargingShowsValue = c.chargingShowsValue;
         fontPath = c.fontPath == null ? "" : c.fontPath;
         perfPower = c.perfPower;
-        perfTemp = c.perfTemp;
+        perfTemp = c.perfTemp;
         perfTempChargingOnly = c.perfTempChargingOnly;
         perfScale = c.perfScale;
         perfWeight = c.perfWeight;
@@ -334,6 +340,12 @@ public final class TrioAppearance {
         criticalOnLight = c.criticalOnLight;
         chargingOnDark = c.chargingOnDark;
         chargingOnLight = c.chargingOnLight;
+        quickChargingOnDark = c.quickChargingOnDark;
+        quickChargingOnLight = c.quickChargingOnLight;
+        flashChargingOnDark = c.flashChargingOnDark;
+        flashChargingOnLight = c.flashChargingOnLight;
+        superChargingOnDark = c.superChargingOnDark;
+        superChargingOnLight = c.superChargingOnLight;
         lowOnDark = c.lowOnDark;
         lowOnLight = c.lowOnLight;
         lowThreshold = c.lowThreshold;
@@ -784,7 +796,7 @@ public final class TrioAppearance {
          */
         public final boolean dual;
 
-        /** The renderer and editor open the ring around the same resolved component. */
+        /** Reference opening for fitting; drawing and hit testing measure the component ink. */
         public float gapStart() {
             return !gapUsed ? TrioGeometry.GAP_NONE
                     : 0.5f - TrioGeometry.ringOpeningDegrees(parts[0]) / (2f * sweep());

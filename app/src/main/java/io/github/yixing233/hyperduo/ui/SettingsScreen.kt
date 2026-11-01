@@ -219,6 +219,9 @@ private fun SectionTitle(title: String) {
 internal enum class RoleColor(val labelRes: Int) {
     Low(R.string.color_low_title),
     Charging(R.string.color_charging_title),
+    QuickCharging(R.string.color_quick_charging_title),
+    FlashCharging(R.string.color_flash_charging_title),
+    SuperCharging(R.string.color_super_charging_title),
     Critical(R.string.color_critical_title),
 }
 
@@ -605,6 +608,15 @@ fun SettingsScreen(repository: SettingsRepository) {
                                 RoleColor.Charging ->
                                     if (onDark) repo.setColorChargingOnDark(argb)
                                     else repo.setColorChargingOnLight(argb)
+                                RoleColor.QuickCharging ->
+                                    if (onDark) repo.setColorQuickChargingOnDark(argb)
+                                    else repo.setColorQuickChargingOnLight(argb)
+                                RoleColor.FlashCharging ->
+                                    if (onDark) repo.setColorFlashChargingOnDark(argb)
+                                    else repo.setColorFlashChargingOnLight(argb)
+                                RoleColor.SuperCharging ->
+                                    if (onDark) repo.setColorSuperChargingOnDark(argb)
+                                    else repo.setColorSuperChargingOnLight(argb)
                             }
                         }
                     },
@@ -2246,6 +2258,9 @@ internal fun colorFor(settings: TrioSettings, role: RoleColor, onDark: Boolean):
         RoleColor.Critical -> if (onDark) settings.criticalOnDark else settings.criticalOnLight
         RoleColor.Low -> if (onDark) settings.lowOnDark else settings.lowOnLight
         RoleColor.Charging -> if (onDark) settings.chargingOnDark else settings.chargingOnLight
+        RoleColor.QuickCharging -> if (onDark) settings.quickChargingOnDark else settings.quickChargingOnLight
+        RoleColor.FlashCharging -> if (onDark) settings.flashChargingOnDark else settings.flashChargingOnLight
+        RoleColor.SuperCharging -> if (onDark) settings.superChargingOnDark else settings.superChargingOnLight
     }
 
 /** Signal levels the preview shows; the middle of each range. */

@@ -69,6 +69,7 @@ class SettingsRepository(context: Context) {
     // ------------------------------------------------------------- appearance
 
     fun setEnabled(value: Boolean) = writeBoolean(Prefs.KEY_ENABLED, value)
+    fun setHideHd(value: Boolean) = writeBoolean(Prefs.KEY_HIDE_HD, value)
     fun setShowWifi(value: Boolean) = writeStyled(style(), Prefs.KEY_SHOW_WIFI) { e, k ->
         e.putBoolean(k, value) }
     fun setShowMobile(value: Boolean) = writeStyled(style(), Prefs.KEY_SHOW_MOBILE) { e, k ->
@@ -357,16 +358,28 @@ class SettingsRepository(context: Context) {
     fun setColorCriticalOnLight(value: Int) = writeInt(Prefs.KEY_COLOR_CRITICAL_ON_LIGHT, value)
     fun setColorChargingOnDark(value: Int) = writeInt(Prefs.KEY_COLOR_CHARGING_ON_DARK, value)
     fun setColorChargingOnLight(value: Int) = writeInt(Prefs.KEY_COLOR_CHARGING_ON_LIGHT, value)
+    fun setColorQuickChargingOnDark(value: Int) = writeInt(Prefs.KEY_COLOR_QUICK_CHARGING_ON_DARK, value)
+    fun setColorQuickChargingOnLight(value: Int) = writeInt(Prefs.KEY_COLOR_QUICK_CHARGING_ON_LIGHT, value)
+    fun setColorFlashChargingOnDark(value: Int) = writeInt(Prefs.KEY_COLOR_FLASH_CHARGING_ON_DARK, value)
+    fun setColorFlashChargingOnLight(value: Int) = writeInt(Prefs.KEY_COLOR_FLASH_CHARGING_ON_LIGHT, value)
+    fun setColorSuperChargingOnDark(value: Int) = writeInt(Prefs.KEY_COLOR_SUPER_CHARGING_ON_DARK, value)
+    fun setColorSuperChargingOnLight(value: Int) = writeInt(Prefs.KEY_COLOR_SUPER_CHARGING_ON_LIGHT, value)
     fun setColorLowOnDark(value: Int) = writeInt(Prefs.KEY_COLOR_LOW_ON_DARK, value)
     fun setColorLowOnLight(value: Int) = writeInt(Prefs.KEY_COLOR_LOW_ON_LIGHT, value)
 
-    /** Restores all six role colours to their defaults in one write. */
+    /** Restores all role colours to their defaults in one write. */
     fun resetRoleColors() {
         preferences().edit(commit = true) {
             putInt(Prefs.KEY_COLOR_CRITICAL_ON_DARK, Prefs.DEF_COLOR_CRITICAL_ON_DARK)
             putInt(Prefs.KEY_COLOR_CRITICAL_ON_LIGHT, Prefs.DEF_COLOR_CRITICAL_ON_LIGHT)
             putInt(Prefs.KEY_COLOR_CHARGING_ON_DARK, Prefs.DEF_COLOR_CHARGING_ON_DARK)
             putInt(Prefs.KEY_COLOR_CHARGING_ON_LIGHT, Prefs.DEF_COLOR_CHARGING_ON_LIGHT)
+            putInt(Prefs.KEY_COLOR_QUICK_CHARGING_ON_DARK, Prefs.DEF_COLOR_QUICK_CHARGING_ON_DARK)
+            putInt(Prefs.KEY_COLOR_QUICK_CHARGING_ON_LIGHT, Prefs.DEF_COLOR_QUICK_CHARGING_ON_LIGHT)
+            putInt(Prefs.KEY_COLOR_FLASH_CHARGING_ON_DARK, Prefs.DEF_COLOR_FLASH_CHARGING_ON_DARK)
+            putInt(Prefs.KEY_COLOR_FLASH_CHARGING_ON_LIGHT, Prefs.DEF_COLOR_FLASH_CHARGING_ON_LIGHT)
+            putInt(Prefs.KEY_COLOR_SUPER_CHARGING_ON_DARK, Prefs.DEF_COLOR_SUPER_CHARGING_ON_DARK)
+            putInt(Prefs.KEY_COLOR_SUPER_CHARGING_ON_LIGHT, Prefs.DEF_COLOR_SUPER_CHARGING_ON_LIGHT)
             putInt(Prefs.KEY_COLOR_LOW_ON_DARK, Prefs.DEF_COLOR_LOW_ON_DARK)
             putInt(Prefs.KEY_COLOR_LOW_ON_LIGHT, Prefs.DEF_COLOR_LOW_ON_LIGHT)
         }
@@ -433,6 +446,7 @@ class SettingsRepository(context: Context) {
         val style = Prefs.normalizeTrioStyle(snapshot.trioStyle)
         push { prefs ->
             prefs.putBoolean(Prefs.KEY_ENABLED, snapshot.enabled)
+            prefs.putBoolean(Prefs.KEY_HIDE_HD, snapshot.hideHd)
             prefs.putBoolean(Prefs.styledKey(Prefs.KEY_SHOW_WIFI, style), snapshot.showWifi)
             prefs.putBoolean(Prefs.styledKey(Prefs.KEY_SHOW_MOBILE, style), snapshot.showMobile)
             prefs.putBoolean(Prefs.styledKey(Prefs.KEY_SHOW_VALUE, style), snapshot.showValue)
