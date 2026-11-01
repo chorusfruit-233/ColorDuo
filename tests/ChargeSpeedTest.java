@@ -16,7 +16,7 @@ public class ChargeSpeedTest {
   check(sampler.sample(true,1,1200).speed==ChargeSpeed.QUICK);
   value[0]="malformed";check(sampler.sample(true,1,2200).speed==null);
   check(sampler.nativeSample(new Native()).speed==ChargeSpeed.SUPER);
-  TrioSettings s=TrioSettings.defaults();s.roleColors=true;
+  TrioSettings s=TrioSettings.defaults();s.roleColors=true;s.pausedGrayAll=false;
   for(ChargeSpeed speed:ChargeSpeed.values())for(int fg:new int[]{0xffffffff,0xff000000}){
    TrioAppearance a=TrioAppearance.of(s);
    check(TrioRenderer.roleColor(a,1,true,true,true,fg,speed)==TrioRenderer.chargingColor(a,speed,fg));
