@@ -807,6 +807,12 @@ public final class Prefs {
     public static final String KEY_COLOR_CRITICAL_ON_LIGHT = "color_critical_on_light";
     public static final String KEY_COLOR_CHARGING_ON_DARK = "color_charging_on_dark";
     public static final String KEY_COLOR_CHARGING_ON_LIGHT = "color_charging_on_light";
+    public static final String KEY_COLOR_QUICK_CHARGING_ON_DARK = "color_quick_charging_on_dark";
+    public static final String KEY_COLOR_QUICK_CHARGING_ON_LIGHT = "color_quick_charging_on_light";
+    public static final String KEY_COLOR_FLASH_CHARGING_ON_DARK = "color_flash_charging_on_dark";
+    public static final String KEY_COLOR_FLASH_CHARGING_ON_LIGHT = "color_flash_charging_on_light";
+    public static final String KEY_COLOR_SUPER_CHARGING_ON_DARK = "color_super_charging_on_dark";
+    public static final String KEY_COLOR_SUPER_CHARGING_ON_LIGHT = "color_super_charging_on_light";
     public static final String KEY_COLOR_LOW_ON_DARK = "color_low_on_dark";
     public static final String KEY_COLOR_LOW_ON_LIGHT = "color_low_on_light";
     public static final String KEY_LOW_THRESHOLD = "low_threshold";
@@ -1137,6 +1143,17 @@ public final class Prefs {
     public static final String KEY_CHARGING_SHOWS_VALUE = "charging_shows_value";
     public static final boolean DEF_CHARGING_SHOWS_VALUE = false;
 
+    public static final String KEY_CHARGE_FLOW = "charge_flow";
+    public static final boolean DEF_CHARGE_FLOW = false;
+    public static final String KEY_CHARGE_FLOW_SPEED = "charge_flow_speed";
+    public static final int DEF_CHARGE_FLOW_SPEED = 100, MIN_CHARGE_FLOW_SPEED = 10, MAX_CHARGE_FLOW_SPEED = 400;
+    public static final String KEY_CHARGE_FLOW_WIDTH = "charge_flow_width";
+    public static final int DEF_CHARGE_FLOW_WIDTH = 18, MIN_CHARGE_FLOW_WIDTH = 1, MAX_CHARGE_FLOW_WIDTH = 100;
+    public static final String KEY_CHARGE_FLOW_GRADIENT = "charge_flow_gradient";
+    public static final int DEF_CHARGE_FLOW_GRADIENT = 50, MIN_CHARGE_FLOW_GRADIENT = 0, MAX_CHARGE_FLOW_GRADIENT = 50;
+    public static final String KEY_CHARGE_FLOW_DIRECTION = "charge_flow_direction";
+    public static final int DEF_CHARGE_FLOW_DIRECTION = 0;
+    public static final int MIN_CHARGE_FLOW_DIRECTION = 0, MAX_CHARGE_FLOW_DIRECTION = 1;
     public static final String KEY_PAUSED_GRAY_ALL = "paused_gray_all";
     public static final boolean DEF_PAUSED_GRAY_ALL = true;
     public static final boolean DEF_TYPE_HIDE_ON_WIFI = false;
@@ -1510,6 +1527,12 @@ public final class Prefs {
     public static final int DEF_COLOR_CRITICAL_ON_LIGHT = 0xFFFF3B30;
     public static final int DEF_COLOR_CHARGING_ON_DARK = 0xFF34C759;
     public static final int DEF_COLOR_CHARGING_ON_LIGHT = 0xFF1F8F3D;
+    public static final int DEF_COLOR_QUICK_CHARGING_ON_DARK = 0xFF00FF00;
+    public static final int DEF_COLOR_QUICK_CHARGING_ON_LIGHT = 0xFF00FF00;
+    public static final int DEF_COLOR_FLASH_CHARGING_ON_DARK = 0xFF000080;
+    public static final int DEF_COLOR_FLASH_CHARGING_ON_LIGHT = 0xFF000080;
+    public static final int DEF_COLOR_SUPER_CHARGING_ON_DARK = 0xFF800080;
+    public static final int DEF_COLOR_SUPER_CHARGING_ON_LIGHT = 0xFF800080;
     public static final int DEF_COLOR_LOW_ON_DARK = 0xFFF2B900;
     public static final int DEF_COLOR_LOW_ON_LIGHT = 0xFFC99700;
     public static final int DEF_LOW_THRESHOLD = 20;

@@ -73,6 +73,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import io.github.yixing233.hyperduo.ChargeSpeed
 import io.github.yixing233.hyperduo.Prefs
 import io.github.yixing233.hyperduo.R
 import io.github.yixing233.hyperduo.TrioAppearance
@@ -170,6 +171,7 @@ private enum class PreviewScene(
     val level: Int,
     val charging: Boolean = false,
     val quickCharging: Boolean = false,
+    val chargingSpeed: ChargeSpeed = ChargeSpeed.NORMAL,
     val powerSave: Boolean = false,
     val low: Boolean = false,
     val wifiLevel: Int = WIFI_ON_LEVEL,
@@ -178,7 +180,12 @@ private enum class PreviewScene(
 ) {
     Normal(R.string.drawing_scene_normal, 64),
     Charging(R.string.drawing_scene_charging, 88, charging = true),
-    QuickCharging(R.string.drawing_scene_quick, 88, charging = true, quickCharging = true),
+    QuickCharging(R.string.drawing_scene_quick, 88, charging = true, quickCharging = true,
+        chargingSpeed = ChargeSpeed.QUICK),
+    FlashCharging(R.string.drawing_scene_flash, 88, charging = true, quickCharging = true,
+        chargingSpeed = ChargeSpeed.FLASH),
+    SuperCharging(R.string.drawing_scene_super, 88, charging = true, quickCharging = true,
+        chargingSpeed = ChargeSpeed.SUPER),
     ChargingPaused(R.string.drawing_scene_paused, 88, charging = true, chargingPaused = true),
     Low(R.string.drawing_scene_low, 24, powerSave = true, low = true),
     Critical(R.string.drawing_scene_critical, 12, low = true),
@@ -808,6 +815,7 @@ private fun applyPreviewState(
     view.setState(scene.level, scene.charging, scene.quickCharging, scene.powerSave,
         scene.low, scene.wifiLevel, MOBILE_LEVEL, scene.previewSlots, PREVIEW_TYPE)
     view.setChargingPaused(scene.chargingPaused)
+    view.setChargingSpeed(scene.chargingSpeed)
 }
 
 @Composable

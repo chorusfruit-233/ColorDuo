@@ -82,7 +82,7 @@
     <string name="drawing_pick_title">%1$s：现在是%2$s</string>
     <string name="drawing_pick_none_summary">清除这一处的可选组件；圆环和电量条保留。</string>
     <string name="drawing_feedback_charging">%1$s已设在%2$s；充电时闪电优先显示。切换到“正常”预览查看。</string>
-    <string name="drawing_feedback_bolt">已将%1$s设在%2$s；切换到“充电”或“快充”预览查看。</string>
+    <string name="drawing_feedback_bolt">已将%1$s设在%2$s；切换到“充电”“快充”“闪充”或“超级闪充”预览查看。</string>
     <string name="drawing_feedback_wifi">%1$s已设在%2$s；当前预览没有 Wi-Fi，切换到“正常”预览查看。</string>
     <string name="drawing_feedback_other">%1$s已设在%2$s；当前预览显示%3$s。切换预览状态查看。</string>
     <string name="drawing_pick_impossible">%1$s放不下这个组件。</string>
@@ -94,6 +94,8 @@
     <string name="drawing_scene_normal">正常</string>
     <string name="drawing_scene_charging">充电</string>
     <string name="drawing_scene_quick">快充</string>
+    <string name="drawing_scene_flash">闪充</string>
+    <string name="drawing_scene_super">超级闪充</string>
     <string name="drawing_scene_low">低电量</string>
     <string name="drawing_scene_critical">危险</string>
     <string name="drawing_scene_no_wifi">无 Wi-Fi</string>
@@ -167,6 +169,9 @@
 
     <string name="color_low_title">低电量颜色</string>
     <string name="color_charging_title">充电颜色</string>
+    <string name="color_quick_charging_title">快充颜色（PD）</string>
+    <string name="color_flash_charging_title">闪充颜色（UFCS）</string>
+    <string name="color_super_charging_title">超级闪充颜色（SVOOC）</string>
     <string name="color_critical_title">危险电量颜色</string>
     <string name="color_field_summary">点按选择颜色</string>
     <string name="color_on_dark">深色背景</string>
@@ -299,8 +304,8 @@
     <string name="perf_temp_charging_only_summary">开启后温度随功率一起出现和消失。</string>
     <string name="drawing_hint_left">左部</string>
     <string name="drawing_hint_right">右部</string>
-        
-    
+
+
     <!-- Capsule interior cell nudges, in design units. -->
     <string name="capsule_container_title">胶囊结构</string>
     <string name="capsule_container_summary">长度与左右两格的位置。</string>
@@ -382,4 +387,15 @@
     <string name="readability_actual_hint">按当前 DPI 绘制的模拟数据；真实状态栏以所在页面的可用空间为准。上方大图用于编辑。</string>
     <string name="hide_hd_title">隐藏 HD 图标</string>
     <string name="hide_hd_summary">开启时隐藏系统 HD 图标，关闭时交还系统。</string>
+    <string name="charge_flow_title">充电时流光动画</string>
+    <string name="charge_flow_summary">沿已充电的电量环循环扫光，暂停充电或拔电后停止。</string>
+    <string name="charge_flow_direction_title">流光方向</string>
+    <string name="charge_flow_clockwise">顺时针</string>
+    <string name="charge_flow_counterclockwise">逆时针</string>
+    <string name="charge_flow_speed_title">流动速度</string>
+    <string name="charge_flow_speed_summary">默认 %1$d%%，范围 %2$d%%–%3$d%%。100%% 约 1.6 秒一轮，数值越大越快。</string>
+    <string name="charge_flow_width_title">流光总宽度</string>
+    <string name="charge_flow_width_summary">占可绘制电量环长度的比例，最长不超过已充电部分。默认 %1$d%%，范围 %2$d%%–%3$d%%。</string>
+    <string name="charge_flow_gradient_title">渐变带宽度</string>
+    <string name="charge_flow_gradient_summary">两端各占流光总宽度的比例。默认 %1$d%%，范围 %2$d%%–%3$d%%；0 为硬边，50 为全渐变。</string>
 </resources>

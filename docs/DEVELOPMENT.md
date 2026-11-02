@@ -386,7 +386,7 @@ README 里给的手工命令一致——用 `su -c` 而不是往裸 `su` 里喂�
 ### 颜色恢复默认的确认
 
 颜色页的「恢复默认」同样先弹确认。它和重启确认共用同一套 `OverlayDialog` 外壳（`ResetColorsDialog`），
-所以同样必须在 `Scaffold` 的 content lambda 内。理由是这条操作会一次性丢掉六种自定义颜色（三种状态 ×
+所以同样必须在 `Scaffold` 的 content lambda 内。理由是这条操作会一次性丢掉十二种自定义颜色（六种状态 ×
 深/浅背景）且没有撤销，误触的代价与重启同一个量级。
 
 弹窗打开期间只翻转一个 `resettingColors` 布尔值，**不在打开时就重置**：确认与取消走的是同一条 `update`
@@ -1886,6 +1886,9 @@ hook 组 10 拦 `setIsHideBattery`，把值记进 `TrioState.sIslandHideBattery`
 | `role_colors` | `true` | — |
 | `color_critical_on_dark` / `color_critical_on_light` | `0xFFFF3B30` | — |
 | `color_charging_on_dark` / `color_charging_on_light` | `0xFF34C759` / `0xFF1F8F3D` | — |
+| `color_quick_charging_on_dark` / `color_quick_charging_on_light` | `0xFF00FF00` | PD / PPS / QC |
+| `color_flash_charging_on_dark` / `color_flash_charging_on_light` | `0xFF000080` | UFCS / VOOC |
+| `color_super_charging_on_dark` / `color_super_charging_on_light` | `0xFF800080` | SVOOC |
 | `color_low_on_dark` / `color_low_on_light` | `0xFFF2B900` / `0xFFC99700` | — |
 | `low_threshold` | `20` | 5 – 50 |
 | `ring_stroke` | `14` | 4 – 16 |

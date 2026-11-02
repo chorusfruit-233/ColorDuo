@@ -149,7 +149,7 @@ public final class TrioAppearance {
      */
     public final boolean perfPower;
     /** The battery temperature is drawn in the same out-of-ring strip. */
-    public final boolean perfTemp;
+    public final boolean perfTemp;
     /** Drops the temperature unless a charger is attached; see {@link Prefs#KEY_PERF_TEMP_CHARGING_ONLY}. */
     public final boolean perfTempChargingOnly;
     /**
@@ -178,11 +178,23 @@ public final class TrioAppearance {
      */
     public final int glyphScale;
 
+    public final boolean chargeFlow;
+    public final int chargeFlowSpeed;
+    public final int chargeFlowWidth;
+    public final int chargeFlowGradient;
+    public final int chargeFlowDirection;
+    public final boolean pausedGrayAll;
     public final boolean roleColors;
     public final int criticalOnDark;
     public final int criticalOnLight;
     public final int chargingOnDark;
     public final int chargingOnLight;
+    public final int quickChargingOnDark;
+    public final int quickChargingOnLight;
+    public final int flashChargingOnDark;
+    public final int flashChargingOnLight;
+    public final int superChargingOnDark;
+    public final int superChargingOnLight;
     public final int lowOnDark;
     public final int lowOnLight;
     public final int lowThreshold;
@@ -323,17 +335,29 @@ public final class TrioAppearance {
         chargingShowsValue = c.chargingShowsValue;
         fontPath = c.fontPath == null ? "" : c.fontPath;
         perfPower = c.perfPower;
-        perfTemp = c.perfTemp;
+        perfTemp = c.perfTemp;
         perfTempChargingOnly = c.perfTempChargingOnly;
         perfScale = c.perfScale;
         perfWeight = c.perfWeight;
         glyphScale = c.glyphScale;
 
+        chargeFlow = c.chargeFlow;
+        chargeFlowSpeed = Prefs.clamp(c.chargeFlowSpeed, Prefs.MIN_CHARGE_FLOW_SPEED, Prefs.MAX_CHARGE_FLOW_SPEED);
+        chargeFlowWidth = Prefs.clamp(c.chargeFlowWidth, Prefs.MIN_CHARGE_FLOW_WIDTH, Prefs.MAX_CHARGE_FLOW_WIDTH);
+        chargeFlowGradient = Prefs.clamp(c.chargeFlowGradient, Prefs.MIN_CHARGE_FLOW_GRADIENT, Prefs.MAX_CHARGE_FLOW_GRADIENT);
+        chargeFlowDirection = c.chargeFlowDirection;
+        pausedGrayAll = c.pausedGrayAll;
         roleColors = c.roleColors;
         criticalOnDark = c.criticalOnDark;
         criticalOnLight = c.criticalOnLight;
         chargingOnDark = c.chargingOnDark;
         chargingOnLight = c.chargingOnLight;
+        quickChargingOnDark = c.quickChargingOnDark;
+        quickChargingOnLight = c.quickChargingOnLight;
+        flashChargingOnDark = c.flashChargingOnDark;
+        flashChargingOnLight = c.flashChargingOnLight;
+        superChargingOnDark = c.superChargingOnDark;
+        superChargingOnLight = c.superChargingOnLight;
         lowOnDark = c.lowOnDark;
         lowOnLight = c.lowOnLight;
         lowThreshold = c.lowThreshold;

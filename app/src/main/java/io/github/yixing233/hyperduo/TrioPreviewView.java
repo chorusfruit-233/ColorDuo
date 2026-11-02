@@ -57,11 +57,19 @@ public final class TrioPreviewView extends View {
     private int level = 72;
     private boolean charging;
     private boolean quickCharging;
+    private ChargeSpeed chargingSpeed = ChargeSpeed.NORMAL;
     private boolean chargingPaused;
 
     public void setChargingPaused(boolean paused) {
         if (chargingPaused != paused) {
             chargingPaused = paused;
+            invalidate();
+        }
+    }
+    public void setChargingSpeed(ChargeSpeed speed) {
+        ChargeSpeed next = speed == null ? ChargeSpeed.NORMAL : speed;
+        if (chargingSpeed != next) {
+            chargingSpeed = next;
             invalidate();
         }
     }
@@ -213,6 +221,7 @@ public final class TrioPreviewView extends View {
         this.level = level;
         this.charging = charging;
         this.quickCharging = quickCharging;
+        this.chargingSpeed = quickCharging ? ChargeSpeed.QUICK : ChargeSpeed.NORMAL;
         this.powerSave = powerSave;
         this.low = low;
         this.wifiLevel = wifiLevel;
@@ -375,6 +384,11 @@ public final class TrioPreviewView extends View {
             return;
         }
 
+        if (!outTypeOnly && !outSignalOnly && isShown()
+                && TrioRenderer.chargeFlowActive(settings, level, charging, chargingPaused)) {
+            postInvalidateOnAnimation();
+        }
+
         // Rounded, not a plain rect: this view paints its own background, and a Compose
         // `clip(RoundedCornerShape(...))` on the AndroidView does NOT clip the canvas
         // inside it - exactly like any other Android View. A square fill therefore showed
@@ -434,7 +448,7 @@ public final class TrioPreviewView extends View {
             // scene it is not a conflation: nothing else knows.
             TrioRenderer.drawInto(canvas, innerW, innerH, level, charging, quickCharging,
                     powerSave, low, wifiLevel, mobileLevel, slotLevels, mobileType, foreground,
-                    settings, false, wifiLevel >= 0, 0, chargingPaused);
+                    settings, false, wifiLevel >= 0, 0, chargingPaused, chargingSpeed);
         }
         canvas.restoreToCount(save);
 

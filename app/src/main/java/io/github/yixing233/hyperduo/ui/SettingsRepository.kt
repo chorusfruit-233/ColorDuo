@@ -292,6 +292,11 @@ class SettingsRepository(context: Context) {
     fun setTypeHideOnWifi(value: Boolean) =
         writeBoolean(Prefs.KEY_TYPE_HIDE_ON_WIFI, value)
     /** While charging the ring centre shows the percentage; see [Prefs.KEY_CHARGING_SHOWS_VALUE]. */
+    fun setChargeFlow(value: Boolean) = writeBoolean(Prefs.KEY_CHARGE_FLOW, value)
+    fun setChargeFlowSpeed(value: Int) = writeInt(Prefs.KEY_CHARGE_FLOW_SPEED, value.coerceIn(Prefs.MIN_CHARGE_FLOW_SPEED, Prefs.MAX_CHARGE_FLOW_SPEED))
+    fun setChargeFlowWidth(value: Int) = writeInt(Prefs.KEY_CHARGE_FLOW_WIDTH, value.coerceIn(Prefs.MIN_CHARGE_FLOW_WIDTH, Prefs.MAX_CHARGE_FLOW_WIDTH))
+    fun setChargeFlowGradient(value: Int) = writeInt(Prefs.KEY_CHARGE_FLOW_GRADIENT, value.coerceIn(Prefs.MIN_CHARGE_FLOW_GRADIENT, Prefs.MAX_CHARGE_FLOW_GRADIENT))
+    fun setChargeFlowDirection(value: Int) = writeInt(Prefs.KEY_CHARGE_FLOW_DIRECTION, value.coerceIn(0, 1))
     fun setPausedGrayAll(value: Boolean) =
         writeBoolean(Prefs.KEY_PAUSED_GRAY_ALL, value)
 
@@ -358,16 +363,28 @@ class SettingsRepository(context: Context) {
     fun setColorCriticalOnLight(value: Int) = writeInt(Prefs.KEY_COLOR_CRITICAL_ON_LIGHT, value)
     fun setColorChargingOnDark(value: Int) = writeInt(Prefs.KEY_COLOR_CHARGING_ON_DARK, value)
     fun setColorChargingOnLight(value: Int) = writeInt(Prefs.KEY_COLOR_CHARGING_ON_LIGHT, value)
+    fun setColorQuickChargingOnDark(value: Int) = writeInt(Prefs.KEY_COLOR_QUICK_CHARGING_ON_DARK, value)
+    fun setColorQuickChargingOnLight(value: Int) = writeInt(Prefs.KEY_COLOR_QUICK_CHARGING_ON_LIGHT, value)
+    fun setColorFlashChargingOnDark(value: Int) = writeInt(Prefs.KEY_COLOR_FLASH_CHARGING_ON_DARK, value)
+    fun setColorFlashChargingOnLight(value: Int) = writeInt(Prefs.KEY_COLOR_FLASH_CHARGING_ON_LIGHT, value)
+    fun setColorSuperChargingOnDark(value: Int) = writeInt(Prefs.KEY_COLOR_SUPER_CHARGING_ON_DARK, value)
+    fun setColorSuperChargingOnLight(value: Int) = writeInt(Prefs.KEY_COLOR_SUPER_CHARGING_ON_LIGHT, value)
     fun setColorLowOnDark(value: Int) = writeInt(Prefs.KEY_COLOR_LOW_ON_DARK, value)
     fun setColorLowOnLight(value: Int) = writeInt(Prefs.KEY_COLOR_LOW_ON_LIGHT, value)
 
-    /** Restores all six role colours to their defaults in one write. */
+    /** Restores all role colours to their defaults in one write. */
     fun resetRoleColors() {
         preferences().edit(commit = true) {
             putInt(Prefs.KEY_COLOR_CRITICAL_ON_DARK, Prefs.DEF_COLOR_CRITICAL_ON_DARK)
             putInt(Prefs.KEY_COLOR_CRITICAL_ON_LIGHT, Prefs.DEF_COLOR_CRITICAL_ON_LIGHT)
             putInt(Prefs.KEY_COLOR_CHARGING_ON_DARK, Prefs.DEF_COLOR_CHARGING_ON_DARK)
             putInt(Prefs.KEY_COLOR_CHARGING_ON_LIGHT, Prefs.DEF_COLOR_CHARGING_ON_LIGHT)
+            putInt(Prefs.KEY_COLOR_QUICK_CHARGING_ON_DARK, Prefs.DEF_COLOR_QUICK_CHARGING_ON_DARK)
+            putInt(Prefs.KEY_COLOR_QUICK_CHARGING_ON_LIGHT, Prefs.DEF_COLOR_QUICK_CHARGING_ON_LIGHT)
+            putInt(Prefs.KEY_COLOR_FLASH_CHARGING_ON_DARK, Prefs.DEF_COLOR_FLASH_CHARGING_ON_DARK)
+            putInt(Prefs.KEY_COLOR_FLASH_CHARGING_ON_LIGHT, Prefs.DEF_COLOR_FLASH_CHARGING_ON_LIGHT)
+            putInt(Prefs.KEY_COLOR_SUPER_CHARGING_ON_DARK, Prefs.DEF_COLOR_SUPER_CHARGING_ON_DARK)
+            putInt(Prefs.KEY_COLOR_SUPER_CHARGING_ON_LIGHT, Prefs.DEF_COLOR_SUPER_CHARGING_ON_LIGHT)
             putInt(Prefs.KEY_COLOR_LOW_ON_DARK, Prefs.DEF_COLOR_LOW_ON_DARK)
             putInt(Prefs.KEY_COLOR_LOW_ON_LIGHT, Prefs.DEF_COLOR_LOW_ON_LIGHT)
         }

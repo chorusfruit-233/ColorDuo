@@ -139,6 +139,12 @@ public final class TrioSettings {
     public int criticalOnLight;
     public int chargingOnDark;
     public int chargingOnLight;
+    public int quickChargingOnDark;
+    public int quickChargingOnLight;
+    public int flashChargingOnDark;
+    public int flashChargingOnLight;
+    public int superChargingOnDark;
+    public int superChargingOnLight;
     public int lowOnDark;
     public int lowOnLight;
     public int lowThreshold;
@@ -213,6 +219,11 @@ public final class TrioSettings {
     public boolean chargingShowsValue;
     /** False: gray only the battery ring. True: gray the complete paused glyph. */
     public boolean pausedGrayAll;
+    public boolean chargeFlow;
+    public int chargeFlowDirection;
+    public int chargeFlowGradient;
+    public int chargeFlowWidth;
+    public int chargeFlowSpeed;
     /**
      * Absolute path of the user's font file, or "" for the system face.
      *
@@ -288,7 +299,7 @@ public final class TrioSettings {
      * view away entirely, and turning either on brings back the same view with
      * only the requested segment drawn.
      */
-    public boolean perfTemp;
+    public boolean perfTemp;
     /** Drops the temperature unless charging; see {@link Prefs#KEY_PERF_TEMP_CHARGING_ONLY}. */
     public boolean perfTempChargingOnly;
 
@@ -365,6 +376,12 @@ public final class TrioSettings {
         s.criticalOnLight = Prefs.DEF_COLOR_CRITICAL_ON_LIGHT;
         s.chargingOnDark = Prefs.DEF_COLOR_CHARGING_ON_DARK;
         s.chargingOnLight = Prefs.DEF_COLOR_CHARGING_ON_LIGHT;
+        s.quickChargingOnDark = Prefs.DEF_COLOR_QUICK_CHARGING_ON_DARK;
+        s.quickChargingOnLight = Prefs.DEF_COLOR_QUICK_CHARGING_ON_LIGHT;
+        s.flashChargingOnDark = Prefs.DEF_COLOR_FLASH_CHARGING_ON_DARK;
+        s.flashChargingOnLight = Prefs.DEF_COLOR_FLASH_CHARGING_ON_LIGHT;
+        s.superChargingOnDark = Prefs.DEF_COLOR_SUPER_CHARGING_ON_DARK;
+        s.superChargingOnLight = Prefs.DEF_COLOR_SUPER_CHARGING_ON_LIGHT;
         s.lowOnDark = Prefs.DEF_COLOR_LOW_ON_DARK;
         s.lowOnLight = Prefs.DEF_COLOR_LOW_ON_LIGHT;
         s.lowThreshold = Prefs.DEF_LOW_THRESHOLD;
@@ -387,6 +404,11 @@ public final class TrioSettings {
         s.typeHideOnWifi = Prefs.DEF_TYPE_HIDE_ON_WIFI;
         s.chargingShowsValue = Prefs.DEF_CHARGING_SHOWS_VALUE;
         s.pausedGrayAll = Prefs.DEF_PAUSED_GRAY_ALL;
+        s.chargeFlow = Prefs.DEF_CHARGE_FLOW;
+        s.chargeFlowDirection = Prefs.DEF_CHARGE_FLOW_DIRECTION;
+        s.chargeFlowGradient = Prefs.DEF_CHARGE_FLOW_GRADIENT;
+        s.chargeFlowWidth = Prefs.DEF_CHARGE_FLOW_WIDTH;
+        s.chargeFlowSpeed = Prefs.DEF_CHARGE_FLOW_SPEED;
         s.fontPath = Prefs.DEF_FONT_PATH;
         s.dotScale = Prefs.DEF_DOT_SCALE;
         s.splitMode = Prefs.DEF_SPLIT_MODE;
@@ -538,6 +560,12 @@ public final class TrioSettings {
         s.criticalOnLight = p.getInt(Prefs.KEY_COLOR_CRITICAL_ON_LIGHT, Prefs.DEF_COLOR_CRITICAL_ON_LIGHT);
         s.chargingOnDark = p.getInt(Prefs.KEY_COLOR_CHARGING_ON_DARK, Prefs.DEF_COLOR_CHARGING_ON_DARK);
         s.chargingOnLight = p.getInt(Prefs.KEY_COLOR_CHARGING_ON_LIGHT, Prefs.DEF_COLOR_CHARGING_ON_LIGHT);
+        s.quickChargingOnDark = p.getInt(Prefs.KEY_COLOR_QUICK_CHARGING_ON_DARK, Prefs.DEF_COLOR_QUICK_CHARGING_ON_DARK);
+        s.quickChargingOnLight = p.getInt(Prefs.KEY_COLOR_QUICK_CHARGING_ON_LIGHT, Prefs.DEF_COLOR_QUICK_CHARGING_ON_LIGHT);
+        s.flashChargingOnDark = p.getInt(Prefs.KEY_COLOR_FLASH_CHARGING_ON_DARK, Prefs.DEF_COLOR_FLASH_CHARGING_ON_DARK);
+        s.flashChargingOnLight = p.getInt(Prefs.KEY_COLOR_FLASH_CHARGING_ON_LIGHT, Prefs.DEF_COLOR_FLASH_CHARGING_ON_LIGHT);
+        s.superChargingOnDark = p.getInt(Prefs.KEY_COLOR_SUPER_CHARGING_ON_DARK, Prefs.DEF_COLOR_SUPER_CHARGING_ON_DARK);
+        s.superChargingOnLight = p.getInt(Prefs.KEY_COLOR_SUPER_CHARGING_ON_LIGHT, Prefs.DEF_COLOR_SUPER_CHARGING_ON_LIGHT);
         s.lowOnDark = p.getInt(Prefs.KEY_COLOR_LOW_ON_DARK, Prefs.DEF_COLOR_LOW_ON_DARK);
         s.lowOnLight = p.getInt(Prefs.KEY_COLOR_LOW_ON_LIGHT, Prefs.DEF_COLOR_LOW_ON_LIGHT);
         s.lowThreshold = Prefs.clamp(
@@ -596,6 +624,11 @@ public final class TrioSettings {
         s.typeHideOnWifi = p.getBoolean(Prefs.KEY_TYPE_HIDE_ON_WIFI,
                 Prefs.DEF_TYPE_HIDE_ON_WIFI);
         s.pausedGrayAll = p.getBoolean(Prefs.KEY_PAUSED_GRAY_ALL, Prefs.DEF_PAUSED_GRAY_ALL);
+        s.chargeFlow = p.getBoolean(Prefs.KEY_CHARGE_FLOW, Prefs.DEF_CHARGE_FLOW);
+        s.chargeFlowDirection = Prefs.clamp(p.getInt(Prefs.KEY_CHARGE_FLOW_DIRECTION, 0), 0, 1);
+        s.chargeFlowGradient = Prefs.clamp(p.getInt(Prefs.KEY_CHARGE_FLOW_GRADIENT, Prefs.DEF_CHARGE_FLOW_GRADIENT), Prefs.MIN_CHARGE_FLOW_GRADIENT, Prefs.MAX_CHARGE_FLOW_GRADIENT);
+        s.chargeFlowWidth = Prefs.clamp(p.getInt(Prefs.KEY_CHARGE_FLOW_WIDTH, Prefs.DEF_CHARGE_FLOW_WIDTH), Prefs.MIN_CHARGE_FLOW_WIDTH, Prefs.MAX_CHARGE_FLOW_WIDTH);
+        s.chargeFlowSpeed = Prefs.clamp(p.getInt(Prefs.KEY_CHARGE_FLOW_SPEED, Prefs.DEF_CHARGE_FLOW_SPEED), Prefs.MIN_CHARGE_FLOW_SPEED, Prefs.MAX_CHARGE_FLOW_SPEED);
         s.chargingShowsValue = p.getBoolean(Prefs.KEY_CHARGING_SHOWS_VALUE,
                 Prefs.DEF_CHARGING_SHOWS_VALUE);
         s.fontPath = readFontPath(p.getString(Prefs.KEY_FONT_PATH, Prefs.DEF_FONT_PATH));
@@ -946,6 +979,12 @@ public final class TrioSettings {
         s.criticalOnLight = criticalOnLight;
         s.chargingOnDark = chargingOnDark;
         s.chargingOnLight = chargingOnLight;
+        s.quickChargingOnDark = quickChargingOnDark;
+        s.quickChargingOnLight = quickChargingOnLight;
+        s.flashChargingOnDark = flashChargingOnDark;
+        s.flashChargingOnLight = flashChargingOnLight;
+        s.superChargingOnDark = superChargingOnDark;
+        s.superChargingOnLight = superChargingOnLight;
         s.lowOnDark = lowOnDark;
         s.lowOnLight = lowOnLight;
         s.lowThreshold = lowThreshold;
@@ -968,6 +1007,11 @@ public final class TrioSettings {
         s.typeHideOnWifi = typeHideOnWifi;
         s.chargingShowsValue = chargingShowsValue;
         s.pausedGrayAll = pausedGrayAll;
+        s.chargeFlow = chargeFlow;
+        s.chargeFlowDirection = chargeFlowDirection;
+        s.chargeFlowGradient = chargeFlowGradient;
+        s.chargeFlowWidth = chargeFlowWidth;
+        s.chargeFlowSpeed = chargeFlowSpeed;
         s.fontPath = fontPath;
         s.dotScale = dotScale;
         s.splitMode = splitMode;
@@ -1062,6 +1106,12 @@ public final class TrioSettings {
             case Prefs.KEY_COLOR_CRITICAL_ON_LIGHT: criticalOnLight = src.criticalOnLight; return true;
             case Prefs.KEY_COLOR_CHARGING_ON_DARK: chargingOnDark = src.chargingOnDark; return true;
             case Prefs.KEY_COLOR_CHARGING_ON_LIGHT: chargingOnLight = src.chargingOnLight; return true;
+            case Prefs.KEY_COLOR_QUICK_CHARGING_ON_DARK: quickChargingOnDark = src.quickChargingOnDark; return true;
+            case Prefs.KEY_COLOR_QUICK_CHARGING_ON_LIGHT: quickChargingOnLight = src.quickChargingOnLight; return true;
+            case Prefs.KEY_COLOR_FLASH_CHARGING_ON_DARK: flashChargingOnDark = src.flashChargingOnDark; return true;
+            case Prefs.KEY_COLOR_FLASH_CHARGING_ON_LIGHT: flashChargingOnLight = src.flashChargingOnLight; return true;
+            case Prefs.KEY_COLOR_SUPER_CHARGING_ON_DARK: superChargingOnDark = src.superChargingOnDark; return true;
+            case Prefs.KEY_COLOR_SUPER_CHARGING_ON_LIGHT: superChargingOnLight = src.superChargingOnLight; return true;
             case Prefs.KEY_COLOR_LOW_ON_DARK: lowOnDark = src.lowOnDark; return true;
             case Prefs.KEY_COLOR_LOW_ON_LIGHT: lowOnLight = src.lowOnLight; return true;
             case Prefs.KEY_LOW_THRESHOLD: lowThreshold = src.lowThreshold; return true;
@@ -1082,6 +1132,11 @@ public final class TrioSettings {
             case Prefs.KEY_WIFI_SCALE: wifiScale = src.wifiScale; return true;
             case Prefs.KEY_TYPE_HIDE_ON_WIFI: typeHideOnWifi = src.typeHideOnWifi; return true;
             case Prefs.KEY_PAUSED_GRAY_ALL: pausedGrayAll = src.pausedGrayAll; return true;
+            case Prefs.KEY_CHARGE_FLOW: chargeFlow = src.chargeFlow; return true;
+            case Prefs.KEY_CHARGE_FLOW_DIRECTION: chargeFlowDirection = src.chargeFlowDirection; return true;
+            case Prefs.KEY_CHARGE_FLOW_GRADIENT: chargeFlowGradient = src.chargeFlowGradient; return true;
+            case Prefs.KEY_CHARGE_FLOW_WIDTH: chargeFlowWidth = src.chargeFlowWidth; return true;
+            case Prefs.KEY_CHARGE_FLOW_SPEED: chargeFlowSpeed = src.chargeFlowSpeed; return true;
             case Prefs.KEY_CHARGING_SHOWS_VALUE: chargingShowsValue = src.chargingShowsValue; return true;
             case Prefs.KEY_FONT_PATH: fontPath = src.fontPath; return true;
             case Prefs.KEY_SPLIT_MODE: splitMode = src.splitMode; return true;
@@ -1197,6 +1252,12 @@ public final class TrioSettings {
         s.criticalOnLight = bundle.getInt(Prefs.KEY_COLOR_CRITICAL_ON_LIGHT, Prefs.DEF_COLOR_CRITICAL_ON_LIGHT);
         s.chargingOnDark = bundle.getInt(Prefs.KEY_COLOR_CHARGING_ON_DARK, Prefs.DEF_COLOR_CHARGING_ON_DARK);
         s.chargingOnLight = bundle.getInt(Prefs.KEY_COLOR_CHARGING_ON_LIGHT, Prefs.DEF_COLOR_CHARGING_ON_LIGHT);
+        s.quickChargingOnDark = bundle.getInt(Prefs.KEY_COLOR_QUICK_CHARGING_ON_DARK, Prefs.DEF_COLOR_QUICK_CHARGING_ON_DARK);
+        s.quickChargingOnLight = bundle.getInt(Prefs.KEY_COLOR_QUICK_CHARGING_ON_LIGHT, Prefs.DEF_COLOR_QUICK_CHARGING_ON_LIGHT);
+        s.flashChargingOnDark = bundle.getInt(Prefs.KEY_COLOR_FLASH_CHARGING_ON_DARK, Prefs.DEF_COLOR_FLASH_CHARGING_ON_DARK);
+        s.flashChargingOnLight = bundle.getInt(Prefs.KEY_COLOR_FLASH_CHARGING_ON_LIGHT, Prefs.DEF_COLOR_FLASH_CHARGING_ON_LIGHT);
+        s.superChargingOnDark = bundle.getInt(Prefs.KEY_COLOR_SUPER_CHARGING_ON_DARK, Prefs.DEF_COLOR_SUPER_CHARGING_ON_DARK);
+        s.superChargingOnLight = bundle.getInt(Prefs.KEY_COLOR_SUPER_CHARGING_ON_LIGHT, Prefs.DEF_COLOR_SUPER_CHARGING_ON_LIGHT);
         s.lowOnDark = bundle.getInt(Prefs.KEY_COLOR_LOW_ON_DARK, Prefs.DEF_COLOR_LOW_ON_DARK);
         s.lowOnLight = bundle.getInt(Prefs.KEY_COLOR_LOW_ON_LIGHT, Prefs.DEF_COLOR_LOW_ON_LIGHT);
         s.lowThreshold = Prefs.clamp(
@@ -1254,6 +1315,11 @@ public final class TrioSettings {
         s.typeHideOnWifi = bundle.getBoolean(Prefs.KEY_TYPE_HIDE_ON_WIFI,
                 Prefs.DEF_TYPE_HIDE_ON_WIFI);
         s.pausedGrayAll = bundle.getBoolean(Prefs.KEY_PAUSED_GRAY_ALL, Prefs.DEF_PAUSED_GRAY_ALL);
+        s.chargeFlow = bundle.getBoolean(Prefs.KEY_CHARGE_FLOW, Prefs.DEF_CHARGE_FLOW);
+        s.chargeFlowDirection = Prefs.clamp(bundle.getInt(Prefs.KEY_CHARGE_FLOW_DIRECTION, 0), 0, 1);
+        s.chargeFlowGradient = Prefs.clamp(bundle.getInt(Prefs.KEY_CHARGE_FLOW_GRADIENT, Prefs.DEF_CHARGE_FLOW_GRADIENT), Prefs.MIN_CHARGE_FLOW_GRADIENT, Prefs.MAX_CHARGE_FLOW_GRADIENT);
+        s.chargeFlowWidth = Prefs.clamp(bundle.getInt(Prefs.KEY_CHARGE_FLOW_WIDTH, Prefs.DEF_CHARGE_FLOW_WIDTH), Prefs.MIN_CHARGE_FLOW_WIDTH, Prefs.MAX_CHARGE_FLOW_WIDTH);
+        s.chargeFlowSpeed = Prefs.clamp(bundle.getInt(Prefs.KEY_CHARGE_FLOW_SPEED, Prefs.DEF_CHARGE_FLOW_SPEED), Prefs.MIN_CHARGE_FLOW_SPEED, Prefs.MAX_CHARGE_FLOW_SPEED);
         s.chargingShowsValue = bundle.getBoolean(Prefs.KEY_CHARGING_SHOWS_VALUE,
                 Prefs.DEF_CHARGING_SHOWS_VALUE);
         s.fontPath = readFontPath(bundle.getString(Prefs.KEY_FONT_PATH, Prefs.DEF_FONT_PATH));
@@ -1366,6 +1432,12 @@ public final class TrioSettings {
         b.putInt(Prefs.KEY_COLOR_CRITICAL_ON_LIGHT, criticalOnLight);
         b.putInt(Prefs.KEY_COLOR_CHARGING_ON_DARK, chargingOnDark);
         b.putInt(Prefs.KEY_COLOR_CHARGING_ON_LIGHT, chargingOnLight);
+        b.putInt(Prefs.KEY_COLOR_QUICK_CHARGING_ON_DARK, quickChargingOnDark);
+        b.putInt(Prefs.KEY_COLOR_QUICK_CHARGING_ON_LIGHT, quickChargingOnLight);
+        b.putInt(Prefs.KEY_COLOR_FLASH_CHARGING_ON_DARK, flashChargingOnDark);
+        b.putInt(Prefs.KEY_COLOR_FLASH_CHARGING_ON_LIGHT, flashChargingOnLight);
+        b.putInt(Prefs.KEY_COLOR_SUPER_CHARGING_ON_DARK, superChargingOnDark);
+        b.putInt(Prefs.KEY_COLOR_SUPER_CHARGING_ON_LIGHT, superChargingOnLight);
         b.putInt(Prefs.KEY_COLOR_LOW_ON_DARK, lowOnDark);
         b.putInt(Prefs.KEY_COLOR_LOW_ON_LIGHT, lowOnLight);
         b.putInt(Prefs.KEY_LOW_THRESHOLD, lowThreshold);
@@ -1388,6 +1460,11 @@ public final class TrioSettings {
         b.putBoolean(Prefs.KEY_TYPE_HIDE_ON_WIFI, typeHideOnWifi);
         b.putBoolean(Prefs.KEY_CHARGING_SHOWS_VALUE, chargingShowsValue);
         b.putBoolean(Prefs.KEY_PAUSED_GRAY_ALL, pausedGrayAll);
+        b.putBoolean(Prefs.KEY_CHARGE_FLOW, chargeFlow);
+        b.putInt(Prefs.KEY_CHARGE_FLOW_DIRECTION, chargeFlowDirection);
+        b.putInt(Prefs.KEY_CHARGE_FLOW_GRADIENT, chargeFlowGradient);
+        b.putInt(Prefs.KEY_CHARGE_FLOW_WIDTH, chargeFlowWidth);
+        b.putInt(Prefs.KEY_CHARGE_FLOW_SPEED, chargeFlowSpeed);
         b.putString(Prefs.KEY_FONT_PATH, fontPath);
         b.putInt(Prefs.KEY_DOT_SCALE, dotScale);
         b.putInt(Prefs.KEY_SPLIT_MODE, splitMode);
@@ -1428,7 +1505,7 @@ public final class TrioSettings {
      * {@code TrioConfig}, which must not notify the listeners (and re-fold every
      * container) when the delayed read saw the same values the first one did -
      * but a full comparison is also what a snapshot type ought to answer.
-     */
+     */
     /**
      * Normalises a stored font path to a non-null string.
      *
@@ -1511,6 +1588,12 @@ public final class TrioSettings {
                 && criticalOnLight == s.criticalOnLight
                 && chargingOnDark == s.chargingOnDark
                 && chargingOnLight == s.chargingOnLight
+                && quickChargingOnDark == s.quickChargingOnDark
+                && quickChargingOnLight == s.quickChargingOnLight
+                && flashChargingOnDark == s.flashChargingOnDark
+                && flashChargingOnLight == s.flashChargingOnLight
+                && superChargingOnDark == s.superChargingOnDark
+                && superChargingOnLight == s.superChargingOnLight
                 && lowOnDark == s.lowOnDark
                 && lowOnLight == s.lowOnLight
                 && lowThreshold == s.lowThreshold
@@ -1532,6 +1615,11 @@ public final class TrioSettings {
                 && typeHideOnWifi == s.typeHideOnWifi
                 && chargingShowsValue == s.chargingShowsValue
                 && pausedGrayAll == s.pausedGrayAll
+                && chargeFlow == s.chargeFlow
+                && chargeFlowDirection == s.chargeFlowDirection
+                && chargeFlowGradient == s.chargeFlowGradient
+                && chargeFlowWidth == s.chargeFlowWidth
+                && chargeFlowSpeed == s.chargeFlowSpeed
                 // Objects.equals, not ==: the font path is the one reference-typed
                 // field here, and == would compare identities. Two snapshots built
                 // from the same stored path hold different String instances, so a
