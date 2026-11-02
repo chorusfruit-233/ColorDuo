@@ -46,6 +46,8 @@ internal enum class ContentControl(val owner: TrioSettingsPart) {
     SplitLink(TrioSettingsPart.Appearance),
     SplitCap(TrioSettingsPart.Appearance),
     PausedGray(TrioSettingsPart.Appearance),
+    ChargeFlow(TrioSettingsPart.Battery),
+    ChargeFlowDirection(TrioSettingsPart.Battery),
     // --- per component: its own switch ----------------------------------------
     Wifi(TrioSettingsPart.Wifi),
     /**
@@ -131,7 +133,8 @@ internal fun ContentControlRow(
     val a = TrioAppearance.of(settings)
     val master = listOf(a.glyph to R.string.master_title)
     val positioned = when (control) {
-        ContentControl.Value -> TrioZones.Part.VALUE
+        ContentControl.Value -> TrioZones.Part.VALUE
+
         // Not a position row: it is a lens over the centre, not a place for the number.
         ContentControl.ChargingShowsValue -> null
         ContentControl.Bolt -> null // One combined visibility/position row below.
@@ -216,6 +219,16 @@ internal fun ContentControlRow(
             summaryRes = R.string.pair_visibility_summary,
             dependencies = master,
         ) { value -> update { it.setShowSim2(value) } }
+        ContentControl.ChargeFlow -> ContentToggle(settings.chargeFlow,
+            R.string.charge_flow_title, R.string.charge_flow_summary, master) { value ->
+                update { it.setChargeFlow(value) }
+            }
+        ContentControl.ChargeFlowDirection -> ContentChoice(settings.chargeFlowDirection,
+            R.string.charge_flow_direction_title, null,
+            listOf(R.string.charge_flow_clockwise, R.string.charge_flow_counterclockwise),
+            master + (settings.chargeFlow to R.string.charge_flow_title)) { value ->
+                update { it.setChargeFlowDirection(value) }
+            }
         ContentControl.PausedGray -> ContentChoice(if (settings.pausedGrayAll) 1 else 0,
             R.string.paused_gray_title, R.string.paused_gray_summary,
             listOf(R.string.paused_gray_ring, R.string.paused_gray_all), master) { value ->

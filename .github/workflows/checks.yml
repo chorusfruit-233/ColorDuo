@@ -46,3 +46,10 @@ jobs:
         run: python3 tests/release-artifacts.py
       - name: Module repository publication
         run: python3 tests/module-publish.py
+      - name: Upload charging flow reference frames
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: charging-flow-reference-${{ github.sha }}
+          path: build/flow-reference/*.png
+          if-no-files-found: error
+          retention-days: 7

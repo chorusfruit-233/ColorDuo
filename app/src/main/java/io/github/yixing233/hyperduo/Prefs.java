@@ -1143,6 +1143,11 @@ public final class Prefs {
     public static final String KEY_CHARGING_SHOWS_VALUE = "charging_shows_value";
     public static final boolean DEF_CHARGING_SHOWS_VALUE = false;
 
+    public static final String KEY_CHARGE_FLOW = "charge_flow";
+    public static final boolean DEF_CHARGE_FLOW = false;
+    public static final String KEY_CHARGE_FLOW_DIRECTION = "charge_flow_direction";
+    public static final int DEF_CHARGE_FLOW_DIRECTION = 0;
+    public static final int MIN_CHARGE_FLOW_DIRECTION = 0, MAX_CHARGE_FLOW_DIRECTION = 1;
     public static final String KEY_PAUSED_GRAY_ALL = "paused_gray_all";
     public static final boolean DEF_PAUSED_GRAY_ALL = true;
     public static final boolean DEF_TYPE_HIDE_ON_WIFI = false;

@@ -11,6 +11,7 @@ for name in Prefs TrioSettings TrioAppearance TrioGeometry TrioZones TrioSizing 
 done
 printf '%s\n' tests/ColorOsSettingsTest.java >> "$test_sources"
 printf '%s\n' tests/ColorOsRenderingTest.java >> "$test_sources"
+printf '%s\n' tests/ChargeFlowTest.java >> "$test_sources"
 printf '%s\n' tests/ChargeSpeedTest.java >> "$test_sources"
 if command -v javac >/dev/null 2>&1; then
     javac -encoding UTF-8 -d "$test_classes" @"$test_sources"
@@ -21,3 +22,5 @@ java -Djava.awt.headless=true -Xmx512m -cp "$test_classes" io.github.yixing233.h
 java -Djava.awt.headless=true -Xmx512m -cp "$test_classes" io.github.yixing233.hyperduo.ColorOsRenderingTest
 
 java -Djava.awt.headless=true -cp "$test_classes" io.github.yixing233.hyperduo.ChargeSpeedTest
+
+java -Djava.awt.headless=true -cp "$test_classes" io.github.yixing233.hyperduo.ChargeFlowTest

@@ -1389,6 +1389,11 @@ final class ColorOsHooks {
                 canvas.clipRect(0, 0, getBounds().width(), getBounds().height());
                 TrioRenderer.drawSizedState(canvas, getBounds().width(), getBounds().height(),
                         host.state, TrioConfig.get(), host.ownedScale, true);
+                if (TrioRenderer.chargeFlowActive(TrioConfig.get(), host.state.level,
+                        host.state.charging, host.state.chargingPaused)
+                        && host.image.isShown() && host.meter.getWindowVisibility() == View.VISIBLE) {
+                    host.image.postInvalidateOnAnimation();
+                }
             } catch (Throwable error) {
                 host.failed = true;
                 MAIN.post(() -> host.fail(error));

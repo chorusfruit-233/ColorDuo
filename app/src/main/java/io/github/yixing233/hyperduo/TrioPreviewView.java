@@ -384,6 +384,11 @@ public final class TrioPreviewView extends View {
             return;
         }
 
+        if (!outTypeOnly && !outSignalOnly && isShown()
+                && TrioRenderer.chargeFlowActive(settings, level, charging, chargingPaused)) {
+            postInvalidateOnAnimation();
+        }
+
         // Rounded, not a plain rect: this view paints its own background, and a Compose
         // `clip(RoundedCornerShape(...))` on the AndroidView does NOT clip the canvas
         // inside it - exactly like any other Android View. A square fill therefore showed

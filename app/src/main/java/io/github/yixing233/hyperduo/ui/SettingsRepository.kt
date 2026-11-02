@@ -292,6 +292,8 @@ class SettingsRepository(context: Context) {
     fun setTypeHideOnWifi(value: Boolean) =
         writeBoolean(Prefs.KEY_TYPE_HIDE_ON_WIFI, value)
     /** While charging the ring centre shows the percentage; see [Prefs.KEY_CHARGING_SHOWS_VALUE]. */
+    fun setChargeFlow(value: Boolean) = writeBoolean(Prefs.KEY_CHARGE_FLOW, value)
+    fun setChargeFlowDirection(value: Int) = writeInt(Prefs.KEY_CHARGE_FLOW_DIRECTION, value.coerceIn(0, 1))
     fun setPausedGrayAll(value: Boolean) =
         writeBoolean(Prefs.KEY_PAUSED_GRAY_ALL, value)
 
