@@ -13,6 +13,7 @@
 | P2 | [SettingsRepository.kt:445](https://github.com/jahn2007/ColorDuo/blob/6974bd79b38bb6b923093c75798ada016aac7a86/app/src/main/java/io/github/yixing233/hyperduo/ui/SettingsRepository.kt#L445)、[resetRoleColors:376](https://github.com/jahn2007/ColorDuo/blob/6974bd79b38bb6b923093c75798ada016aac7a86/app/src/main/java/io/github/yixing233/hyperduo/ui/SettingsRepository.kt#L376) | 框架缺席时修改配置后重连，完整同步遗漏 5 个动画参数和 6 个协议颜色；恢复默认的远端写入也遗漏新协议颜色。广播暂时掩盖差异，SystemUI 重启后可能恢复旧值。 | 框架持久同步直接复用 `TrioSettings.toBundle()` 的完整快照；恢复默认也调用同一路径。新增远端保存后重新读取全部配置的检查。 |
 | P2 | [ColorOsChargeSpeed.java:107–122](https://github.com/jahn2007/ColorDuo/blob/6974bd79b38bb6b923093c75798ada016aac7a86/app/src/main/java/io/github/yixing233/hyperduo/ColorOsChargeSpeed.java#L107) | sysfs 不可读、需要原生协议回退时，非公开模型类的 public getter 会因反射访问限制被忽略；夹具返回 `unavailable`，无法识别 SVOOC。 | 缓存 getter 时设置反射可访问性，覆盖跨包的非公开模型夹具。 |
 | P2 | [TrioRenderer.java:1799](https://github.com/jahn2007/ColorDuo/blob/6974bd79b38bb6b923093c75798ada016aac7a86/app/src/main/java/io/github/yixing233/hyperduo/TrioRenderer.java#L1799) | 关闭状态颜色后，原有 SVOOC 快充闪电由快充色退回前景色；原回退分支只处理 QUICK，遗漏 FLASH / SUPER。 | 状态配色关闭时保留快充闪电的原有颜色；电量环仍使用前景色，暂停灰度范围继续独立生效。 |
+| P2 | [ColorOsHooks.java:1009](https://github.com/jahn2007/ColorDuo/blob/6974bd79b38bb6b923093c75798ada016aac7a86/app/src/main/java/io/github/yixing233/hyperduo/ColorOsHooks.java#L1009) | PR 把 `battery_charge_reverse` 当成第二层充电闪电，未充电或模块接管闪电时一并隐藏。参考固件 SystemUI 17.99.02 的 `stat_system_battery.xml` 明确将它绑定到 `stat_charge_wireless_reverse`，实际是无线反向充电标识。原生闪电的强制隐藏也违背“系统原生”的归还语义。 | 保留系统对无线反向充电图标的控制；归还充电闪电后由原生 binder 决定其显隐。宿主回归覆盖充电、未充电、原生归还和模块接管情形。 |
 
 ## 验证范围
 
@@ -22,4 +23,4 @@
 - 协议枚举与 [OnePlus SM8750 驱动头文件](https://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8750/blob/oneplus/sm8750_b_16.0.0_oneplus_13/vendor/oplus/kernel/charger/v2/include/oplus_chg.h) 对照一致。此来源不能代替 ColorOS 17 实机上的节点权限和实际返回值验证。
 - 已查看普通圆环、分离椭圆和胶囊的生产代码参考帧；参考帧是模拟数据，不是实机截图。
 
-实机步骤见 [测试说明](READABILITY-TEST.md)。实际协议识别、动画流畅度、功耗及面板过渡仍需实机确认。全局“状态颜色”开关和“恢复默认”作用于全部状态配色，电量环与闪电的具体颜色分别保存。
+实机步骤见 [测试说明](READABILITY-TEST.md)。实际协议识别、动画流畅度、功耗及面板过渡仍需实机确认。原生反向充电标识的资源用途已按参考固件核对，实机显隐仍需验证。全局“状态颜色”开关和“恢复默认”作用于全部状态配色，电量环与闪电的具体颜色分别保存。

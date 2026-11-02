@@ -1006,9 +1006,9 @@ final class ColorOsHooks {
             image.setVisibility(View.VISIBLE);
             hide("battery_content", true);
             hide("battery_percentage_view", !appearance.handsBackPercentage());
-            boolean hideNativeBolt = appearance.hidesNativeBolt() || (!state.charging && !state.chargingPaused);
-            hide("battery_charge_icon", hideNativeBolt);
-            hide("battery_charge_reverse", hideNativeBolt);
+            hide("battery_charge_icon", appearance.hidesNativeBolt());
+            // battery_charge_reverse is wireless power sharing, not a second bolt layer.
+            // Its visibility remains under the native binder's control.
             hide(clockContainer, TrioRenderer.drawsClock(state, appearance));
             syncExtra(appearance);
             syncSlots(appearance);

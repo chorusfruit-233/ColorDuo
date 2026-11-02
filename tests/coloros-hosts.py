@@ -188,19 +188,19 @@ public final class ColorOsHostTest {
             check(host.extra!=null,"every supported context mounts its readouts");
         }
         check(Boolean.FALSE.equals(main.namedHidden.get("battery_charge_icon"))
-                &&Boolean.FALSE.equals(main.namedHidden.get("battery_charge_reverse")),
-                "handed-back SuperVOOC keeps both native bolt layers while charging");
+                &&!main.namedHidden.containsKey("battery_charge_reverse"),
+                "handed-back charging and wireless reverse indicators retain native control");
         main.state.charging=false;
         main.applyInternal();
-        check(Boolean.TRUE.equals(main.namedHidden.get("battery_charge_icon"))
-                &&Boolean.TRUE.equals(main.namedHidden.get("battery_charge_reverse")),
-                "unplugging hides both SuperVOOC bolt layers");
+        check(Boolean.FALSE.equals(main.namedHidden.get("battery_charge_icon"))
+                &&!main.namedHidden.containsKey("battery_charge_reverse"),
+                "native handoff does not override unplugged, full or wireless reverse states");
         main.state.charging=true;
         TrioConfig.appearance.hideBolt=true;
         main.applyInternal();
         check(Boolean.TRUE.equals(main.namedHidden.get("battery_charge_icon"))
-                &&Boolean.TRUE.equals(main.namedHidden.get("battery_charge_reverse")),
-                "module ownership hides both native layers to avoid overlaying its own bolt");
+                &&!main.namedHidden.containsKey("battery_charge_reverse"),
+                "owning the charging bolt never suppresses wireless power sharing");
         TrioConfig.appearance.hideBolt=false;
         check(main.extra.parent==main.meter.parent,"standard rows reserve a sibling strip");
         check(keyguard.extra.parent==keyguard.meter.parent,"keyguard owns its own strip");
