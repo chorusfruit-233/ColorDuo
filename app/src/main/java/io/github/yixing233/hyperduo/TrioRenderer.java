@@ -1837,14 +1837,16 @@ public final class TrioRenderer {
         float[] lengths = a.capsule ? capsuleFlowLengths(p0,p1) : null;
         STROKE.setStrokeWidth(a.capsule ? a.ringStroke*TrioGeometry.CAP_STROKE_RATIO : a.ringStroke);
         STROKE.setStrokeCap(Paint.Cap.BUTT);
+        int samples=Math.max(24,Math.round(width*120));
         try {
-            for(int n=0;n<20;n++) {
-                // Small overlapping arc intervals avoid antialiasing seams between glow samples.
-                float from=head+width*n/20f-width/60f, to=head+width*(n+1)/20f+width/60f;
+            for(int n=0;n<samples;n++) {
+                // Keep gradients smooth when users widen the band, with fewer calls for narrow bands.
+                float overlap=width/(samples*3f);
+                float from=head+width*n/samples-overlap, to=head+width*(n+1)/samples+overlap;
                 if(a.chargeFlowDirection==1) { float next=charged-from;from=charged-to;to=next; }
                 from=Math.max(0,from);to=Math.min(charged,to);
                 if(to<=from)continue;
-                float glow=chargeFlowGlow((n+.5f)/20f,a.chargeFlowGradient);
+                float glow=chargeFlowGlow((n+.5f)/samples,a.chargeFlowGradient);
                 int red=(role>>16)&255,green=(role>>8)&255,blue=role&255;
                 STROKE.setColor((role&0xff000000)|((red+Math.round((255-red)*glow))<<16)
                         |((green+Math.round((255-green)*glow))<<8)|(blue+Math.round((255-blue)*glow)));
