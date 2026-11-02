@@ -392,4 +392,10 @@
     <string name="charge_flow_direction_title">流光方向</string>
     <string name="charge_flow_clockwise">顺时针</string>
     <string name="charge_flow_counterclockwise">逆时针</string>
+    <string name="charge_flow_speed_title">流动速度</string>
+    <string name="charge_flow_speed_summary">默认 %1$d%%，范围 %2$d%%–%3$d%%。100%% 约 1.6 秒一轮，数值越大越快。</string>
+    <string name="charge_flow_width_title">流光总宽度</string>
+    <string name="charge_flow_width_summary">占可绘制电量环长度的比例，最长不超过已充电部分。默认 %1$d%%，范围 %2$d%%–%3$d%%。</string>
+    <string name="charge_flow_gradient_title">渐变带宽度</string>
+    <string name="charge_flow_gradient_summary">两端各占流光总宽度的比例。默认 %1$d%%，范围 %2$d%%–%3$d%%；0 为硬边，50 为全渐变。</string>
 </resources>

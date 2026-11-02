@@ -393,4 +393,10 @@
     <string name="charge_flow_direction_title">Flow direction</string>
     <string name="charge_flow_clockwise">Clockwise</string>
     <string name="charge_flow_counterclockwise">Counterclockwise</string>
+    <string name="charge_flow_speed_title">Flow speed</string>
+    <string name="charge_flow_speed_summary">Default %1$d%%; range %2$d%%–%3$d%%. At 100%%, one cycle takes about 1.6 seconds. Higher is faster.</string>
+    <string name="charge_flow_width_title">Total highlight width</string>
+    <string name="charge_flow_width_summary">Percentage of the drawable battery outline, capped to its charged portion. Default %1$d%%; range %2$d%%–%3$d%%.</string>
+    <string name="charge_flow_gradient_title">Gradient width</string>
+    <string name="charge_flow_gradient_summary">Percentage of the highlight at each end. Default %1$d%%; range %2$d%%–%3$d%%. Zero gives hard edges; 50 gives a fully feathered band.</string>
 </resources>

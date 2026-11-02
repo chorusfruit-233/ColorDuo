@@ -499,7 +499,7 @@ public final class TrioRenderer {
                 : roleColor(appearance, level, charging, powerSave, low, fg, chargingSpeed);
         final int boltColor = boltColor(appearance, chargingSpeed, fg, chargingPaused);
         final float flowPhase = chargeFlowActive(cfg, level, charging, chargingPaused)
-                ? chargeFlowPhase(System.nanoTime()) : -1f;
+                ? chargeFlowPhase(System.nanoTime(), appearance.chargeFlowSpeed) : -1f;
 
         // A slot with no reading counts as absent, so a single-SIM device - or a
         // poll that has not answered yet - is not mistaken for a second SIM.
@@ -1810,15 +1810,28 @@ public final class TrioRenderer {
     }
 
     static float chargeFlowPhase(long nanos) {
-        long period = 1_600_000_000L;
+        return chargeFlowPhase(nanos, Prefs.DEF_CHARGE_FLOW_SPEED);
+    }
+
+    static float chargeFlowPhase(long nanos, int speed) {
+        long period = 160_000_000_000L / Prefs.clamp(speed, Prefs.MIN_CHARGE_FLOW_SPEED, Prefs.MAX_CHARGE_FLOW_SPEED);
         return ((nanos % period + period) % period) / (float) period;
+    }
+
+    /** Feather each end independently; the middle remains an opaque highlight. */
+    static float chargeFlowGlow(float position, int gradientPercent) {
+        float feather=Prefs.clamp(gradientPercent,0,50)/100f;
+        if(feather==0)return .96f;
+        float ramp=Math.min(1f,Math.max(0f,Math.min(position,1f-position))/feather);
+        float value=(float)Math.sin(Math.PI*.5f*ramp);
+        return value*value*.96f;
     }
 
     /** Draw only inside the charged run. Gaps carry neither ink nor progress distance. */
     static void drawChargeFlow(Canvas c, int level, int role, TrioAppearance a, float phase,
                                float p0, float p1, float sweep, float start) {
         if (phase < 0 || level <= 0) return;
-        float charged = Math.min(1f,level/100f), width = Math.min(.18f,charged*.45f);
+        float charged = Math.min(1f,level/100f), width = Math.min(a.chargeFlowWidth/100f,charged);
         float head = phase*(charged+width)-width;
         TrioGeometry.SplitRing split = a.ring && a.splitMode == 1 ? new TrioGeometry.SplitRing(a) : null;
         float[] lengths = a.capsule ? capsuleFlowLengths(p0,p1) : null;
@@ -1831,7 +1844,7 @@ public final class TrioRenderer {
                 if(a.chargeFlowDirection==1) { float next=charged-from;from=charged-to;to=next; }
                 from=Math.max(0,from);to=Math.min(charged,to);
                 if(to<=from)continue;
-                float glow=(float)Math.sin(Math.PI*(n+.5f)/20f);glow*=glow*.96f;
+                float glow=chargeFlowGlow((n+.5f)/20f,a.chargeFlowGradient);
                 int red=(role>>16)&255,green=(role>>8)&255,blue=role&255;
                 STROKE.setColor((role&0xff000000)|((red+Math.round((255-red)*glow))<<16)
                         |((green+Math.round((255-green)*glow))<<8)|(blue+Math.round((255-blue)*glow)));

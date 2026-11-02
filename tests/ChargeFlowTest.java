@@ -52,6 +52,26 @@ public class ChargeFlowTest {
   s.trioStyle=Prefs.STYLE_RING;s.splitMode=0;s.chargeFlowDirection=0;
   Frame first=flow(s,66,.25f),last=flow(s,66,.65f);check(first.position()<last.position(),"clockwise follows increasing angles");
   s.chargeFlowDirection=1;first=flow(s,66,.25f);last=flow(s,66,.65f);check(first.position()>last.position(),"counterclockwise follows decreasing angles");
+  TrioSettings custom=s.copy();custom.chargeFlowSpeed=321;custom.chargeFlowWidth=44;custom.chargeFlowGradient=12;
+  check(custom.equals(custom.copy()),"custom parameters survive copy");
+  check(custom.equals(TrioSettings.fromBundle(custom.toBundle())),"custom parameters survive snapshot transport");
+  TrioSettings keys=TrioSettings.defaults();
+  for(String key:new String[]{Prefs.KEY_CHARGE_FLOW_SPEED,Prefs.KEY_CHARGE_FLOW_WIDTH,Prefs.KEY_CHARGE_FLOW_GRADIENT})check(keys.applyKeyFrom(custom,key),"remote key recognized");
+  check(keys.chargeFlowSpeed==321&&keys.chargeFlowWidth==44&&keys.chargeFlowGradient==12,"remote callbacks keep each custom parameter");
+  android.os.Bundle invalid=custom.toBundle();invalid.putInt(Prefs.KEY_CHARGE_FLOW_SPEED,-10);invalid.putInt(Prefs.KEY_CHARGE_FLOW_WIDTH,999);invalid.putInt(Prefs.KEY_CHARGE_FLOW_GRADIENT,999);
+  TrioSettings bounded=TrioSettings.fromBundle(invalid);
+  check(bounded.chargeFlowSpeed==10&&bounded.chargeFlowWidth==100&&bounded.chargeFlowGradient==50,"snapshot inputs are bounded");
+  float normal=TrioRenderer.chargeFlowPhase(100_000_000L,100);
+  check(Math.abs(TrioRenderer.chargeFlowPhase(100_000_000L,400)-normal*4)<.00001,"four times speed advances four times as far");
+  check(Math.abs(TrioRenderer.chargeFlowPhase(100_000_000L,10)-normal/10)<.00001,"one tenth speed advances one tenth as far");
+  check(TrioRenderer.chargeFlowPhase(400_000_000L,400)==0,"fastest speed loops at its own period");
+  check(TrioRenderer.chargeFlowPhase(0,0)==0,"invalid direct speed cannot divide by zero");
+  check(TrioRenderer.chargeFlowGlow(.01f,0)==.96f,"zero gradient has a hard edge");
+  check(TrioRenderer.chargeFlowGlow(.3f,25)>.95f,"short gradients leave a solid core");
+  check(TrioRenderer.chargeFlowGlow(.3f,50)<.8f,"full gradients keep feathering into the band");
+  check(Math.abs(TrioRenderer.chargeFlowGlow(.2f,40)-TrioRenderer.chargeFlowGlow(.8f,40))<.00001,"both ends have equal fade width");
+  s.chargeFlowWidth=5;int narrow=ink(flow(s,66,.5f));s.chargeFlowWidth=30;
+  check(ink(flow(s,66,.5f))>narrow*2,"total width changes real painted length");s.chargeFlowWidth=18;
   Path output=Paths.get("build/flow-reference");Files.createDirectories(output);
   for(int shape=0;shape<3;shape++){
    s.trioStyle=shape==2?Prefs.STYLE_CAPSULE:Prefs.STYLE_RING;s.splitMode=shape==1?1:0;
@@ -64,6 +84,18 @@ public class ChargeFlowTest {
     Frame preview=mask(s,66);TrioRenderer.drawChargeFlow(preview,66,GREEN,TrioAppearance.of(s),.35f,shape==2?8:0,shape==2?8:0,360,90);
     check(ink(flow(s,66,.35f))>0,"each outline and direction paints a scan");
     ImageIO.write(preview.image,"png",output.resolve("shape-"+shape+"-direction-"+direction+".png").toFile());
+   }
+  }
+  for(int shape=0;shape<3;shape++){
+   s.trioStyle=shape==2?Prefs.STYLE_CAPSULE:Prefs.STYLE_RING;s.splitMode=shape==1?1:0;
+   for(int profile=0;profile<3;profile++){
+    s.chargeFlowWidth=new int[]{1,100,40}[profile];s.chargeFlowGradient=new int[]{0,50,20}[profile];
+    for(int direction=0;direction<2;direction++){
+     s.chargeFlowDirection=direction;confined(flow(s,66,.5f),mask(s,66));
+    }
+    s.chargeFlowDirection=0;Frame preview=mask(s,66);
+    TrioRenderer.drawChargeFlow(preview,66,GREEN,TrioAppearance.of(s),.5f,shape==2?8:0,shape==2?8:0,360,90);
+    ImageIO.write(preview.image,"png",output.resolve("custom-shape-"+shape+"-profile-"+profile+".png").toFile());
    }
   }
   check(ink(flow(s,66,-1))==0,"inactive phase has no overlay");

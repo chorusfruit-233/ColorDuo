@@ -179,6 +179,9 @@ public final class TrioAppearance {
     public final int glyphScale;
 
     public final boolean chargeFlow;
+    public final int chargeFlowSpeed;
+    public final int chargeFlowWidth;
+    public final int chargeFlowGradient;
     public final int chargeFlowDirection;
     public final boolean pausedGrayAll;
     public final boolean roleColors;
@@ -339,6 +342,9 @@ public final class TrioAppearance {
         glyphScale = c.glyphScale;
 
         chargeFlow = c.chargeFlow;
+        chargeFlowSpeed = Prefs.clamp(c.chargeFlowSpeed, Prefs.MIN_CHARGE_FLOW_SPEED, Prefs.MAX_CHARGE_FLOW_SPEED);
+        chargeFlowWidth = Prefs.clamp(c.chargeFlowWidth, Prefs.MIN_CHARGE_FLOW_WIDTH, Prefs.MAX_CHARGE_FLOW_WIDTH);
+        chargeFlowGradient = Prefs.clamp(c.chargeFlowGradient, Prefs.MIN_CHARGE_FLOW_GRADIENT, Prefs.MAX_CHARGE_FLOW_GRADIENT);
         chargeFlowDirection = c.chargeFlowDirection;
         pausedGrayAll = c.pausedGrayAll;
         roleColors = c.roleColors;

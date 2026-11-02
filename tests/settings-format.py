@@ -12,9 +12,9 @@ for directory in sorted((ROOT / 'app/src/main/res').glob('values*')):
     if not resource.exists():
         continue
     for string in ET.parse(resource).getroot().findall('string'):
-        if string.get('name') in {'sim_stack_gap_summary', 'signal_icon_scale_summary', 'dot_scale_summary'}:
+        if string.get('name') in {'sim_stack_gap_summary', 'signal_icon_scale_summary', 'dot_scale_summary', 'charge_flow_speed_summary', 'charge_flow_width_summary', 'charge_flow_gradient_summary'}:
             summaries.append(''.join(string.itertext()))
-assert len(summaries) >= 6, 'Check both Chinese and English summaries'
+assert len(summaries) >= 12, 'Check both Chinese and English summaries'
 
 with tempfile.TemporaryDirectory() as tmp:
     source = Path(tmp) / 'SettingsFormatCheck.java'

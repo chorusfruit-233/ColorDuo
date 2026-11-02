@@ -221,6 +221,9 @@ public final class TrioSettings {
     public boolean pausedGrayAll;
     public boolean chargeFlow;
     public int chargeFlowDirection;
+    public int chargeFlowGradient;
+    public int chargeFlowWidth;
+    public int chargeFlowSpeed;
     /**
      * Absolute path of the user's font file, or "" for the system face.
      *
@@ -403,6 +406,9 @@ public final class TrioSettings {
         s.pausedGrayAll = Prefs.DEF_PAUSED_GRAY_ALL;
         s.chargeFlow = Prefs.DEF_CHARGE_FLOW;
         s.chargeFlowDirection = Prefs.DEF_CHARGE_FLOW_DIRECTION;
+        s.chargeFlowGradient = Prefs.DEF_CHARGE_FLOW_GRADIENT;
+        s.chargeFlowWidth = Prefs.DEF_CHARGE_FLOW_WIDTH;
+        s.chargeFlowSpeed = Prefs.DEF_CHARGE_FLOW_SPEED;
         s.fontPath = Prefs.DEF_FONT_PATH;
         s.dotScale = Prefs.DEF_DOT_SCALE;
         s.splitMode = Prefs.DEF_SPLIT_MODE;
@@ -620,6 +626,9 @@ public final class TrioSettings {
         s.pausedGrayAll = p.getBoolean(Prefs.KEY_PAUSED_GRAY_ALL, Prefs.DEF_PAUSED_GRAY_ALL);
         s.chargeFlow = p.getBoolean(Prefs.KEY_CHARGE_FLOW, Prefs.DEF_CHARGE_FLOW);
         s.chargeFlowDirection = Prefs.clamp(p.getInt(Prefs.KEY_CHARGE_FLOW_DIRECTION, 0), 0, 1);
+        s.chargeFlowGradient = Prefs.clamp(p.getInt(Prefs.KEY_CHARGE_FLOW_GRADIENT, Prefs.DEF_CHARGE_FLOW_GRADIENT), Prefs.MIN_CHARGE_FLOW_GRADIENT, Prefs.MAX_CHARGE_FLOW_GRADIENT);
+        s.chargeFlowWidth = Prefs.clamp(p.getInt(Prefs.KEY_CHARGE_FLOW_WIDTH, Prefs.DEF_CHARGE_FLOW_WIDTH), Prefs.MIN_CHARGE_FLOW_WIDTH, Prefs.MAX_CHARGE_FLOW_WIDTH);
+        s.chargeFlowSpeed = Prefs.clamp(p.getInt(Prefs.KEY_CHARGE_FLOW_SPEED, Prefs.DEF_CHARGE_FLOW_SPEED), Prefs.MIN_CHARGE_FLOW_SPEED, Prefs.MAX_CHARGE_FLOW_SPEED);
         s.chargingShowsValue = p.getBoolean(Prefs.KEY_CHARGING_SHOWS_VALUE,
                 Prefs.DEF_CHARGING_SHOWS_VALUE);
         s.fontPath = readFontPath(p.getString(Prefs.KEY_FONT_PATH, Prefs.DEF_FONT_PATH));
@@ -1000,6 +1009,9 @@ public final class TrioSettings {
         s.pausedGrayAll = pausedGrayAll;
         s.chargeFlow = chargeFlow;
         s.chargeFlowDirection = chargeFlowDirection;
+        s.chargeFlowGradient = chargeFlowGradient;
+        s.chargeFlowWidth = chargeFlowWidth;
+        s.chargeFlowSpeed = chargeFlowSpeed;
         s.fontPath = fontPath;
         s.dotScale = dotScale;
         s.splitMode = splitMode;
@@ -1122,6 +1134,9 @@ public final class TrioSettings {
             case Prefs.KEY_PAUSED_GRAY_ALL: pausedGrayAll = src.pausedGrayAll; return true;
             case Prefs.KEY_CHARGE_FLOW: chargeFlow = src.chargeFlow; return true;
             case Prefs.KEY_CHARGE_FLOW_DIRECTION: chargeFlowDirection = src.chargeFlowDirection; return true;
+            case Prefs.KEY_CHARGE_FLOW_GRADIENT: chargeFlowGradient = src.chargeFlowGradient; return true;
+            case Prefs.KEY_CHARGE_FLOW_WIDTH: chargeFlowWidth = src.chargeFlowWidth; return true;
+            case Prefs.KEY_CHARGE_FLOW_SPEED: chargeFlowSpeed = src.chargeFlowSpeed; return true;
             case Prefs.KEY_CHARGING_SHOWS_VALUE: chargingShowsValue = src.chargingShowsValue; return true;
             case Prefs.KEY_FONT_PATH: fontPath = src.fontPath; return true;
             case Prefs.KEY_SPLIT_MODE: splitMode = src.splitMode; return true;
@@ -1302,6 +1317,9 @@ public final class TrioSettings {
         s.pausedGrayAll = bundle.getBoolean(Prefs.KEY_PAUSED_GRAY_ALL, Prefs.DEF_PAUSED_GRAY_ALL);
         s.chargeFlow = bundle.getBoolean(Prefs.KEY_CHARGE_FLOW, Prefs.DEF_CHARGE_FLOW);
         s.chargeFlowDirection = Prefs.clamp(bundle.getInt(Prefs.KEY_CHARGE_FLOW_DIRECTION, 0), 0, 1);
+        s.chargeFlowGradient = Prefs.clamp(bundle.getInt(Prefs.KEY_CHARGE_FLOW_GRADIENT, Prefs.DEF_CHARGE_FLOW_GRADIENT), Prefs.MIN_CHARGE_FLOW_GRADIENT, Prefs.MAX_CHARGE_FLOW_GRADIENT);
+        s.chargeFlowWidth = Prefs.clamp(bundle.getInt(Prefs.KEY_CHARGE_FLOW_WIDTH, Prefs.DEF_CHARGE_FLOW_WIDTH), Prefs.MIN_CHARGE_FLOW_WIDTH, Prefs.MAX_CHARGE_FLOW_WIDTH);
+        s.chargeFlowSpeed = Prefs.clamp(bundle.getInt(Prefs.KEY_CHARGE_FLOW_SPEED, Prefs.DEF_CHARGE_FLOW_SPEED), Prefs.MIN_CHARGE_FLOW_SPEED, Prefs.MAX_CHARGE_FLOW_SPEED);
         s.chargingShowsValue = bundle.getBoolean(Prefs.KEY_CHARGING_SHOWS_VALUE,
                 Prefs.DEF_CHARGING_SHOWS_VALUE);
         s.fontPath = readFontPath(bundle.getString(Prefs.KEY_FONT_PATH, Prefs.DEF_FONT_PATH));
@@ -1444,6 +1462,9 @@ public final class TrioSettings {
         b.putBoolean(Prefs.KEY_PAUSED_GRAY_ALL, pausedGrayAll);
         b.putBoolean(Prefs.KEY_CHARGE_FLOW, chargeFlow);
         b.putInt(Prefs.KEY_CHARGE_FLOW_DIRECTION, chargeFlowDirection);
+        b.putInt(Prefs.KEY_CHARGE_FLOW_GRADIENT, chargeFlowGradient);
+        b.putInt(Prefs.KEY_CHARGE_FLOW_WIDTH, chargeFlowWidth);
+        b.putInt(Prefs.KEY_CHARGE_FLOW_SPEED, chargeFlowSpeed);
         b.putString(Prefs.KEY_FONT_PATH, fontPath);
         b.putInt(Prefs.KEY_DOT_SCALE, dotScale);
         b.putInt(Prefs.KEY_SPLIT_MODE, splitMode);
@@ -1596,6 +1617,9 @@ public final class TrioSettings {
                 && pausedGrayAll == s.pausedGrayAll
                 && chargeFlow == s.chargeFlow
                 && chargeFlowDirection == s.chargeFlowDirection
+                && chargeFlowGradient == s.chargeFlowGradient
+                && chargeFlowWidth == s.chargeFlowWidth
+                && chargeFlowSpeed == s.chargeFlowSpeed
                 // Objects.equals, not ==: the font path is the one reference-typed
                 // field here, and == would compare identities. Two snapshots built
                 // from the same stored path hold different String instances, so a

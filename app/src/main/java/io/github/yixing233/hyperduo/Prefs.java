@@ -1145,6 +1145,12 @@ public final class Prefs {
 
     public static final String KEY_CHARGE_FLOW = "charge_flow";
     public static final boolean DEF_CHARGE_FLOW = false;
+    public static final String KEY_CHARGE_FLOW_SPEED = "charge_flow_speed";
+    public static final int DEF_CHARGE_FLOW_SPEED = 100, MIN_CHARGE_FLOW_SPEED = 10, MAX_CHARGE_FLOW_SPEED = 400;
+    public static final String KEY_CHARGE_FLOW_WIDTH = "charge_flow_width";
+    public static final int DEF_CHARGE_FLOW_WIDTH = 18, MIN_CHARGE_FLOW_WIDTH = 1, MAX_CHARGE_FLOW_WIDTH = 100;
+    public static final String KEY_CHARGE_FLOW_GRADIENT = "charge_flow_gradient";
+    public static final int DEF_CHARGE_FLOW_GRADIENT = 50, MIN_CHARGE_FLOW_GRADIENT = 0, MAX_CHARGE_FLOW_GRADIENT = 50;
     public static final String KEY_CHARGE_FLOW_DIRECTION = "charge_flow_direction";
     public static final int DEF_CHARGE_FLOW_DIRECTION = 0;
     public static final int MIN_CHARGE_FLOW_DIRECTION = 0, MAX_CHARGE_FLOW_DIRECTION = 1;
