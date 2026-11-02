@@ -59,6 +59,7 @@ public final class LayoutReference {
             state.wifiPresent = true;
             state.wifiLevel = 3;
             state.charging = state.quickCharging = scene == 5;
+            state.chargingSpeed = scene == 5 ? ChargeSpeed.SUPER : ChargeSpeed.NORMAL;
             TrioState.sClockText = "09:41";
             BufferedImage icon = new BufferedImage(280, 200, BufferedImage.TYPE_INT_ARGB);
             Graphics2D ink = icon.createGraphics();
@@ -167,7 +168,7 @@ def main():
         scene.write_text(SCENES)
         sources = sorted((ROOT / "tests/shims").rglob("*.java"))
         sources += [SOURCE / f"{name}.java" for name in (
-            "Prefs", "TrioSettings", "TrioAppearance", "TrioGeometry", "TrioZones", "TrioSizing", "TrioRenderer", "DuoPolicy")]
+            "Prefs", "TrioSettings", "TrioAppearance", "TrioGeometry", "TrioZones", "TrioSizing", "TrioRenderer", "DuoPolicy", "ChargeSpeed")]
         subprocess.run(["javac", "-encoding", "UTF-8", "-d", str(classes),
                         *map(str, sources), str(scene)], check=True)
         subprocess.run(["java", "-Djava.awt.headless=true", "-Xmx512m", "-cp", str(classes),

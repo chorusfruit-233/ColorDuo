@@ -347,8 +347,8 @@ adb shell am start -n io.github.yixing233.hyperduo/.ui.MainActivity
   `getRemotePreferences(NAME).edit().putX(...).commit()`，并把同一份写进本应用的
   `SharedPreferences`（即 `shared_prefs\hyperduo_settings.xml`）。服务是异步绑定、也可能随时
   死亡，所以 `SettingsRepository` 每次写入都实时取 `HyperDuoApp.xposedService`，**不缓存
-  service**；绑定成功时还会 `syncAllToFramework()` 全量重放这 39 个键，补齐框架缺席期间的改动。
-  **每新增一个键都必须同时加到 `syncAllToFramework()`**，否则该键在框架重连后不会下发。
+  service**；绑定成功时由 `syncAllToFramework()` 调用 `TrioSettings.writeTo()`，按 `toBundle()` 的完整快照重放配置，补齐框架缺席期间的改动。
+  新配置必须完整纳入 `TrioSettings` 的读取、复制、单键回调和快照传输；框架同步直接复用快照序列化，不再维护第二份键列表。
 - **读侧**（hook 进程）：remote `SharedPreferences` 是**只读**的，但支持
   `registerOnSharedPreferenceChangeListener`，框架会实时投递变更。`TrioConfig` 注册一个监听器，
   每次回调重新读成一份 `TrioSettings` 快照并 `invalidateHosts()` 重绘宿主 ⇒ **改设置不需要

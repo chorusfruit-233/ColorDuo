@@ -222,6 +222,10 @@ internal enum class RoleColor(val labelRes: Int) {
     QuickCharging(R.string.color_quick_charging_title),
     FlashCharging(R.string.color_flash_charging_title),
     SuperCharging(R.string.color_super_charging_title),
+    BoltCharging(R.string.color_bolt_charging_title),
+    BoltQuickCharging(R.string.color_bolt_quick_charging_title),
+    BoltFlashCharging(R.string.color_bolt_flash_charging_title),
+    BoltSuperCharging(R.string.color_bolt_super_charging_title),
     Critical(R.string.color_critical_title),
 }
 
@@ -617,6 +621,18 @@ fun SettingsScreen(repository: SettingsRepository) {
                                 RoleColor.SuperCharging ->
                                     if (onDark) repo.setColorSuperChargingOnDark(argb)
                                     else repo.setColorSuperChargingOnLight(argb)
+                                RoleColor.BoltCharging ->
+                                    if (onDark) repo.setColorBoltChargingOnDark(argb)
+                                    else repo.setColorBoltChargingOnLight(argb)
+                                RoleColor.BoltQuickCharging ->
+                                    if (onDark) repo.setColorBoltQuickChargingOnDark(argb)
+                                    else repo.setColorBoltQuickChargingOnLight(argb)
+                                RoleColor.BoltFlashCharging ->
+                                    if (onDark) repo.setColorBoltFlashChargingOnDark(argb)
+                                    else repo.setColorBoltFlashChargingOnLight(argb)
+                                RoleColor.BoltSuperCharging ->
+                                    if (onDark) repo.setColorBoltSuperChargingOnDark(argb)
+                                    else repo.setColorBoltSuperChargingOnLight(argb)
                             }
                         }
                     },
@@ -2261,6 +2277,10 @@ internal fun colorFor(settings: TrioSettings, role: RoleColor, onDark: Boolean):
         RoleColor.QuickCharging -> if (onDark) settings.quickChargingOnDark else settings.quickChargingOnLight
         RoleColor.FlashCharging -> if (onDark) settings.flashChargingOnDark else settings.flashChargingOnLight
         RoleColor.SuperCharging -> if (onDark) settings.superChargingOnDark else settings.superChargingOnLight
+        RoleColor.BoltCharging -> if (onDark) settings.boltChargingOnDark else settings.boltChargingOnLight
+        RoleColor.BoltQuickCharging -> if (onDark) settings.boltQuickChargingOnDark else settings.boltQuickChargingOnLight
+        RoleColor.BoltFlashCharging -> if (onDark) settings.boltFlashChargingOnDark else settings.boltFlashChargingOnLight
+        RoleColor.BoltSuperCharging -> if (onDark) settings.boltSuperChargingOnDark else settings.boltSuperChargingOnLight
     }
 
 /** Signal levels the preview shows; the middle of each range. */

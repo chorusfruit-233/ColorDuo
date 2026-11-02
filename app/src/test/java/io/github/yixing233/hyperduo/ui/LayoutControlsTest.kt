@@ -127,6 +127,30 @@ class LayoutControlsTest {
         assertEquals(listOf(Prefs.PART_SIM_PAIR), next.ringZones.flatMap { it.toList() }.filter { Prefs.isSignalRow(it) })
     }
 
+    @Test fun batteryAndBoltEditorsHaveIndependentColorRows() {
+        val battery = roleColorsForEditor(TrioSettingsPart.Battery)
+        val bolt = roleColorsForEditor(TrioSettingsPart.Bolt)
+        assertEquals(6, battery.size)
+        assertEquals(4, bolt.size)
+        assertTrue(battery.toSet().intersect(bolt.toSet()).isEmpty())
+        assertEquals((battery + bolt).toSet(), roleColorsForEditor(TrioSettingsPart.Appearance).toSet())
+        assertEquals(listOf(RoleColor.BoltCharging, RoleColor.BoltQuickCharging,
+            RoleColor.BoltFlashCharging, RoleColor.BoltSuperCharging), bolt)
+    }
+
+    @Test fun colorPickersReadTheSelectedComponentAndTheme() {
+        val s = settings().apply {
+            flashChargingOnDark = 0xffa12233.toInt()
+            flashChargingOnLight = 0xffb23344.toInt()
+            boltFlashChargingOnDark = 0xff1122aa.toInt()
+            boltFlashChargingOnLight = 0xff2233bb.toInt()
+        }
+        assertEquals(s.flashChargingOnDark, colorFor(s, RoleColor.FlashCharging, true))
+        assertEquals(s.flashChargingOnLight, colorFor(s, RoleColor.FlashCharging, false))
+        assertEquals(s.boltFlashChargingOnDark, colorFor(s, RoleColor.BoltFlashCharging, true))
+        assertEquals(s.boltFlashChargingOnLight, colorFor(s, RoleColor.BoltFlashCharging, false))
+    }
+
     @Test fun hdVisibilityHasOneIndependentSwitchEvenWhenNetworkTypeIsOff() {
         for (style in listOf(Prefs.STYLE_RING, Prefs.STYLE_CAPSULE)) {
             val s = settings(style).apply { mobileTypeMode = Prefs.MOBILE_TYPE_OFF }

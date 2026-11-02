@@ -771,10 +771,18 @@ internal fun slidersForEditor(part: TrioSettingsPart, a: TrioAppearance): List<S
  */
 internal fun roleColorsForPart(part: TrioZones.Part): List<RoleColor> = when (part) {
     TrioZones.Part.VALUE -> listOf(RoleColor.Low, RoleColor.Critical)
-    TrioZones.Part.BOLT -> listOf(RoleColor.Charging, RoleColor.QuickCharging,
-        RoleColor.FlashCharging, RoleColor.SuperCharging)
+    TrioZones.Part.BOLT -> listOf(RoleColor.BoltCharging, RoleColor.BoltQuickCharging,
+        RoleColor.BoltFlashCharging, RoleColor.BoltSuperCharging)
     else -> emptyList()
 }
+
+internal fun roleColorsForEditor(part: TrioSettingsPart): List<RoleColor> = when (part) {
+    TrioSettingsPart.Appearance -> RoleColor.entries
+    TrioSettingsPart.Battery -> listOf(RoleColor.Low, RoleColor.Charging, RoleColor.QuickCharging,
+        RoleColor.FlashCharging, RoleColor.SuperCharging, RoleColor.Critical)
+    else -> part.part?.let(::roleColorsForPart).orEmpty()
+}
+
 
 /**
  * The long-press dialog: the rows that size the tapped component, plus the role
@@ -808,8 +816,7 @@ internal fun PartSettingsSheet(
     val a = TrioAppearance.of(settings)
     val rows = slidersForEditor(part, a)
     val controls = contentControlsFor(part, settings)
-    val colors = if (part == TrioSettingsPart.Appearance || part == TrioSettingsPart.Battery) RoleColor.entries
-        else part.part?.let(::roleColorsForPart).orEmpty()
+    val colors = roleColorsForEditor(part)
     val configuration = LocalConfiguration.current
     val compact = configuration.screenHeightDp < 600 || configuration.fontScale > 1.3f
     val maxHeight = (configuration.screenHeightDp * 0.72f).dp

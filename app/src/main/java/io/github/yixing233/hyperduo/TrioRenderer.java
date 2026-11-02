@@ -1789,14 +1789,19 @@ public final class TrioRenderer {
     }
 
     static int boltColor(TrioAppearance a, ChargeSpeed speed, int fg, boolean paused) {
-        return paused ? (a.pausedGrayAll ? DuoPolicy.pausedColor(fg) : fg) : chargingColor(a, speed, fg);
+        if(a==null) return fg;
+        if(paused) return a.pausedGrayAll?DuoPolicy.pausedColor(fg):fg;
+        if(!a.roleColors) return speed!=null && speed!=ChargeSpeed.NORMAL?TrioGeometry.QUICK_CHARGE:fg;
+        boolean dark=isDarkBackground(fg);
+        if(speed==ChargeSpeed.SUPER) return dark?a.boltSuperChargingOnDark:a.boltSuperChargingOnLight;
+        if(speed==ChargeSpeed.FLASH) return dark?a.boltFlashChargingOnDark:a.boltFlashChargingOnLight;
+        if(speed==ChargeSpeed.QUICK) return dark?a.boltQuickChargingOnDark:a.boltQuickChargingOnLight;
+        return dark?a.boltChargingOnDark:a.boltChargingOnLight;
     }
 
     static int chargingColor(TrioAppearance a, ChargeSpeed speed, int fg) {
         if (a == null) return fg;
-        // Preserve the pre-role-colour fast-charge bolt when the global role
-        // colour switch is off. Normal charging keeps using the foreground.
-        if (!a.roleColors) return speed == ChargeSpeed.QUICK ? TrioGeometry.QUICK_CHARGE : fg;
+        if (!a.roleColors) return fg;
         boolean dark = isDarkBackground(fg);
         if (speed == ChargeSpeed.SUPER) return dark ? a.superChargingOnDark : a.superChargingOnLight;
         if (speed == ChargeSpeed.FLASH) return dark ? a.flashChargingOnDark : a.flashChargingOnLight;

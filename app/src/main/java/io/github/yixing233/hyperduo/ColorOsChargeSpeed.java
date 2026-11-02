@@ -111,6 +111,8 @@ final class ColorOsChargeSpeed {
                         && (name.startsWith("get") || name.startsWith("is"))
                         && (name.contains("charg") || name.contains("vooc") || name.contains("ufcs")
                             || name.contains("pps") || name.equals("getpd") || name.equals("ispd"))) {
+                    try { method.setAccessible(true); }
+                    catch (RuntimeException ignored) { }
                     nativeFlags.add(method);
                 }
             }

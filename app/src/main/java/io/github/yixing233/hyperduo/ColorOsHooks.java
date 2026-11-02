@@ -1157,7 +1157,7 @@ final class ColorOsHooks {
                     : nativeSpeed.speed != null ? nativeSpeed.speed : ChargeSpeed.NORMAL;
             state.quickCharging = state.charging && state.chargingSpeed != ChargeSpeed.NORMAL;
             String speedNote = "ColorOS charge speed: tier=" + state.chargingSpeed
-                    + " charging=" + state.charging + " fastChgType=" + protocol.subtype
+                    + " charging=" + state.charging + " protocolSubtype=" + protocol.subtype
                     + " source=" + (!state.charging ? "disconnected"
                         : protocol.speed != null ? "oplus_sysfs"
                         : nativeSpeed.speed != null ? "native_flags" : "fallback_normal");

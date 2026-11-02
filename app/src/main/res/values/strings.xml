@@ -178,8 +178,8 @@
     <string name="color_on_light">浅色背景</string>
     <string name="color_dialog_summary">分别设置状态栏为深色与浅色背景时使用的颜色。</string>
     <string name="color_reset">恢复默认</string>
-    <string name="color_reset_summary">把三种状态颜色恢复为出厂预设。</string>
-    <string name="color_reset_dialog_summary">三种状态颜色都会回到出厂预设，当前的自定义颜色会被覆盖。</string>
+    <string name="color_reset_summary">恢复电量环、闪电、低电量和危险电量的全部配色。</string>
+    <string name="color_reset_dialog_summary">所有状态配色都会恢复为默认值，包括电量环和闪电的独立充电配色。</string>
     <string name="color_reset_confirm">恢复</string>
 
     <string name="low_threshold_title">低电量阈值</string>
@@ -398,4 +398,8 @@
     <string name="charge_flow_width_summary">占可绘制电量环长度的比例，最长不超过已充电部分。默认 %1$d%%，范围 %2$d%%–%3$d%%。</string>
     <string name="charge_flow_gradient_title">渐变带宽度</string>
     <string name="charge_flow_gradient_summary">两端各占流光总宽度的比例。默认 %1$d%%，范围 %2$d%%–%3$d%%；0 为硬边，50 为全渐变。</string>
+    <string name="color_bolt_charging_title">闪电充电颜色</string>
+    <string name="color_bolt_quick_charging_title">闪电快充颜色（PD）</string>
+    <string name="color_bolt_flash_charging_title">闪电闪充颜色（UFCS）</string>
+    <string name="color_bolt_super_charging_title">闪电超级闪充颜色（SVOOC）</string>
 </resources>

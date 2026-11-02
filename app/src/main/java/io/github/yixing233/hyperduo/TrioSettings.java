@@ -145,6 +145,14 @@ public final class TrioSettings {
     public int flashChargingOnLight;
     public int superChargingOnDark;
     public int superChargingOnLight;
+    public int boltChargingOnDark;
+    public int boltChargingOnLight;
+    public int boltQuickChargingOnDark;
+    public int boltQuickChargingOnLight;
+    public int boltFlashChargingOnDark;
+    public int boltFlashChargingOnLight;
+    public int boltSuperChargingOnDark;
+    public int boltSuperChargingOnLight;
     public int lowOnDark;
     public int lowOnLight;
     public int lowThreshold;
@@ -382,6 +390,14 @@ public final class TrioSettings {
         s.flashChargingOnLight = Prefs.DEF_COLOR_FLASH_CHARGING_ON_LIGHT;
         s.superChargingOnDark = Prefs.DEF_COLOR_SUPER_CHARGING_ON_DARK;
         s.superChargingOnLight = Prefs.DEF_COLOR_SUPER_CHARGING_ON_LIGHT;
+        s.boltChargingOnDark = s.chargingOnDark;
+        s.boltChargingOnLight = s.chargingOnLight;
+        s.boltQuickChargingOnDark = s.quickChargingOnDark;
+        s.boltQuickChargingOnLight = s.quickChargingOnLight;
+        s.boltFlashChargingOnDark = s.flashChargingOnDark;
+        s.boltFlashChargingOnLight = s.flashChargingOnLight;
+        s.boltSuperChargingOnDark = s.superChargingOnDark;
+        s.boltSuperChargingOnLight = s.superChargingOnLight;
         s.lowOnDark = Prefs.DEF_COLOR_LOW_ON_DARK;
         s.lowOnLight = Prefs.DEF_COLOR_LOW_ON_LIGHT;
         s.lowThreshold = Prefs.DEF_LOW_THRESHOLD;
@@ -566,6 +582,14 @@ public final class TrioSettings {
         s.flashChargingOnLight = p.getInt(Prefs.KEY_COLOR_FLASH_CHARGING_ON_LIGHT, Prefs.DEF_COLOR_FLASH_CHARGING_ON_LIGHT);
         s.superChargingOnDark = p.getInt(Prefs.KEY_COLOR_SUPER_CHARGING_ON_DARK, Prefs.DEF_COLOR_SUPER_CHARGING_ON_DARK);
         s.superChargingOnLight = p.getInt(Prefs.KEY_COLOR_SUPER_CHARGING_ON_LIGHT, Prefs.DEF_COLOR_SUPER_CHARGING_ON_LIGHT);
+        s.boltChargingOnDark = p.getInt(Prefs.KEY_COLOR_BOLT_CHARGING_ON_DARK, s.chargingOnDark);
+        s.boltChargingOnLight = p.getInt(Prefs.KEY_COLOR_BOLT_CHARGING_ON_LIGHT, s.chargingOnLight);
+        s.boltQuickChargingOnDark = p.getInt(Prefs.KEY_COLOR_BOLT_QUICK_CHARGING_ON_DARK, s.quickChargingOnDark);
+        s.boltQuickChargingOnLight = p.getInt(Prefs.KEY_COLOR_BOLT_QUICK_CHARGING_ON_LIGHT, s.quickChargingOnLight);
+        s.boltFlashChargingOnDark = p.getInt(Prefs.KEY_COLOR_BOLT_FLASH_CHARGING_ON_DARK, s.flashChargingOnDark);
+        s.boltFlashChargingOnLight = p.getInt(Prefs.KEY_COLOR_BOLT_FLASH_CHARGING_ON_LIGHT, s.flashChargingOnLight);
+        s.boltSuperChargingOnDark = p.getInt(Prefs.KEY_COLOR_BOLT_SUPER_CHARGING_ON_DARK, s.superChargingOnDark);
+        s.boltSuperChargingOnLight = p.getInt(Prefs.KEY_COLOR_BOLT_SUPER_CHARGING_ON_LIGHT, s.superChargingOnLight);
         s.lowOnDark = p.getInt(Prefs.KEY_COLOR_LOW_ON_DARK, Prefs.DEF_COLOR_LOW_ON_DARK);
         s.lowOnLight = p.getInt(Prefs.KEY_COLOR_LOW_ON_LIGHT, Prefs.DEF_COLOR_LOW_ON_LIGHT);
         s.lowThreshold = Prefs.clamp(
@@ -985,6 +1009,14 @@ public final class TrioSettings {
         s.flashChargingOnLight = flashChargingOnLight;
         s.superChargingOnDark = superChargingOnDark;
         s.superChargingOnLight = superChargingOnLight;
+        s.boltChargingOnDark = boltChargingOnDark;
+        s.boltChargingOnLight = boltChargingOnLight;
+        s.boltQuickChargingOnDark = boltQuickChargingOnDark;
+        s.boltQuickChargingOnLight = boltQuickChargingOnLight;
+        s.boltFlashChargingOnDark = boltFlashChargingOnDark;
+        s.boltFlashChargingOnLight = boltFlashChargingOnLight;
+        s.boltSuperChargingOnDark = boltSuperChargingOnDark;
+        s.boltSuperChargingOnLight = boltSuperChargingOnLight;
         s.lowOnDark = lowOnDark;
         s.lowOnLight = lowOnLight;
         s.lowThreshold = lowThreshold;
@@ -1112,6 +1144,14 @@ public final class TrioSettings {
             case Prefs.KEY_COLOR_FLASH_CHARGING_ON_LIGHT: flashChargingOnLight = src.flashChargingOnLight; return true;
             case Prefs.KEY_COLOR_SUPER_CHARGING_ON_DARK: superChargingOnDark = src.superChargingOnDark; return true;
             case Prefs.KEY_COLOR_SUPER_CHARGING_ON_LIGHT: superChargingOnLight = src.superChargingOnLight; return true;
+            case Prefs.KEY_COLOR_BOLT_CHARGING_ON_DARK: boltChargingOnDark = src.boltChargingOnDark; return true;
+            case Prefs.KEY_COLOR_BOLT_CHARGING_ON_LIGHT: boltChargingOnLight = src.boltChargingOnLight; return true;
+            case Prefs.KEY_COLOR_BOLT_QUICK_CHARGING_ON_DARK: boltQuickChargingOnDark = src.boltQuickChargingOnDark; return true;
+            case Prefs.KEY_COLOR_BOLT_QUICK_CHARGING_ON_LIGHT: boltQuickChargingOnLight = src.boltQuickChargingOnLight; return true;
+            case Prefs.KEY_COLOR_BOLT_FLASH_CHARGING_ON_DARK: boltFlashChargingOnDark = src.boltFlashChargingOnDark; return true;
+            case Prefs.KEY_COLOR_BOLT_FLASH_CHARGING_ON_LIGHT: boltFlashChargingOnLight = src.boltFlashChargingOnLight; return true;
+            case Prefs.KEY_COLOR_BOLT_SUPER_CHARGING_ON_DARK: boltSuperChargingOnDark = src.boltSuperChargingOnDark; return true;
+            case Prefs.KEY_COLOR_BOLT_SUPER_CHARGING_ON_LIGHT: boltSuperChargingOnLight = src.boltSuperChargingOnLight; return true;
             case Prefs.KEY_COLOR_LOW_ON_DARK: lowOnDark = src.lowOnDark; return true;
             case Prefs.KEY_COLOR_LOW_ON_LIGHT: lowOnLight = src.lowOnLight; return true;
             case Prefs.KEY_LOW_THRESHOLD: lowThreshold = src.lowThreshold; return true;
@@ -1258,6 +1298,14 @@ public final class TrioSettings {
         s.flashChargingOnLight = bundle.getInt(Prefs.KEY_COLOR_FLASH_CHARGING_ON_LIGHT, Prefs.DEF_COLOR_FLASH_CHARGING_ON_LIGHT);
         s.superChargingOnDark = bundle.getInt(Prefs.KEY_COLOR_SUPER_CHARGING_ON_DARK, Prefs.DEF_COLOR_SUPER_CHARGING_ON_DARK);
         s.superChargingOnLight = bundle.getInt(Prefs.KEY_COLOR_SUPER_CHARGING_ON_LIGHT, Prefs.DEF_COLOR_SUPER_CHARGING_ON_LIGHT);
+        s.boltChargingOnDark = bundle.getInt(Prefs.KEY_COLOR_BOLT_CHARGING_ON_DARK, s.chargingOnDark);
+        s.boltChargingOnLight = bundle.getInt(Prefs.KEY_COLOR_BOLT_CHARGING_ON_LIGHT, s.chargingOnLight);
+        s.boltQuickChargingOnDark = bundle.getInt(Prefs.KEY_COLOR_BOLT_QUICK_CHARGING_ON_DARK, s.quickChargingOnDark);
+        s.boltQuickChargingOnLight = bundle.getInt(Prefs.KEY_COLOR_BOLT_QUICK_CHARGING_ON_LIGHT, s.quickChargingOnLight);
+        s.boltFlashChargingOnDark = bundle.getInt(Prefs.KEY_COLOR_BOLT_FLASH_CHARGING_ON_DARK, s.flashChargingOnDark);
+        s.boltFlashChargingOnLight = bundle.getInt(Prefs.KEY_COLOR_BOLT_FLASH_CHARGING_ON_LIGHT, s.flashChargingOnLight);
+        s.boltSuperChargingOnDark = bundle.getInt(Prefs.KEY_COLOR_BOLT_SUPER_CHARGING_ON_DARK, s.superChargingOnDark);
+        s.boltSuperChargingOnLight = bundle.getInt(Prefs.KEY_COLOR_BOLT_SUPER_CHARGING_ON_LIGHT, s.superChargingOnLight);
         s.lowOnDark = bundle.getInt(Prefs.KEY_COLOR_LOW_ON_DARK, Prefs.DEF_COLOR_LOW_ON_DARK);
         s.lowOnLight = bundle.getInt(Prefs.KEY_COLOR_LOW_ON_LIGHT, Prefs.DEF_COLOR_LOW_ON_LIGHT);
         s.lowThreshold = Prefs.clamp(
@@ -1438,6 +1486,14 @@ public final class TrioSettings {
         b.putInt(Prefs.KEY_COLOR_FLASH_CHARGING_ON_LIGHT, flashChargingOnLight);
         b.putInt(Prefs.KEY_COLOR_SUPER_CHARGING_ON_DARK, superChargingOnDark);
         b.putInt(Prefs.KEY_COLOR_SUPER_CHARGING_ON_LIGHT, superChargingOnLight);
+        b.putInt(Prefs.KEY_COLOR_BOLT_CHARGING_ON_DARK, boltChargingOnDark);
+        b.putInt(Prefs.KEY_COLOR_BOLT_CHARGING_ON_LIGHT, boltChargingOnLight);
+        b.putInt(Prefs.KEY_COLOR_BOLT_QUICK_CHARGING_ON_DARK, boltQuickChargingOnDark);
+        b.putInt(Prefs.KEY_COLOR_BOLT_QUICK_CHARGING_ON_LIGHT, boltQuickChargingOnLight);
+        b.putInt(Prefs.KEY_COLOR_BOLT_FLASH_CHARGING_ON_DARK, boltFlashChargingOnDark);
+        b.putInt(Prefs.KEY_COLOR_BOLT_FLASH_CHARGING_ON_LIGHT, boltFlashChargingOnLight);
+        b.putInt(Prefs.KEY_COLOR_BOLT_SUPER_CHARGING_ON_DARK, boltSuperChargingOnDark);
+        b.putInt(Prefs.KEY_COLOR_BOLT_SUPER_CHARGING_ON_LIGHT, boltSuperChargingOnLight);
         b.putInt(Prefs.KEY_COLOR_LOW_ON_DARK, lowOnDark);
         b.putInt(Prefs.KEY_COLOR_LOW_ON_LIGHT, lowOnLight);
         b.putInt(Prefs.KEY_LOW_THRESHOLD, lowThreshold);
@@ -1594,6 +1650,14 @@ public final class TrioSettings {
                 && flashChargingOnLight == s.flashChargingOnLight
                 && superChargingOnDark == s.superChargingOnDark
                 && superChargingOnLight == s.superChargingOnLight
+                && boltChargingOnDark == s.boltChargingOnDark
+                && boltChargingOnLight == s.boltChargingOnLight
+                && boltQuickChargingOnDark == s.boltQuickChargingOnDark
+                && boltQuickChargingOnLight == s.boltQuickChargingOnLight
+                && boltFlashChargingOnDark == s.boltFlashChargingOnDark
+                && boltFlashChargingOnLight == s.boltFlashChargingOnLight
+                && boltSuperChargingOnDark == s.boltSuperChargingOnDark
+                && boltSuperChargingOnLight == s.boltSuperChargingOnLight
                 && lowOnDark == s.lowOnDark
                 && lowOnLight == s.lowOnLight
                 && lowThreshold == s.lowThreshold
@@ -1656,6 +1720,41 @@ public final class TrioSettings {
                 && typeWeight == s.typeWeight
                 && trackAlpha == s.trackAlpha
                 && debugLog == s.debugLog;
+    }
+
+    /** Freeze the existing shared palette once before either editor can change it. */
+    public static boolean migrateBoltColors(SharedPreferences preferences) {
+        TrioSettings previous=from(preferences);
+        String[] keys={
+                Prefs.KEY_COLOR_BOLT_CHARGING_ON_DARK,Prefs.KEY_COLOR_BOLT_CHARGING_ON_LIGHT,
+                Prefs.KEY_COLOR_BOLT_QUICK_CHARGING_ON_DARK,Prefs.KEY_COLOR_BOLT_QUICK_CHARGING_ON_LIGHT,
+                Prefs.KEY_COLOR_BOLT_FLASH_CHARGING_ON_DARK,Prefs.KEY_COLOR_BOLT_FLASH_CHARGING_ON_LIGHT,
+                Prefs.KEY_COLOR_BOLT_SUPER_CHARGING_ON_DARK,Prefs.KEY_COLOR_BOLT_SUPER_CHARGING_ON_LIGHT
+        };
+        int[] colors={
+                previous.boltChargingOnDark,previous.boltChargingOnLight,
+                previous.boltQuickChargingOnDark,previous.boltQuickChargingOnLight,
+                previous.boltFlashChargingOnDark,previous.boltFlashChargingOnLight,
+                previous.boltSuperChargingOnDark,previous.boltSuperChargingOnLight
+        };
+        SharedPreferences.Editor editor=null;
+        for(int i=0;i<keys.length;i++) if(!preferences.contains(keys[i])) {
+            if(editor==null) editor=preferences.edit();
+            editor.putInt(keys[i],colors[i]);
+        }
+        return editor==null || editor.commit();
+    }
+
+    /** Replay the exact broadcast snapshot, including every newly added setting. */
+    public void writeTo(SharedPreferences.Editor editor) {
+        Bundle snapshot=toBundle();
+        for(String key:snapshot.keySet()) {
+            Object value=snapshot.get(key);
+            if(value instanceof Boolean) editor.putBoolean(key,(Boolean)value);
+            else if(value instanceof Integer) editor.putInt(key,(Integer)value);
+            else if(value==null || value instanceof String) editor.putString(key,(String)value);
+            else throw new IllegalStateException("Unsupported setting type: "+key);
+        }
     }
 
     @Override

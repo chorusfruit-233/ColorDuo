@@ -160,8 +160,8 @@
     <string name="color_on_light">Light background</string>
     <string name="color_dialog_summary">Set the color used when the status bar sits on a dark or a light background.</string>
     <string name="color_reset">Reset to default</string>
-    <string name="color_reset_summary">Restore the three state colors to their factory presets.</string>
-    <string name="color_reset_dialog_summary">All three state colors go back to their factory presets; your custom colors will be overwritten.</string>
+    <string name="color_reset_summary">Restore every ring, bolt, low-battery and critical-battery color.</string>
+    <string name="color_reset_dialog_summary">All state colors will be reset, including the independent ring and bolt charging palettes.</string>
     <string name="color_reset_confirm">Reset</string>
 
     <string name="low_threshold_title">Low battery threshold</string>
@@ -399,4 +399,8 @@
     <string name="charge_flow_width_summary">Percentage of the drawable battery outline, capped to its charged portion. Default %1$d%%; range %2$d%%–%3$d%%.</string>
     <string name="charge_flow_gradient_title">Gradient width</string>
     <string name="charge_flow_gradient_summary">Percentage of the highlight at each end. Default %1$d%%; range %2$d%%–%3$d%%. Zero gives hard edges; 50 gives a fully feathered band.</string>
+    <string name="color_bolt_charging_title">Bolt charging color</string>
+    <string name="color_bolt_quick_charging_title">Bolt quick charge color (PD)</string>
+    <string name="color_bolt_flash_charging_title">Bolt flash charge color (UFCS)</string>
+    <string name="color_bolt_super_charging_title">Bolt super charge color (SVOOC)</string>
 </resources>

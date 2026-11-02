@@ -813,6 +813,14 @@ public final class Prefs {
     public static final String KEY_COLOR_FLASH_CHARGING_ON_LIGHT = "color_flash_charging_on_light";
     public static final String KEY_COLOR_SUPER_CHARGING_ON_DARK = "color_super_charging_on_dark";
     public static final String KEY_COLOR_SUPER_CHARGING_ON_LIGHT = "color_super_charging_on_light";
+    public static final String KEY_COLOR_BOLT_CHARGING_ON_DARK = "color_bolt_charging_on_dark";
+    public static final String KEY_COLOR_BOLT_CHARGING_ON_LIGHT = "color_bolt_charging_on_light";
+    public static final String KEY_COLOR_BOLT_QUICK_CHARGING_ON_DARK = "color_bolt_quick_charging_on_dark";
+    public static final String KEY_COLOR_BOLT_QUICK_CHARGING_ON_LIGHT = "color_bolt_quick_charging_on_light";
+    public static final String KEY_COLOR_BOLT_FLASH_CHARGING_ON_DARK = "color_bolt_flash_charging_on_dark";
+    public static final String KEY_COLOR_BOLT_FLASH_CHARGING_ON_LIGHT = "color_bolt_flash_charging_on_light";
+    public static final String KEY_COLOR_BOLT_SUPER_CHARGING_ON_DARK = "color_bolt_super_charging_on_dark";
+    public static final String KEY_COLOR_BOLT_SUPER_CHARGING_ON_LIGHT = "color_bolt_super_charging_on_light";
     public static final String KEY_COLOR_LOW_ON_DARK = "color_low_on_dark";
     public static final String KEY_COLOR_LOW_ON_LIGHT = "color_low_on_light";
     public static final String KEY_LOW_THRESHOLD = "low_threshold";

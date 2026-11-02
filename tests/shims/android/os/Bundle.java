@@ -60,6 +60,8 @@ public class Bundle {
         return v instanceof String ? (String) v : defValue;
     }
 
+    public Object get(String key) { return values.get(key); }
+
     public boolean containsKey(String key) {
         return values.containsKey(key);
     }
