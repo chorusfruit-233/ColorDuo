@@ -2,7 +2,9 @@
 
 **0.3.13-test1 / 10037**，使用 ColorDuo 正式签名，可覆盖现有正式版并保留配置。安装后重启 SystemUI 或手机。
 
-本包包含 PR #13（含 #11）及审查修正，主分支和模块仓仍为 0.3.12。审查结果见 [PR13-REVIEW.md](https://github.com/chorusfruit-233/ColorDuo/blob/test/pr13-charge-flow/docs/PR13-REVIEW.md)。
+[下载签名测试包](https://github.com/chorusfruit-233/ColorDuo/actions/runs/41487628930/artifacts/13162443769)（解压后安装 `ColorDuo-0.3.13-test1.apk`）。[构建与检查](https://github.com/chorusfruit-233/ColorDuo/actions/runs/41487628930)。
+
+本包包含 PR #13（含 #11）及审查修正，主分支和模块仓仍为 0.3.12。审查结果见 [PR13-REVIEW.md](https://github.com/chorusfruit-233/ColorDuo/blob/316717f2efbeca2f398be4ecf4b0a06b88db2a37/docs/PR13-REVIEW.md)。
 
 1. 在“环内组件”设置当前协议的颜色，再到“充电闪电”设置同一协议的另一种颜色。分别反向修改，检查两者互不联动；浅、深色主题都检查一次。
 2. 开启“充电时流光动画”（默认关闭），切换普通圆环、分离椭圆、胶囊；检查顺逆方向、速度 10%–400%、总宽度 1%–100%、每端渐变 0%–50%。
