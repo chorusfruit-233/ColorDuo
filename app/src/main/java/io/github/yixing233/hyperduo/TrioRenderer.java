@@ -1826,7 +1826,8 @@ public final class TrioRenderer {
         STROKE.setStrokeCap(Paint.Cap.BUTT);
         try {
             for(int n=0;n<20;n++) {
-                float from=head+width*n/20f, to=head+width*(n+1)/20f;
+                // Small overlapping arc intervals avoid antialiasing seams between glow samples.
+                float from=head+width*n/20f-width/60f, to=head+width*(n+1)/20f+width/60f;
                 if(a.chargeFlowDirection==1) { float next=charged-from;from=charged-to;to=next; }
                 from=Math.max(0,from);to=Math.min(charged,to);
                 if(to<=from)continue;
