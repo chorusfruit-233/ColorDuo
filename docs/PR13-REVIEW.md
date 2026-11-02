@@ -1,6 +1,6 @@
 # PR #11 / #13 审查与测试
 
-测试分支：`test/pr13-charge-flow`；版本 **0.3.13-test1 / 10037**。本包包含 #13 的功能及下列修正，使用 ColorDuo 正式签名供实机验收。PR、主分支和模块仓尚未合入这些改动。
+测试分支 `test/pr13-charge-flow` 的 **0.3.13-test1 / 10037** 完成审查后，用户已同意合入 #13 及下列修正。正式版本为 **0.3.13 / 10038**，测试包与复现记录保留供追溯。
 
 审查基线：[#13 @ 6974bd7](https://github.com/chorusfruit-233/ColorDuo/pull/13/commits/6974bd79b38bb6b923093c75798ada016aac7a86)。#13 已包含 #11 的协议配色，两者的 `ChargeSpeed` 和 `ColorOsChargeSpeed` 实现相同，测试以 #13 为基础。原 PR 与上游的 workflow 差异为零。
 
@@ -25,4 +25,4 @@
 - 协议枚举与 [OnePlus SM8750 驱动头文件](https://github.com/OnePlusOSS/android_kernel_modules_and_devicetree_oneplus_sm8750/blob/oneplus/sm8750_b_16.0.0_oneplus_13/vendor/oplus/kernel/charger/v2/include/oplus_chg.h) 对照一致。此来源不能代替 ColorOS 17 实机上的节点权限和实际返回值验证。
 - 已查看普通圆环、分离椭圆和胶囊的生产代码参考帧；参考帧是模拟数据，不是实机截图。
 
-实机步骤见 [测试说明](READABILITY-TEST.md)。实际协议识别、动画流畅度、功耗及面板过渡仍需实机确认。原生反向充电标识的资源用途已按参考固件核对，实机显隐仍需验证。全局“状态颜色”开关和“恢复默认”作用于全部状态配色，电量环与闪电的具体颜色分别保存。
+实机步骤见 [测试说明](READABILITY-TEST.md)。实际协议识别、动画流畅度、功耗及面板过渡尚无量测记录，继续按实机反馈维护。原生反向充电标识的资源用途已按参考固件核对，实机显隐仍需验证。全局“状态颜色”开关和“恢复默认”作用于全部状态配色，电量环与闪电的具体颜色分别保存。

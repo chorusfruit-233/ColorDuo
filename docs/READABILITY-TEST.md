@@ -1,13 +1,13 @@
-# PR #13 审查测试包
+# 0.3.13 充电配色与流光检查
 
-**0.3.13-test1 / 10037**，使用 ColorDuo 正式签名，可覆盖现有正式版并保留配置。安装后重启 SystemUI 或手机。
+**0.3.13 / 10038 正式版**，可覆盖 0.3.12 和已签名的 0.3.13-test1 并保留配置。安装后重启 SystemUI 或手机。
 
-[下载签名测试包](https://github.com/chorusfruit-233/ColorDuo/actions/runs/41487628930/artifacts/13162443769)（解压后安装 `ColorDuo-0.3.13-test1.apk`）。[构建与检查](https://github.com/chorusfruit-233/ColorDuo/actions/runs/41487628930)。
+[下载正式版 APK](https://github.com/chorusfruit-233/ColorDuo/releases/download/v0.3.13/ColorDuo-0.3.13.apk)。
 
-本包包含 PR #13（含 #11）及审查修正，主分支和模块仓仍为 0.3.12。审查结果见 [PR13-REVIEW.md](https://github.com/chorusfruit-233/ColorDuo/blob/316717f2efbeca2f398be4ecf4b0a06b88db2a37/docs/PR13-REVIEW.md)。
+本版包含 PR #13（含 #11）及全部审查修正。审查记录见 [PR13-REVIEW.md](https://github.com/chorusfruit-233/ColorDuo/blob/main/docs/PR13-REVIEW.md)。
 
 1. 在“环内组件”设置当前协议的颜色，再到“充电闪电”设置同一协议的另一种颜色。分别反向修改，检查两者互不联动；浅、深色主题都检查一次。
-2. 开启“充电时流光动画”（默认关闭），切换普通圆环、分离椭圆、胶囊；检查顺逆方向、速度 10%–400%、总宽度 1%–100%、每端渐变 0%–50%。
+2. 首页点击大预览的电量环线，打开“环内组件”，开启“充电时流光动画”（默认关闭），切换普通圆环、分离椭圆、胶囊；检查顺逆方向、速度 10%–400%、总宽度 1%–100%、每端渐变 0%–50%。
 3. 在预览切换四种充电协议，再对照实际充电状态。动画应只沿已充电轮廓移动，开口和未充电部分保持空白。
 4. 开启旁路供电或暂停充电、拔电、关闭动画，确认流光停止；下拉两个面板、锁屏、熄屏后恢复，检查是否有漏绘或多余刷新。
 5. 修改颜色和动画参数后重启 SystemUI，确认设置保留。
