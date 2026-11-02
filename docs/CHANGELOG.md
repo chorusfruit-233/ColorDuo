@@ -17,6 +17,8 @@
 
 正式签名，可覆盖 0.3.12 及 0.3.13-test1 并保留配置，安装后重启 SystemUI 或手机。协议配色方案来源：jw-c-c；审查记录见 [PR13-REVIEW.md](PR13-REVIEW.md)。
 
+已发布：[源码仓库](https://github.com/chorusfruit-233/ColorDuo/releases/tag/v0.3.13) · [Xposed 模块仓](https://github.com/Xposed-Modules-Repo/io.github.chorusfruit_233.colorduo/releases/tag/10038-0.3.13)。
+
 ## 0.3.13-test1
 
 - 整合 PR #13 供实机测试，包括 #11 的充电协议配色、默认关闭的流光动画，以及方向、速度、总宽度和渐变宽度调节。

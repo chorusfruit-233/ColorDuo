@@ -1,6 +1,8 @@
-# PR #11 / #13 审查与测试
+# PR #11 / #13 审查记录
 
-测试分支 `test/pr13-charge-flow` 的 **0.3.13-test1 / 10037** 完成审查后，用户已同意合入 #13 及下列修正。正式版本为 **0.3.13 / 10038**，测试包与复现记录保留供追溯。
+**0.3.13 / 10038** 已合入 #13 及下列修正，#11 由 #13 包含并关闭，#12 已完成。前置测试版本为 `test/pr13-charge-flow` 的 **0.3.13-test1 / 10037**，测试包和复现记录保留供追溯。
+
+[正式版](https://github.com/chorusfruit-233/ColorDuo/releases/tag/v0.3.13) · [模块仓](https://github.com/Xposed-Modules-Repo/io.github.chorusfruit_233.colorduo/releases/tag/10038-0.3.13)。
 
 审查基线：[#13 @ 6974bd7](https://github.com/chorusfruit-233/ColorDuo/pull/13/commits/6974bd79b38bb6b923093c75798ada016aac7a86)。#13 已包含 #11 的协议配色，两者的 `ChargeSpeed` 和 `ColorOsChargeSpeed` 实现相同，测试以 #13 为基础。原 PR 与上游的 workflow 差异为零。
 
