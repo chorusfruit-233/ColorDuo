@@ -57,6 +57,8 @@ final class ColorOsHooks {
     private static final Map<View, WeakReference<Host>> HOSTS = new WeakHashMap<>();
     private static final Map<View, WeakReference<Host>> CHILDREN = new WeakHashMap<>();
     private static final Map<Integer, Mobile> MOBILES = new ConcurrentHashMap<>();
+    private static final ColorOsSignalFlows SIGNAL_FLOWS = new ColorOsSignalFlows(
+            message -> TrioHooks.log(TrioHooks.LOG_WARN, message));
     private static volatile Object wifiFlow;
     private static volatile WifiSample renderedWifi = WifiSample.UNKNOWN;
     private static Class<?> wifiActiveClass;
@@ -169,6 +171,7 @@ final class ColorOsHooks {
             // are cancelled only after all external registrations have closed successfully.
             ColorOsReload.closeCallbacks();
             ColorOsNetworkType.stop();
+            SIGNAL_FLOWS.clear();
             stopMirrors();
             MAIN.removeCallbacksAndMessages(null);
         } finally {
@@ -794,6 +797,9 @@ final class ColorOsHooks {
 
     private static void refreshHosts() {
         if (ColorOsReload.retiring) return;
+        if (!TrioConfig.get().enabled || !TrioConfig.appearance().foldsMobile()) {
+            SIGNAL_FLOWS.sync(Collections.emptyList());
+        }
         ClockTicker.refreshNow();
         for (WeakReference<Host> reference : new ArrayList<>(HOSTS.values())) {
             Host host = reference.get();
@@ -812,6 +818,7 @@ final class ColorOsHooks {
         }
         if (tickerStarted) return;
         tickerStarted = true;
+        ColorOsReload.watch(SIGNAL_FLOWS::pause, SIGNAL_FLOWS::resume);
         MAIN.post(new Runnable() {
             @Override public void run() {
                 if (ColorOsReload.retiring) return;
@@ -877,8 +884,7 @@ final class ColorOsHooks {
         volatile String renderedType;
 
         Object signal() {
-            Object current = value(icon);
-            return current == null ? value(cellularIcon) : current;
+            return SIGNAL_FLOWS.read(icon, cellularIcon);
         }
 
         String networkType(String radio) {
@@ -1206,6 +1212,20 @@ final class ColorOsHooks {
             state.mobileType = "";
             ColorOsRadio.Sample radio = RADIO_SAMPLER.sample(context, now);
             ColorOsNetworkType.sync(context, radio.subscriptions);
+            // Reading StateFlow.value alone does not keep WhileSubscribed models live.
+            // Subscribe only the active SIMs while the module owns their signal display.
+            List<Object> signalFlows = new ArrayList<>();
+            if (TrioConfig.appearance().foldsMobile() && radio.subscriptions != null) {
+                for (SubscriptionInfo subscription : radio.subscriptions) {
+                    if (subscription == null) continue;
+                    Mobile mobile = MOBILES.get(subscription.getSubscriptionId());
+                    if (mobile != null) {
+                        signalFlows.add(mobile.icon);
+                        signalFlows.add(mobile.cellularIcon);
+                    }
+                }
+            }
+            SIGNAL_FLOWS.sync(signalFlows);
             state.dataSlot = radio.dataSlot;
             state.mobileService = radio.radio;
             if (radio.radio == DuoPolicy.Radio.AIRPLANE || radio.radio == DuoPolicy.Radio.NO_SIM) {
@@ -1261,7 +1281,9 @@ final class ColorOsHooks {
         private void noteMobile(ColorOsRadio.Sample radio) {
             if (TrioConfig.debugLog()) {
                 String note = "ColorOS mobile: models=" + MOBILES.size() + " dataSlot=" + TrioState.sDataSlot
-                        + " levels=" + java.util.Arrays.toString(state.slotLevels) + " type=" + state.mobileType
+                        + " levels=" + java.util.Arrays.toString(state.slotLevels)
+                        + " telephonyLevels=" + java.util.Arrays.toString(TrioState.sSlotLevels)
+                        + " type=" + state.mobileType
                         + " service=" + state.mobileService + " reported=" + radio.reportedRadio
                         + " primarySlot=" + state.dataSlot
                         + " subscriptions=" + (radio.subscriptions == null ? -1 : radio.subscriptions.size());

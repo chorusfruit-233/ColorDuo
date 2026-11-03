@@ -77,6 +77,7 @@ class ColorOsHooks {
  charger=new ColorOsCharger(()->null,chargerWorker,System::currentTimeMillis);}
  static void drainRetiredCallbacks(){} static void resume(Map<String,Object> state){
  if(state!=handed)throw new AssertionError("lost handoff");resumes++;}
+ static final ColorOsSignalFlows SIGNAL_FLOWS=new ColorOsSignalFlows(note->{});
  static void invalidateHosts(){repaints++;}
 @LIFECYCLE@
 }'''.replace('@LIFECYCLE@', lifecycle),
@@ -177,6 +178,6 @@ with tempfile.TemporaryDirectory(prefix='colorduo-reload-') as d:
     sources=[]
     for name,content in files.items():
         p=root/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(content,encoding='utf-8');sources.append(str(p))
-    sources += [str(SOURCE/n) for n in ['ColorOsPolicy.java','ColorOsNetworkType.java','ColorOsReload.java','HyperDuoModule.java','Refl.java','ColorOsCharger.java']]
+    sources += [str(SOURCE/n) for n in ['ColorOsPolicy.java','ColorOsNetworkType.java','ColorOsSignalFlows.java','ColorOsReload.java','HyperDuoModule.java','Refl.java','ColorOsCharger.java']]
     subprocess.run(['javac','-encoding','UTF-8','-d',str(root),*sources],check=True)
     subprocess.run(['java','-cp',str(root),'io.github.yixing233.hyperduo.ReloadTest'],check=True)
