@@ -478,7 +478,23 @@ public final class TrioAppearance {
      * the ring would read a layout those arrangements never consult.
      */
     public boolean ownsWifi() {
-        return wifi && (!ring || hasRingPart(Prefs.PART_WIFI));
+        return followsTypePosition() || (wifi && (!ring || hasRingPart(Prefs.PART_WIFI)));
+    }
+
+    /** Automatic network display owns the configured inner TYPE slot, even with native Wi-Fi selected. */
+    public boolean followsTypePosition() {
+        return typeHideOnWifi && typeInRing && slotted && hasRingPart(Prefs.PART_TYPE);
+    }
+
+    /** Temporary frame layout; never rewrite the user's saved priority lists or Wi-Fi setting. */
+    private int[][] networkZones(boolean wifiInUse) {
+        if (!followsTypePosition()) return ringZones;
+        int[][] effective = TrioSettings.copyZones(ringZones);
+        for (int[] zone : effective) for (int i = 0; i < zone.length; i++) {
+            if (zone[i] == Prefs.PART_WIFI) zone[i] = Prefs.PART_NONE;
+            else if (zone[i] == Prefs.PART_TYPE && wifiInUse) zone[i] = Prefs.PART_WIFI;
+        }
+        return effective;
     }
 
     public boolean ownsValue() {
@@ -501,7 +517,7 @@ public final class TrioAppearance {
 
     /** Whether the Wi-Fi arcs carry ink at this signal level. */
     public boolean wifiInk(int wifiLevel) {
-        return ownsWifi() && wifiLevel >= 1;
+        return ownsWifi() && wifiLevel >= (followsTypePosition() ? 0 : 1);
     }
 
     /** The caller supplies display Wi-Fi presence, already resolved from the default route. */
@@ -867,6 +883,7 @@ public final class TrioAppearance {
          */
         private Ring(TrioAppearance a, int level, boolean charging, int wifiLevel,
                      String mobileType, int sims, boolean wifiConnected) {
+            int[][] frameZones = a.networkZones(wifiConnected);
             mobileType = a.visibleMobileType(mobileType, wifiConnected);
             // ZONE_COUNT, not 3: the layout stores five sections now (three ring zones plus
             // the capsule's two), and this array is indexed by Zone.ordinal. The ring only
@@ -889,7 +906,7 @@ public final class TrioAppearance {
                 // repairs that already, but this loop is what the hooked process runs and it
                 // can be reached from a broadcast that never went through a decode, so the
                 // refusal is enforced here rather than trusted to have arrived.
-                parts[z] = firstDrawableInk(a, a.ringZones[z], z,
+                parts[z] = firstDrawableInk(a, frameZones[z], z,
                         level, charging, wifiLevel, mobileType, yieldType);
             }
             // A charger puts the number in the middle, whatever the layout arranged there.
@@ -1041,7 +1058,7 @@ public final class TrioAppearance {
                                   int wifiLevel, String mobileType) {
         switch (part) {
             case Prefs.PART_WIFI:
-                return a.wifi && a.wifiInk(wifiLevel);
+                return a.wifiInk(wifiLevel);
             case Prefs.PART_VALUE:
                 return a.value && level >= 0;
             case Prefs.PART_BOLT:
@@ -1248,6 +1265,7 @@ public final class TrioAppearance {
 
         private Capsule(TrioAppearance a, int level, boolean charging, int wifiLevel,
                         String mobileType, int sims, boolean wifiConnected) {
+            int[][] frameZones = a.networkZones(wifiConnected);
             mobileType = a.visibleMobileType(mobileType, wifiConnected);
             parts = new int[Prefs.ZONE_COUNT];
             dotBands = new boolean[Prefs.ZONE_COUNT];
@@ -1262,7 +1280,7 @@ public final class TrioAppearance {
             // is the layout's LEFT section. It used to be a key of its own, which is
             // why this loop ran over the three bands only and the drawing dispatched the
             // left column separately.
-            parts[band.ordinal()] = firstDrawableInk(a, a.ringZones[band.ordinal()],
+            parts[band.ordinal()] = firstDrawableInk(a, frameZones[band.ordinal()],
                         band.ordinal(), level, charging, wifiLevel, mobileType, yieldType);
             }
             for (TrioZones.Zone band : TrioZones.Zone.values()) {
@@ -1283,7 +1301,7 @@ public final class TrioAppearance {
             // (Wi-Fi, in practice) no matter what the list said, and the preview looked
             // stuck.
             parts[TrioZones.Zone.LEFT.ordinal()] = firstInk(
-                    a, a.ringZones[TrioZones.Zone.LEFT.ordinal()],
+                    a, frameZones[TrioZones.Zone.LEFT.ordinal()],
                     level, charging, wifiLevel, mobileType);
             // "Has the user placed anything at all?" - which decides whether the
             // shipped look is used. The LEFT cell counts only when the LAYOUT named
@@ -1292,7 +1310,7 @@ public final class TrioAppearance {
             // distinction wrong is what made the cell ignore the list and draw the
             // clock whatever the user picked.
             final boolean anyPlaced = a.hasRingPart(Prefs.PART_SIM_PAIR) || anyPlacedExceptLeft(parts)
-                    || a.ringZones[TrioZones.Zone.LEFT.ordinal()].length > 0
+                    || frameZones[TrioZones.Zone.LEFT.ordinal()].length > 0
                     || dotBands[TrioZones.Zone.TOP.ordinal()]
                     || dotBands[TrioZones.Zone.BOTTOM.ordinal()];
             if (!anyPlaced) {

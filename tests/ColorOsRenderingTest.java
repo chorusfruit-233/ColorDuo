@@ -21,6 +21,7 @@ public final class ColorOsRenderingTest {
         final List<float[]> circles = new ArrayList<>();
         final List<Integer> circleColors = new ArrayList<>();
         final List<Integer> pathColors = new ArrayList<>();
+        final List<Path> pathObjects = new ArrayList<>();
         final List<java.awt.geom.Rectangle2D> pathBounds = new ArrayList<>();
         final List<Integer> arcColors = new ArrayList<>();
         final List<Integer> textColors = new ArrayList<>();
@@ -45,6 +46,7 @@ public final class ColorOsRenderingTest {
         }
         @Override public void drawPath(Path path, Paint paint) {
             pathColors.add(paint.getColor());
+            pathObjects.add(path);
             RectF ink=new RectF();path.computeBounds(ink,true);
             pathBounds.add(graphics.getTransform().createTransformedShape(new java.awt.geom.Rectangle2D.Float(
                     ink.left,ink.top,ink.width(),ink.height())).getBounds2D());
@@ -69,6 +71,7 @@ public final class ColorOsRenderingTest {
         adaptiveRingOpenings();
         physicalSizing();
         activeNetworkTypePolicy();
+        automaticWifiUsesTypePosition();
         fullCapsule();
         clockHandoff();
         readableDefaults();
@@ -445,6 +448,41 @@ public final class ColorOsRenderingTest {
                 check(TrioAppearance.of(settings).visibleMobileType("5G",true).equals("5G"),
                         "disabling route following preserves independent mobile type display");
             }
+        }
+    }
+
+    private static void automaticWifiUsesTypePosition() throws Exception {
+        java.lang.reflect.Field field=TrioRenderer.class.getDeclaredField("WIFI_DOT");
+        field.setAccessible(true);Path wifiDot=(Path)field.get(null);
+        for (int style : new int[]{Prefs.STYLE_RING,Prefs.STYLE_CAPSULE}) {
+            TrioSettings settings=TrioSettings.defaults();settings.trioStyle=style;
+            settings.mobileTypeMode=Prefs.MOBILE_TYPE_IN_RING;settings.typeHideOnWifi=true;
+            settings.showWifi=false;settings.chargingShowsValue=false;
+            settings.ringZones=Prefs.decodeLayout("|5||");
+            int[][] saved=TrioSettings.copyZones(settings.ringZones);
+            TrioAppearance a=TrioAppearance.of(settings);
+            check(a.ownsWifi(),"automatic inner TYPE takes native Wi-Fi ownership without manual Wi-Fi placement");
+            for(boolean wifi:new boolean[]{true,false,true,false}) {
+                int[] parts=style==Prefs.STYLE_RING?a.ring(70,false,wifi?3:-1,"5G",2,wifi).parts:
+                        a.capsule(70,false,wifi?3:-1,"5G",2,wifi).parts;
+                check(parts[TrioZones.Zone.CENTRE.ordinal()]==(wifi?Prefs.PART_WIFI:Prefs.PART_TYPE),
+                        "Wi-Fi replaces TYPE in exactly the same cell and restores on mobile data");
+                TrioState state=new TrioState();state.level=70;state.mobileType="5G";
+                state.wifiPresent=wifi;state.wifiLevel=3;state.mobileService=DuoPolicy.Radio.AVAILABLE;
+                try(Frame frame=new Frame()) {
+                    TrioRenderer.drawState(frame,480,400,state,settings);
+                    check(String.join("",frame.texts).contains("5G")==!wifi,"actual pixels follow the selected route");
+                    check(frame.pathObjects.contains(wifiDot)==wifi,"the module itself paints the Wi-Fi symbol at the automatic slot");
+                }
+            }
+            check(java.util.Arrays.deepEquals(saved,settings.ringZones)&&!settings.showWifi,
+                    "route changes never mutate persisted layout or manual Wi-Fi preference");
+            settings.showWifi=true;settings.ringZones=Prefs.decodeLayout("1|5||");a=TrioAppearance.of(settings);
+            int[] parts=style==Prefs.STYLE_RING?a.ring(70,false,3,"5G",2,true).parts:
+                    a.capsule(70,false,3,"5G",2,true).parts;
+            check(parts[0]!=Prefs.PART_WIFI&&parts[1]==Prefs.PART_WIFI,"explicit Wi-Fi elsewhere cannot duplicate the automatic icon");
+            settings.showWifi=false;settings.typeHideOnWifi=false;
+            check(!TrioAppearance.of(settings).ownsWifi(),"disabling auto mode returns native Wi-Fi ownership");
         }
     }
 

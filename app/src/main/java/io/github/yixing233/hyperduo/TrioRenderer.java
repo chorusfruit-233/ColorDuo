@@ -2029,7 +2029,7 @@ public final class TrioRenderer {
             arc(c, TrioGeometry.W_CX, TrioGeometry.W2_CY, TrioGeometry.W2_R,
                     TrioGeometry.W2_START, TrioGeometry.W2_SWEEP);
         }
-        if (level >= 1) {
+        if (level >= 1 || (level == 0 && a.followsTypePosition())) {
             FILL.setColor(fg);
             c.drawPath(WIFI_DOT, FILL);
         }

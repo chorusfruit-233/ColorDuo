@@ -137,7 +137,7 @@
     <string name="dot_scale_summary">默认 %1$d%%，可调 %2$d–%3$d%%。调整圆点粗细；整体尺寸请使用“信号图标大小”。</string>
 
     <string name="type_hide_on_wifi_title">跟随实际上网网络</string>
-    <string name="type_hide_on_wifi_summary">使用 Wi-Fi 上网时隐藏移动网络类型；系统切换到移动数据后，隐藏 Wi-Fi 图示并显示移动网络类型。</string>
+    <string name="type_hide_on_wifi_summary">按实际上网网络，在环内网络类型的位置自动显示 Wi-Fi 弧或移动网络类型，无需单独放置 Wi-Fi。</string>
     <string name="show_mobile_type_title">网络类型</string>
     <string name="show_mobile_type_summary">显示当前数据卡的 4G、5G 等网络类型，可放在图标内或图标旁。</string>
     <string name="mobile_type_off">关闭</string>
