@@ -169,7 +169,9 @@ internal class SliderSpec(
  * percentage-weight row, which is gated on the percentage switch rather than on
  * the rule that decides whether a percentage is drawn.
  */
-internal fun geometrySliders(): List<SliderSpec> {
+private val sliderTable by lazy { buildGeometrySliders() }
+internal fun geometrySliders(): List<SliderSpec> = sliderTable
+private fun buildGeometrySliders(): List<SliderSpec> {
     val value = TrioZones.Part.VALUE
     val wifi = TrioZones.Part.WIFI
     val mobile = TrioZones.Part.MOBILE
@@ -871,7 +873,7 @@ internal fun PartSettingsSheet(
                         ContentControl.PairReverse, ContentControl.PairSingle) }
                         .forEach { control -> ContentControlRow(control, settings, update, ringSettings) }
                     Text(stringResource(R.string.edit_appearance))
-                if (rows.isEmpty() && colors.isEmpty() && controls.isEmpty()) {
+                if (rows.isEmpty() && colors.isEmpty() && controls.isEmpty() && part != TrioSettingsPart.Appearance) {
                     Text(
                         text = stringResource(R.string.drawing_settings_none),
                         style = MiuixTheme.textStyles.footnote1,
@@ -907,6 +909,8 @@ internal fun PartSettingsSheet(
                             onValueChange = { value -> update { it.setLowThreshold(value) } },
                         )
                     }
+                if (colors.isNotEmpty() && !a.roleColors) Text(stringResource(R.string.colors_global_hint))
+                if (part == TrioSettingsPart.Value) Text(stringResource(R.string.value_colors_hint))
                 extraContent?.invoke()
                 val advancedRows = rows.filter { isAdvancedSlider(it, a) }
                 if (advancedRows.isNotEmpty()) {

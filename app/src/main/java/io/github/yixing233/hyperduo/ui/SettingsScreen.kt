@@ -568,6 +568,7 @@ fun SettingsScreen(repository: SettingsRepository) {
                                 }
                                 SettingsTab.About -> aboutTab(
                                     settingsState.value, serviceState.value, updater, showMessage,
+                                    onRestart = { restarter.reset(); restarting = true },
                                 ) { block -> update(block) }
                             }
                         }
@@ -1427,6 +1428,7 @@ private fun LazyListScope.aboutTab(
     service: XposedService?,
     updater: UpdateController,
     showMessage: (String) -> Unit,
+    onRestart: () -> Unit,
     update: ((SettingsRepository) -> Unit) -> Unit,
 ) {
     item { SectionTitle(stringResource(R.string.app_preferences)) }
@@ -1478,6 +1480,7 @@ private fun LazyListScope.aboutTab(
     item { SectionTitle(stringResource(R.string.updates_section)) }
     item { UpdateCard(updater, showMessage) }
     item { SectionTitle(stringResource(R.string.diagnostics_title)) }
+    item { Card { ArrowPreference(title = stringResource(R.string.restart_title), onClick = onRestart) } }
     item { ActivatedRow(settings = settings, service = service) }    item { InfoCard(service = service) }    item {
         Card {
             SwitchPreference(

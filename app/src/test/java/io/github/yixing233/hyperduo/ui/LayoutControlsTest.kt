@@ -187,4 +187,11 @@ class LayoutControlsTest {
         assertEquals(R.string.bolt_native, boltPositionOptions(native)[TrioZones.boltPosition(native)])
         assertFalse(TrioAppearance.of(native).hidesNativeBolt())
     }
+    @Test fun canonicalOwnersAndCachedSliders() {
+        assertSame(geometrySliders(), geometrySliders())
+        assertTrue(contentControlsFor(TrioSettingsPart.Appearance, settings()).isEmpty())
+        assertTrue(contentControlsFor(TrioSettingsPart.Battery, settings()).contains(ContentControl.PausedGray))
+        assertEquals(TrioSettingsPart.Wifi, TrioSettingsPart.of(TrioZones.Part.TYPE))
+        assertFalse(partsForPage(settings()).contains(TrioSettingsPart.Type))
+    }
 }

@@ -20,7 +20,7 @@
     <string name="group_font">Font</string>
 
     <string name="tab_parts">Components</string>
-    <string name="tab_home">Home</string>
+    <string name="tab_home">Layout</string>
 
     <string name="drawing_priority_empty_summary">Nothing placed here yet. Use "Add component" below.</string>
     <string name="drawing_signal_out_of_ring_notice">The mobile signal is set to "outside the ring", so its dots are not drawn inside it.</string>
@@ -93,7 +93,7 @@
     <string name="trio_style_ring">Ring</string>
     <string name="trio_style_capsule">Capsule</string>
 
-    <string name="show_wifi_title">Show Wi-Fi arcs</string>
+    <string name="show_wifi_title">Wi-Fi and network type</string>
     <string name="show_wifi_summary">Shows Wi-Fi strength as arcs in the selected slot while connected.</string>
 
     <string name="show_mobile_title">Show mobile dots</string>
@@ -231,7 +231,7 @@
     <string name="about_module_version">Module version: %1$s</string>
     <string name="about_scope_count">Scoped apps</string>
     <string name="about_enabled_count">Enabled toggles</string>
-    <string name="about_title">About</string>
+    <string name="about_title">More</string>
     <string name="about_summary">ColorDuo · an iPhone-Duo style trio status bar icon</string>
 
     <string name="info_module_version">App version</string>
@@ -282,7 +282,7 @@
     <string name="ring_position_mobile">Mobile signal position</string>
     <string name="signal_mode_in_ring">In the ring</string>
     <string name="signal_mode_out_ring">Outside the ring</string>
-    <string name="stacked_signal_title">Stacked signal</string>
+    <string name="stacked_signal_title">Draw the outside signal in the module</string>
     <string name="stacked_signal_summary">Outside the ring, draw the module\'s own signal reading beside the battery instead of handing the icon back.</string>
     <string name="out_signal_size_title">Stacked signal size</string>
     <string name="out_signal_size_summary">Default %1$ddp, range %2$d–%3$ddp.</string>
@@ -295,7 +295,7 @@
     <string name="ring_position_type">Network type position</string>
     <string name="ring_position_clock">Clock position</string>
     <string name="drawing_part_battery">Battery outline</string>
-    <string name="drawing_part_ring">Battery ring</string>
+    <string name="drawing_part_ring">Battery outline</string>
     <!-- The capsule's left column used to be reserved for the clock. -->
     <!-- issue #38: the launcher entry is an activity-alias and can be switched off. -->
     <string name="about_hide_icon">Hide launcher icon</string>
@@ -338,7 +338,7 @@
     <string name="paused_gray_summary">Applies to paused charging and bypass power, without affecting normal charging.</string>
     <string name="paused_gray_ring">Battery ring only</string>
     <string name="paused_gray_all">All icons</string>
-    <string name="sim_pair_title">Stacked SIM signals</string>
+    <string name="sim_pair_title">Dual SIM in one position</string>
     <string name="sim_pair_summary">Show SIM 1 above SIM 2 in one position. A single SIM uses one row.</string>
     <string name="sim_stack_gap_title">SIM row spacing</string>
     <string name="sim_stack_gap_summary">Spacing in standard dot diameters, starting at 0%%. Thick dots keep enough room to avoid overlap.</string>
@@ -350,7 +350,7 @@
     <string name="pair_mirror_summary">Flip every row while keeping SIM order and row spacing.</string>
     <string name="signal_layout_title">Signal layout</string>
     <string name="signal_layout_independent">Place separately</string>
-    <string name="signal_layout_paired">Stack together</string>
+    <string name="signal_layout_paired">Dual SIM in one position</string>
     <string name="sim_pair_position_title">Stack position</string>
     <string name="pair_visibility_summary">Include this SIM in the stack.</string>
     <string name="signal_hidden">Hidden</string>
@@ -413,4 +413,6 @@
 <string name="diagnostics_title">Diagnostics and device</string>
 <string name="edit_display">Display and placement</string>
 <string name="edit_appearance">Appearance</string>
+<string name="colors_global_hint">Enable state colours in Components → Overall appearance.</string>
+<string name="value_colors_hint">Low and critical colours follow the battery outline. Edit them in Battery outline settings.</string>
 </resources>
