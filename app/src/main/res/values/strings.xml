@@ -410,4 +410,6 @@
 <string name="app_preferences">应用界面</string>
 <string name="updates_section">更新与项目</string>
 <string name="diagnostics_title">诊断与设备信息</string>
+<string name="edit_display">显示与位置</string>
+<string name="edit_appearance">外观</string>
 </resources>

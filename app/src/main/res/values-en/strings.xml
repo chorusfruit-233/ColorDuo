@@ -411,4 +411,6 @@
 <string name="app_preferences">App interface</string>
 <string name="updates_section">Updates and project</string>
 <string name="diagnostics_title">Diagnostics and device</string>
+<string name="edit_display">Display and placement</string>
+<string name="edit_appearance">Appearance</string>
 </resources>

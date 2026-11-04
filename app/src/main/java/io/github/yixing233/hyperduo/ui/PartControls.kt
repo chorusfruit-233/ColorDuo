@@ -866,7 +866,11 @@ internal fun PartSettingsSheet(
                     if (part == TrioSettingsPart.Appearance) {
                         ArrowPreference(title = stringResource(R.string.color_reset_all), onClick = onResetColors)
                     }
-                    controls.forEach { control -> ContentControlRow(control, settings, update, ringSettings) }
+                    if (controls.isNotEmpty()) Text(stringResource(R.string.edit_display))
+                    controls.filter { advanced || it !in listOf(ContentControl.PairMirror,
+                        ContentControl.PairReverse, ContentControl.PairSingle) }
+                        .forEach { control -> ContentControlRow(control, settings, update, ringSettings) }
+                    Text(stringResource(R.string.edit_appearance))
                 if (rows.isEmpty() && colors.isEmpty() && controls.isEmpty()) {
                     Text(
                         text = stringResource(R.string.drawing_settings_none),

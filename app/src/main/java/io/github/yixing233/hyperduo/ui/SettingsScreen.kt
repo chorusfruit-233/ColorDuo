@@ -68,6 +68,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.runtime.rememberUpdatedState
 import android.os.Handler
 import android.os.Looper
@@ -2216,6 +2219,7 @@ internal fun IntSlider(
     step: Int = 1,
     valueTextSuffix: String? = null,
 ) {
+    androidx.compose.runtime.key(title, min, max) {
     var draft by remember { mutableStateOf(value) }
     val output = rememberUpdatedState(onValueChange)
     val writer = remember {
@@ -2224,7 +2228,14 @@ internal fun IntSlider(
             { output.value(it) })
     }
     LaunchedEffect(value) { if (!writer.hasPending()) draft = value }
-    DisposableEffect(writer) { onDispose { writer.flush() } }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(writer, lifecycle) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) writer.flush()
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer); writer.flush() }
+    }
     SliderPreference(
         value = draft.toFloat(),
         // Rounded here rather than stored rounded: the slider reports floats,
@@ -2249,6 +2260,8 @@ internal fun IntSlider(
         steps = 0,
         insideMargin = SettingsItemMargin,
     )
+
+    }
 }
 
 /**
