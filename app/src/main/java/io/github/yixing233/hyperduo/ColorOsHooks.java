@@ -1187,11 +1187,13 @@ final class ColorOsHooks {
                     nativeSample.connected, nativeSample.level, repository.level, carrierMerged);
             state.wifiPresent = ColorOsPolicy.wifiPresent(connected, state.wifiLevel,
                     nativeSample.connected, carrierMerged);
+            state.wifiPresent = WifiPresence.forDisplay(state.wifiPresent);
             if (TrioConfig.debugLog()) {
                 String note = "ColorOS wifi: connected=" + connected
                         + " rendered=" + nativeSample.kind + "/" + nativeSample.level
                         + " repository=" + repository.kind + "/" + repository.level
-                        + " platformLevel=" + TrioState.sWifiLevel + " resolved=" + state.wifiLevel;
+                        + " platformLevel=" + TrioState.sWifiLevel + " resolved=" + state.wifiLevel
+                        + " route=" + InternetRoute.current() + " displayed=" + state.wifiPresent;
                 if (!note.equals(lastWifiNote)) {
                     lastWifiNote = note;
                     TrioHooks.log(TrioHooks.LOG_INFO, note);

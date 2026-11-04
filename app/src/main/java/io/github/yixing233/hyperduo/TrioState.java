@@ -306,7 +306,7 @@ final class TrioState {
 
         wifiLevel = sWifiLevel;
         mobileLevel = sMobileLevel;
-        wifiPresent = sWifiPresent;
+        wifiPresent = WifiPresence.forDisplay(sWifiPresent);
         islandHideBattery = sIslandHideBattery;
         mobileType = sMobileType;
         // The three battery values are read straight from their statics by the

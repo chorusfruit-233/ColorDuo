@@ -36,6 +36,7 @@ final class WifiPresence {
     // End ColorDuo reload lifecycle.
     private static Runnable pendingRefresh;
     private static boolean watchdogStarted;
+    private static boolean routeRegistered;
 
     private WifiPresence() {}
 
@@ -46,6 +47,33 @@ final class WifiPresence {
 
     /** Last definitive framework observation; null means the query has not answered. */
     static Boolean connectedSnapshot() { return connected; }
+
+    /** Apply the optional route policy without changing the physical connection cache. */
+    static boolean forDisplay(boolean associated) {
+        return InternetRoute.wifiForDisplay(associated, TrioConfig.appearance().typeHideOnWifi,
+                InternetRoute.current());
+    }
+
+    private static void observeRoute(Context context, ConnectivityManager manager) {
+        InternetRoute.refresh(manager);
+        if (manager == null || routeRegistered) return;
+        try {
+            ConnectivityManager.NetworkCallback callback = new ConnectivityManager.NetworkCallback() {
+                @Override public void onAvailable(Network network) { scheduleRefresh(context); }
+                @Override public void onLost(Network network) { scheduleRefresh(context); }
+                @Override public void onCapabilitiesChanged(Network network, NetworkCapabilities capabilities) {
+                    scheduleRefresh(context);
+                }
+            };
+            manager.registerDefaultNetworkCallback(callback);
+            // ColorDuo reload lifecycle.
+            ColorOsReload.watch(() -> manager.unregisterNetworkCallback(callback),
+                    () -> manager.registerDefaultNetworkCallback(callback));
+            // End ColorDuo reload lifecycle.
+            routeRegistered = true;
+        } catch (RuntimeException unavailable) { /* watchdog still refreshes the default route */ }
+    }
+
 
     static synchronized void start(final Context context) {
         // ColorDuo reload lifecycle.
@@ -136,6 +164,8 @@ final class WifiPresence {
         if (ColorOsReload.retiring) return;
         // End ColorDuo reload lifecycle.
         try {
+            final ConnectivityManager routeManager = context.getSystemService(ConnectivityManager.class);
+            observeRoute(context, routeManager);
             final WifiManager wifi = context.getSystemService(WifiManager.class);
             if (wifi == null) return;
             final boolean enabled = wifi.isWifiEnabled();

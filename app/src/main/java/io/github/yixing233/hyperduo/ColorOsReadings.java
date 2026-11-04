@@ -77,7 +77,7 @@ final class ColorOsReadings extends ViewGroup {
 
         radioNotice = appearance.foldsMobile() && DuoPolicy.hasNotice(state.mobileService);
         String network = registering ? "" : radioNotice ? ColorOsLabels.radioNotice(getContext(), state.mobileService)
-                : state.mobileType == null ? "" : state.mobileType;
+                : appearance.visibleMobileType(state.mobileType, state.wifiPresent);
         if (!network.contentEquals(type.getText()) || type.suffixScale != appearance.typeSuffixScale) {
             TrioHooks.applyOutTypeText(type, network, appearance.typeSuffixScale);
         }

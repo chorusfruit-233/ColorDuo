@@ -446,20 +446,8 @@ public final class TrioRenderer {
         // switches themselves, which is what used to let the two arrangements
         // drift apart - and let the documentation drift from both.
         final TrioAppearance appearance = TrioAppearance.of(cfg);
-        // The network type is NOT suppressed here any more.
-        //
-        // It used to be: the whole label was replaced with null at this entry point, which made
-        // every arrangement obey at once. That was right while the question was "is Wi-Fi on",
-        // and wrong once the answer depends on WHERE the pieces were placed - handing off the
-        // arcs, an out-of-ring label, a band that would be left empty. Those are decisions over
-        // the layout, and the layout is resolved in TrioAppearance. Suppressing the string here
-        // would pre-empt them: the band would be filled from the priority list with the label,
-        // and the label would then draw as nothing, leaving exactly the blank zone the
-        // per-band rule exists to prevent.
-        //
-        // See TrioAppearance.hidesTypeForWifi for the arrangement-level half and
-        // firstDrawableInk for the per-band half.
-        final String shownType = mobileType;
+        // Use the same route-aware decision for pixels and layout occupancy.
+        final String shownType = appearance.visibleMobileType(mobileType, wifiConnected);
         // The capsule's length belongs to the frame: every horizontal quantity below reads it
         // through TrioGeometry, and setting it here - once, before anything is drawn - is what
         // keeps the outline, the fill, the cells and the hit boxes on one shape.

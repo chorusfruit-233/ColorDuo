@@ -118,8 +118,8 @@
     <string name="dot_scale_title">Signal dot thickness</string>
     <string name="dot_scale_summary">Default %1$d%%, range %2$d–%3$d%%. Adjusts dot thickness; use signal icon size for overall scaling.</string>
 
-    <string name="type_hide_on_wifi_title">Hide the network type on Wi-Fi</string>
-    <string name="type_hide_on_wifi_summary">Lets placed Wi-Fi arcs take priority over the network label while connected; restores the label on disconnect.</string>
+    <string name="type_hide_on_wifi_title">Follow the active Internet connection</string>
+    <string name="type_hide_on_wifi_summary">Hide the mobile network type while Internet uses Wi-Fi. When the system switches to mobile data, hide the Wi-Fi symbol and show the mobile network type.</string>
     <string name="show_mobile_type_title">Network type</string>
     <string name="show_mobile_type_summary">Shows the data SIM network type, such as 4G or 5G, inside or beside the icon.</string>
     <string name="mobile_type_off">Off</string>

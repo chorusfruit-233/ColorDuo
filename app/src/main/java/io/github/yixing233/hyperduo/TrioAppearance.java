@@ -504,42 +504,14 @@ public final class TrioAppearance {
         return ownsWifi() && wifiLevel >= 1;
     }
 
-    /**
-     * Whether the network type steps aside because Wi-Fi is up - decided per ARRANGEMENT.
-     *
-     * <p>Three cases, and they are not the same question:
-     *
-     * <ol>
-     *   <li><b>The arcs are handed back to MIUI</b> (Wi-Fi is nowhere in this arrangement).
-     *       The system draws its own Wi-Fi icon beside the glyph, so the arcs are not competing
-     *       with the label for the same space, and the label stays. Suppressing it here would
-     *       hide a reading for a Wi-Fi icon the module is not even drawing.</li>
-     *   <li><b>The type is outside the glyph</b> (the ring's own out-of-ring strip, or the
-     *       capsule's - see {@link #typeOutOfRing}). It then sits in the same strip the
-     *       system's Wi-Fi icon lands in, which is the crowding the option exists to fix, so
-     *       it goes.</li>
-     *   <li><b>Both are inside.</b> The arcs take priority, so the label yields - but only if
-     *       something else can take its band. A band left empty reads as a broken layout, so
-     *       when the label is the only candidate left for its zone it stays and the arcs keep
-     *       the slot they would have shared.</li>
-     * </ol>
-     *
-     * <p>Case 3 is per BAND, which is why it is answered by the caller: only the zone loop
-     * knows what else is queued behind the label. This method answers the first two.
-     *
-     * @param wifiConnected the live connection state - never the signal level, which is a
-     *   strength: 0 is a weak link and -1 also means "no reading"
-     */
+    /** The caller supplies display Wi-Fi presence, already resolved from the default route. */
     public boolean hidesTypeForWifi(boolean wifiConnected) {
-        if (!typeHideOnWifi || !wifiConnected) {
-            return false;
-        }
-        // Case 1: Wi-Fi is not ours in this arrangement, so there is nothing to make room for.
-        if (!ownsWifi()) {
-            return false;
-        }
-        // Case 2: outside the glyph, where the system icon already sits.
-        return typeOutOfRing;
+        return typeHideOnWifi && wifiConnected;
+    }
+
+    /** Shared by every inner cell, the out-of-ring strip, and live layout measurement. */
+    public String visibleMobileType(String type, boolean wifiInUse) {
+        return hidesTypeForWifi(wifiInUse) || type == null ? "" : type;
     }
 
     /**
@@ -895,15 +867,13 @@ public final class TrioAppearance {
          */
         private Ring(TrioAppearance a, int level, boolean charging, int wifiLevel,
                      String mobileType, int sims, boolean wifiConnected) {
+            mobileType = a.visibleMobileType(mobileType, wifiConnected);
             // ZONE_COUNT, not 3: the layout stores five sections now (three ring zones plus
             // the capsule's two), and this array is indexed by Zone.ordinal. The ring only
             // draws the first three; the rest resolve to PART_NONE because a ring install
             // has nothing in them, and a ring never asks for them anyway.
             parts = new int[Prefs.ZONE_COUNT];
-            // The label yields to the arcs only when the arcs are OURS in this arrangement,
-            // the label is inside the glyph, and Wi-Fi is actually connected. See
-            // hidesTypeForWifi for why each of those matters; the per-band part - keeping a
-            // band filled - is decided inside firstDrawableInk.
+            // Route-based suppression applies even when no replacement occupies the cell.
             final boolean yieldType = a.hidesTypeForWifi(wifiConnected);
             for (int z = 0; z < Prefs.ZONE_COUNT; z++) {
                 // The zone draws the FIRST candidate that has something to show this frame.
@@ -1278,15 +1248,14 @@ public final class TrioAppearance {
 
         private Capsule(TrioAppearance a, int level, boolean charging, int wifiLevel,
                         String mobileType, int sims, boolean wifiConnected) {
+            mobileType = a.visibleMobileType(mobileType, wifiConnected);
             parts = new int[Prefs.ZONE_COUNT];
             dotBands = new boolean[Prefs.ZONE_COUNT];
             dotParts = new int[Prefs.ZONE_COUNT];
 
             // Every band is a real cell now: the two openings hold either a reading or a dot
             // row, and only the interior is a reading's alone.
-            // See hidesTypeForWifi: the label yields only when the arcs are ours here, the
-            // label is inside the glyph, and Wi-Fi is really connected. Whether the band then
-            // stays filled is decided per zone inside firstDrawableInk.
+            // Keep capsule and ring on the same route-based policy.
             final boolean yieldType = a.hidesTypeForWifi(wifiConnected);
             for (TrioZones.Zone band : TrioZones.Zone.values()) {
                 // The capsule reads FOUR cells: the three bands plus the left column, which

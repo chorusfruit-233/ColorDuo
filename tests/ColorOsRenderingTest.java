@@ -68,6 +68,7 @@ public final class ColorOsRenderingTest {
     public static void main(String[] args) throws Exception {
         adaptiveRingOpenings();
         physicalSizing();
+        activeNetworkTypePolicy();
         fullCapsule();
         clockHandoff();
         readableDefaults();
@@ -416,6 +417,33 @@ public final class ColorOsRenderingTest {
                 TrioRenderer.drawState(frame, 480, 400, state, settings);
                 boolean typeDrawn = String.join("", frame.texts).contains("5G");
                 check(typeDrawn == !connected, "middle Wi-Fi/RAT priority follows connection: " + connected);
+            }
+        }
+    }
+
+    private static void activeNetworkTypePolicy() {
+        for (int style : new int[]{Prefs.STYLE_RING,Prefs.STYLE_CAPSULE}) {
+            for (boolean ownsWifi : new boolean[]{false,true}) {
+                TrioSettings settings=TrioSettings.defaults();settings.trioStyle=style;
+                settings.typeHideOnWifi=true;settings.mobileTypeMode=Prefs.MOBILE_TYPE_IN_RING;
+                settings.showWifi=ownsWifi;settings.chargingShowsValue=false;
+                settings.ringZones=Prefs.decodeLayout("1|5||");
+                TrioState state=new TrioState();state.level=70;state.mobileType="5G";
+                state.mobileService=DuoPolicy.Radio.AVAILABLE;
+                for(boolean wifiInUse:new boolean[]{true,false,true,false}) {
+                    state.wifiPresent=wifiInUse;state.wifiLevel=3;
+                    try(Frame frame=new Frame()) {
+                        TrioRenderer.drawState(frame,480,400,state,settings);
+                        check(String.join("",frame.texts).contains("5G")==!wifiInUse,
+                                "active route controls network type even in an otherwise empty cell");
+                    }
+                    TrioAppearance a=TrioAppearance.of(settings);
+                    check(a.visibleMobileType("5G",wifiInUse).equals(wifiInUse?"":"5G"),
+                            "outer and inner labels share the same suppression policy");
+                }
+                settings.typeHideOnWifi=false;
+                check(TrioAppearance.of(settings).visibleMobileType("5G",true).equals("5G"),
+                        "disabling route following preserves independent mobile type display");
             }
         }
     }

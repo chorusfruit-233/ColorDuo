@@ -3479,8 +3479,8 @@ final class TrioHooks {
 
     /** The type string to show, normalised to empty when there is none. */
     private static String typeText() {
-        final String text = TrioState.sMobileType;
-        return text == null ? "" : text;
+        return TrioConfig.appearance().visibleMobileType(TrioState.sMobileType,
+                WifiPresence.forDisplay(TrioState.sWifiPresent));
     }
 
     /** The label already mounted on {@code container}, or null. */
