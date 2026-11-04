@@ -1450,7 +1450,8 @@ private fun LazyListScope.aboutTab(
                 },
             )
         }
-    }    item {
+    }
+    item {
         Column {
             SectionTitle(stringResource(R.string.nav_section))
             Card {
@@ -1481,7 +1482,9 @@ private fun LazyListScope.aboutTab(
     item { UpdateCard(updater, showMessage) }
     item { SectionTitle(stringResource(R.string.diagnostics_title)) }
     item { Card { ArrowPreference(title = stringResource(R.string.restart_title), onClick = onRestart) } }
-    item { ActivatedRow(settings = settings, service = service) }    item { InfoCard(service = service) }    item {
+    item { ActivatedRow(settings = settings, service = service) }
+    item { InfoCard(service = service) }
+    item {
         Card {
             SwitchPreference(
                 checked = settings.debugLog,
