@@ -914,7 +914,6 @@ internal fun PartSettingsSheet(
                         )
                     }
                 if (colors.isNotEmpty() && !a.roleColors) Text(stringResource(R.string.colors_global_hint))
-                if (part == TrioSettingsPart.Value) Text(stringResource(R.string.value_colors_hint))
                 extraContent?.invoke()
                 rows.filter { it.enabled(a) && !isAdvancedSlider(it, a) }.forEach { spec ->
                     SliderRow(spec, settings, update)
@@ -978,7 +977,7 @@ internal fun SliderRow(
         max = maximum,
         step = spec.step,
         title = stringResource(spec.titleRes(a)),
-        summary = stringResource(
+        summary = if (spec.part == TrioZones.Part.VALUE) null else stringResource(
             spec.summaryRes(a),
             spec.read(defaults).coerceIn(spec.min, maximum),
             spec.min,

@@ -2219,7 +2219,7 @@ internal fun IntSlider(
     min: Int,
     max: Int,
     title: String,
-    summary: String,
+    summary: String?,
     enabled: Boolean,
     onValueChange: (Int) -> Unit,
     step: Int = 1,

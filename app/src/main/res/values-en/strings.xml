@@ -414,7 +414,6 @@
 <string name="edit_display">Display and placement</string>
 <string name="edit_appearance">Appearance</string>
 <string name="colors_global_hint">Enable state colours in Components → Overall appearance.</string>
-<string name="value_colors_hint">Low and critical colours follow the battery outline. Edit them in Battery outline settings.</string>
 <string name="advanced_left_arc">Left arc advanced options</string>
 <string name="advanced_right_arc">Right arc advanced options</string>
 <string name="advanced_capsule">Capsule structure advanced options</string>

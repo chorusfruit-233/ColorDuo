@@ -413,7 +413,6 @@
 <string name="edit_display">显示与位置</string>
 <string name="edit_appearance">外观</string>
 <string name="colors_global_hint">请在“组件 → 整体外观”中开启状态颜色。</string>
-<string name="value_colors_hint">低电量与危险电量颜色跟随电量轮廓，在电量轮廓设置中调整。</string>
 <string name="advanced_left_arc">左弧段高级参数</string>
 <string name="advanced_right_arc">右弧段高级参数</string>
 <string name="advanced_capsule">胶囊结构高级参数</string>
