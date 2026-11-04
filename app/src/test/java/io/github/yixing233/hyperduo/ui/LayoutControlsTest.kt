@@ -194,4 +194,34 @@ class LayoutControlsTest {
         assertEquals(TrioSettingsPart.Wifi, TrioSettingsPart.of(TrioZones.Part.TYPE))
         assertFalse(partsForPage(settings()).contains(TrioSettingsPart.Type))
     }
+    @Test fun advancedSectionsOwnAllTheirControlsWithoutLeakingIntoBasicRows() {
+        val s = settings().apply { splitMode = 1; splitLink = 0 }
+        var a = TrioAppearance.of(s)
+        val structure = slidersForEditor(TrioSettingsPart.Structure, a)
+        assertEquals(listOf(AdvancedGroup.LeftArc, AdvancedGroup.RightArc),
+            advancedGroupsFor(structure, contentControlsFor(TrioSettingsPart.Structure,s), a))
+        s.splitLink = 1; a = TrioAppearance.of(s)
+        assertEquals(listOf(AdvancedGroup.LeftArc), advancedGroupsFor(
+            slidersForEditor(TrioSettingsPart.Structure,a), emptyList(), a))
+        val paired = TrioZones.withPiece(settings(),TrioZones.Zone.CENTRE.ordinal,TrioZones.Part.SIM_PAIR)
+        a = TrioAppearance.of(paired)
+        val controls = contentControlsFor(TrioSettingsPart.Mobile,paired)
+        val rows = slidersForEditor(TrioSettingsPart.Mobile,a)
+        assertEquals(listOf(AdvancedGroup.DualSim), advancedGroupsFor(rows,controls,a))
+        for (control in listOf(ContentControl.PairMirror,ContentControl.PairReverse,ContentControl.PairSingle)) {
+            assertTrue(controls.contains(control))
+            assertEquals(AdvancedGroup.DualSim, advancedGroup(control))
+        }
+        assertTrue(rows.filter { isAdvancedSlider(it,a) }.all { advancedGroup(it,a)==AdvancedGroup.DualSim })
+        val capsule = settings(Prefs.STYLE_CAPSULE); a = TrioAppearance.of(capsule)
+        assertEquals(listOf(AdvancedGroup.Capsule), advancedGroupsFor(
+            slidersForEditor(TrioSettingsPart.Structure,a), emptyList(),a))
+        val network = TrioZones.withPiece(settings(),TrioZones.Zone.CENTRE.ordinal,TrioZones.Part.TYPE)
+        a = TrioAppearance.of(network)
+        assertEquals(listOf(AdvancedGroup.NetworkType), advancedGroupsFor(
+            slidersForEditor(TrioSettingsPart.Type,a), contentControlsFor(TrioSettingsPart.Type,network),a))
+        val independent = settings(); a = TrioAppearance.of(independent)
+        assertTrue(advancedGroupsFor(slidersForEditor(TrioSettingsPart.Mobile,a),
+            contentControlsFor(TrioSettingsPart.Mobile,independent),a).isEmpty())
+    }
 }

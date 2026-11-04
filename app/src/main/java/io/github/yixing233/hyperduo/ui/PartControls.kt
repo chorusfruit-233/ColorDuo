@@ -831,7 +831,6 @@ internal fun PartSettingsSheet(
     val a = remember(settings) { TrioAppearance.of(settings) }
     val rows = slidersForEditor(part, a) +
         if (part == TrioSettingsPart.Wifi) slidersForEditor(TrioSettingsPart.Type, a) else emptyList()
-    var advanced by rememberSaveable(part) { mutableStateOf(false) }
     val controls = contentControlsFor(part, settings) +
         if (part == TrioSettingsPart.Wifi) contentControlsFor(TrioSettingsPart.Type, settings) else emptyList()
     val colors = roleColorsForEditor(part)
@@ -875,8 +874,7 @@ internal fun PartSettingsSheet(
                         ArrowPreference(title = stringResource(R.string.color_reset_all), onClick = onResetColors)
                     }
                     if (controls.isNotEmpty()) Text(stringResource(R.string.edit_display))
-                    controls.filter { advanced || it !in listOf(ContentControl.PairMirror,
-                        ContentControl.PairReverse, ContentControl.PairSingle) }
+                    controls.filter { advancedGroup(it) == null }
                         .forEach { control -> ContentControlRow(control, settings, update, ringSettings) }
                     Text(stringResource(R.string.edit_appearance))
                 if (rows.isEmpty() && colors.isEmpty() && controls.isEmpty() && part != TrioSettingsPart.Appearance) {
@@ -918,23 +916,8 @@ internal fun PartSettingsSheet(
                 if (colors.isNotEmpty() && !a.roleColors) Text(stringResource(R.string.colors_global_hint))
                 if (part == TrioSettingsPart.Value) Text(stringResource(R.string.value_colors_hint))
                 extraContent?.invoke()
-                val advancedRows = rows.filter { isAdvancedSlider(it, a) }
-                if (advancedRows.isNotEmpty()) {
-                    ArrowPreference(title = stringResource(if (advanced) R.string.advanced_hide else R.string.advanced_show),
-                        onClick = { advanced = !advanced })
-                }
-                rows.filter { it.enabled(a) && (advanced || !isAdvancedSlider(it, a)) }.forEach { spec ->
-                    // The hint is resolved in a composable scope and passed down, the
-                    // same shape the size page uses: a row that is live has nothing to
-                    // explain, and a tooltip saying nothing would still eat the press.
-                    val hint = gateHintFor(spec, a)
-                    if (hint == null) {
-                        SliderRow(spec, settings, update)
-                    } else {
-                        TooltipBox(text = hint, enabled = true) {
-                            SliderRow(spec, settings, update)
-                        }
-                    }
+                rows.filter { it.enabled(a) && !isAdvancedSlider(it, a) }.forEach { spec ->
+                    SliderRow(spec, settings, update)
                 }
 
                 colors.forEach { role ->
@@ -954,6 +937,14 @@ internal fun PartSettingsSheet(
                         enabled = a.glyph && a.roleColors,
                         onClick = { onEditColor(role) },
                     )
+                }
+
+                // Each disclosure owns its controls and sliders as children AFTER its row.
+                advancedGroupsFor(rows, controls, a).forEach { group ->
+                    androidx.compose.runtime.key(part, group, a.style) {
+                        AdvancedParameterSection(group, part, rows, controls, a, settings,
+                            update, ringSettings)
+                    }
                 }
 
                     if (colors.isNotEmpty()) {
@@ -1017,3 +1008,52 @@ internal fun isAdvancedSlider(spec: SliderSpec, a: TrioAppearance): Boolean =
     spec.titleRes(a) in listOf(R.string.pair_pitch_title,R.string.pair_bend_title,R.string.pair_x_title,
         R.string.pair_y_title,R.string.sim_stack_gap_title,R.string.out_type_margin_left_title,
         R.string.out_type_margin_right_title,R.string.type_suffix_scale_title)
+
+/** One functional owner per disclosure; never split advanced controls above its trigger. */
+internal enum class AdvancedGroup(val titleRes: Int) {
+    LeftArc(R.string.advanced_left_arc), RightArc(R.string.advanced_right_arc),
+    Capsule(R.string.advanced_capsule), DualSim(R.string.advanced_dual_sim),
+    NetworkType(R.string.advanced_network_type)
+}
+
+internal fun advancedGroup(control: ContentControl): AdvancedGroup? = when (control) {
+    ContentControl.PairMirror, ContentControl.PairReverse, ContentControl.PairSingle -> AdvancedGroup.DualSim
+    else -> null
+}
+
+internal fun advancedGroup(spec: SliderSpec, a: TrioAppearance): AdvancedGroup? = when {
+    spec.scope == SliderScope.SplitLeft -> AdvancedGroup.LeftArc
+    spec.scope == SliderScope.SplitRight -> AdvancedGroup.RightArc
+    spec.scope == SliderScope.CapsuleStructure -> AdvancedGroup.Capsule
+    spec.scope == SliderScope.PairedSignal -> AdvancedGroup.DualSim
+    isAdvancedSlider(spec, a) && spec.part == TrioZones.Part.TYPE -> AdvancedGroup.NetworkType
+    else -> null
+}
+
+internal fun advancedGroupsFor(rows: List<SliderSpec>, controls: List<ContentControl>,
+    a: TrioAppearance): List<AdvancedGroup> = AdvancedGroup.entries.filter { group ->
+        controls.any { advancedGroup(it) == group } ||
+            rows.any { it.enabled(a) && advancedGroup(it, a) == group }
+    }
+
+@Composable
+private fun AdvancedParameterSection(group: AdvancedGroup, part: TrioSettingsPart,
+    rows: List<SliderSpec>, controls: List<ContentControl>, a: TrioAppearance,
+    settings: TrioSettings, update: ((SettingsRepository) -> Unit) -> Unit,
+    ringSettings: TrioSettings) {
+    var expanded by rememberSaveable(part, group, a.style) { mutableStateOf(false) }
+    val childControls = controls.filter { advancedGroup(it) == group }
+    val childRows = rows.filter { it.enabled(a) && advancedGroup(it, a) == group }
+    Column(Modifier.fillMaxWidth()) {
+        ArrowPreference(
+            title = stringResource(group.titleRes),
+            summary = stringResource(if (expanded) R.string.advanced_hide else R.string.advanced_show),
+            onClick = { expanded = !expanded })
+        if (expanded) {
+            Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp)) {
+                childControls.forEach { control -> ContentControlRow(control, settings, update, ringSettings) }
+                childRows.forEach { spec -> SliderRow(spec, settings, update) }
+            }
+        }
+    }
+}
