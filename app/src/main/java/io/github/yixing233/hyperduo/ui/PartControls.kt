@@ -822,6 +822,12 @@ internal fun PartSettingsSheet(
     ringSettings: TrioSettings = settings,
     extraContent: (@Composable () -> Unit)? = null,
 ) {
+    // Old preview/outside shortcuts resolve to the same canonical network editor.
+    if (part == TrioSettingsPart.Type) {
+        PartSettingsSheet(show, TrioSettingsPart.Wifi, settings, update, onEditColor,
+            onResetColors, onDismiss, onDismissFinished, preview, ringSettings, extraContent)
+        return
+    }
     val a = remember(settings) { TrioAppearance.of(settings) }
     val rows = slidersForEditor(part, a) +
         if (part == TrioSettingsPart.Wifi) slidersForEditor(TrioSettingsPart.Type, a) else emptyList()
