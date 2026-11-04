@@ -17,7 +17,7 @@
     <string name="group_font">字体</string>
 
     <string name="tab_parts">组件</string>
-    <string name="tab_home">首页</string>
+    <string name="tab_home">布局</string>
     <string name="drawing_master_title">总开关</string>
     <string name="drawing_quick_edit_title">快捷编辑</string>
     <string name="drawing_order_title">组件排序</string>
@@ -47,7 +47,7 @@
     <string name="ring_position_mobile">移动信号的位置</string>
     <string name="signal_mode_in_ring">环内</string>
     <string name="signal_mode_out_ring">环外</string>
-    <string name="stacked_signal_title">堆叠信号</string>
+    <string name="stacked_signal_title">环外信号使用模块绘制</string>
     <string name="stacked_signal_summary">环外时由模块在电池旁自己画一组信号读数，不再交回系统图标。</string>
     <string name="out_signal_size_title">堆叠信号大小</string>
     <string name="out_signal_size_summary">默认 %1$ddp，可调 %2$d–%3$ddp。</string>
@@ -67,10 +67,10 @@
     <string name="out_order_move_out">往外移动</string>
     <string name="out_order_outwards">← 往外</string>
     <string name="out_order_battery">贴着电池 →</string>
-    <string name="drawing_part_appearance">外观</string>
-    <string name="drawing_part_battery">电池</string>
-    <string name="drawing_part_readouts">读数组</string>
-    <string name="drawing_part_ring">环内组件</string>
+    <string name="drawing_part_appearance">整体外观</string>
+    <string name="drawing_part_battery">电量轮廓</string>
+    <string name="drawing_part_readouts">功率与温度</string>
+    <string name="drawing_part_ring">电量轮廓</string>
     <string name="drawing_parts_title">组件外观</string>
     <string name="drawing_preview_hidden">预览已隐藏</string>
     <string name="drawing_readout_sample_summary">环外读数组的示例，实际内容随状态变化。</string>
@@ -116,7 +116,7 @@
     <string name="trio_style_ring">圆环</string>
     <string name="trio_style_capsule">胶囊</string>
 
-    <string name="show_wifi_title">显示 Wi-Fi 弧</string>
+    <string name="show_wifi_title">Wi-Fi 与网络类型</string>
     <string name="show_wifi_summary">连接 Wi-Fi 时，在所选区域用弧线显示信号强度。</string>
 
     <string name="show_mobile_title">显示移动信号点</string>
@@ -249,7 +249,7 @@
     <string name="about_module_version">模块版本：%1$s</string>
     <string name="about_scope_count">作用域应用</string>
     <string name="about_enabled_count">已开启显示项</string>
-    <string name="about_title">关于</string>
+    <string name="about_title">更多</string>
     <string name="about_summary">ColorDuo · 仿 iPhone Duo 三合一状态栏图标</string>
 
     <string name="info_module_version">应用版本</string>
@@ -337,7 +337,7 @@
     <string name="paused_gray_summary">适用于充电暂停、旁路供电等状态，不影响正常充电。</string>
     <string name="paused_gray_ring">仅电量环</string>
     <string name="paused_gray_all">全部图标</string>
-    <string name="sim_pair_title">双卡堆叠</string>
+    <string name="sim_pair_title">双卡同位</string>
     <string name="sim_pair_summary">在同一个位置上下显示 SIM 1 和 SIM 2 的信号；单卡时只显示实际存在的一排。</string>
     <string name="sim_stack_gap_title">双卡排间距</string>
     <string name="sim_stack_gap_summary">按标准点直径调节排距；0%% 起调，粗圆点会保留避免重叠所需的最小间距。</string>
@@ -349,7 +349,7 @@
     <string name="pair_mirror_summary">同时翻转每排点阵的弯曲方向，保持卡序和排距。</string>
     <string name="signal_layout_title">信号布局</string>
     <string name="signal_layout_independent">分别放置</string>
-    <string name="signal_layout_paired">合并堆叠</string>
+    <string name="signal_layout_paired">双卡同位</string>
     <string name="sim_pair_position_title">堆叠位置</string>
     <string name="pair_visibility_summary">选择这张卡是否参与堆叠。</string>
     <string name="signal_hidden">不显示</string>
@@ -402,4 +402,12 @@
     <string name="color_bolt_quick_charging_title">闪电快充颜色（PD）</string>
     <string name="color_bolt_flash_charging_title">闪电闪充颜色（UFCS）</string>
     <string name="color_bolt_super_charging_title">闪电超级闪充颜色（SVOOC）</string>
+    <string name="structure_title">轮廓结构</string>
+    <string name="advanced_show">展开高级参数</string>
+    <string name="advanced_hide">收起高级参数</string>
+    <string name="color_reset_component">恢复本组件配色</string>
+    <string name="color_reset_all">恢复全部配色</string>
+<string name="app_preferences">应用界面</string>
+<string name="updates_section">更新与项目</string>
+<string name="diagnostics_title">诊断与设备信息</string>
 </resources>

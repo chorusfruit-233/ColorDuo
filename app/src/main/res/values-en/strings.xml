@@ -403,4 +403,12 @@
     <string name="color_bolt_quick_charging_title">Bolt quick charge color (PD)</string>
     <string name="color_bolt_flash_charging_title">Bolt flash charge color (UFCS)</string>
     <string name="color_bolt_super_charging_title">Bolt super charge color (SVOOC)</string>
+    <string name="structure_title">Outline structure</string>
+    <string name="advanced_show">Show advanced options</string>
+    <string name="advanced_hide">Hide advanced options</string>
+    <string name="color_reset_component">Reset component colours</string>
+    <string name="color_reset_all">Reset all colours</string>
+<string name="app_preferences">App interface</string>
+<string name="updates_section">Updates and project</string>
+<string name="diagnostics_title">Diagnostics and device</string>
 </resources>

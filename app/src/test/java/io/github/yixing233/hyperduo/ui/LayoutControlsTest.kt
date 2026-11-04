@@ -52,15 +52,15 @@ class LayoutControlsTest {
 
     @Test fun splitParametersFollowTheActiveStructureAndLinkMode() {
         val s = settings().apply { splitMode = 1 }
-        val linked = slidersForEditor(TrioSettingsPart.Appearance, TrioAppearance.of(s))
+        val linked = slidersForEditor(TrioSettingsPart.Structure, TrioAppearance.of(s))
         assertEquals(6, linked.count { it.scope == SliderScope.SplitLeft })
         assertFalse(linked.any { it.scope == SliderScope.SplitRight })
         s.splitLink = 0
-        val independent = slidersForEditor(TrioSettingsPart.Appearance, TrioAppearance.of(s))
+        val independent = slidersForEditor(TrioSettingsPart.Structure, TrioAppearance.of(s))
         assertEquals(6, independent.count { it.scope == SliderScope.SplitRight })
         s.trioStyle = Prefs.STYLE_CAPSULE
-        assertTrue(slidersForEditor(TrioSettingsPart.Appearance, TrioAppearance.of(s))
-            .all { it.scope == SliderScope.Shared })
+        assertTrue(slidersForEditor(TrioSettingsPart.Structure, TrioAppearance.of(s))
+            .all { it.scope == SliderScope.CapsuleStructure })
         assertFalse(contentControlsFor(TrioSettingsPart.Appearance, s).contains(ContentControl.SplitMode))
     }
 
@@ -133,7 +133,7 @@ class LayoutControlsTest {
         assertEquals(6, battery.size)
         assertEquals(4, bolt.size)
         assertTrue(battery.toSet().intersect(bolt.toSet()).isEmpty())
-        assertEquals((battery + bolt).toSet(), roleColorsForEditor(TrioSettingsPart.Appearance).toSet())
+        assertTrue(roleColorsForEditor(TrioSettingsPart.Appearance).isEmpty())
         assertEquals(listOf(RoleColor.BoltCharging, RoleColor.BoltQuickCharging,
             RoleColor.BoltFlashCharging, RoleColor.BoltSuperCharging), bolt)
     }
