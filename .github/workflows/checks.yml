@@ -26,6 +26,8 @@ jobs:
         run: python3 tests/duo-policy.py
       - name: ColorOS ownership and signals
         run: sh tests/coloros-policy.sh
+      - name: Wi-Fi primary link, standards and Internet routing
+        run: python3 tests/coloros-wifi.py
       - name: Telephony and transactional hot reload
         run: python3 tests/coloros-reload.py
       - name: Ring rendering and settings

@@ -985,6 +985,7 @@ internal fun SliderRow(
         ),
         enabled = spec.enabled(a),
         valueTextSuffix = spec.suffix,
+        identity = spec,
         onValueChange = { v -> update { r -> spec.write(r, v) } },
     )
 }

@@ -43,6 +43,8 @@ alpha5 接管 `StatBatteryMeterView` 的各个实例，包括主状态栏、锁�
 
 新增 JVM 测试使用真实协程流复现无人订阅时缓存停滞，并覆盖等级变化、双卡、取消、回滚和独立类加载器。本版提供正式签名测试包，尚不能据离线测试宣称目标设备已经修复。
 
+2026-11-05 补充：[原反馈者确认 0.3.14-test1 已恢复信号等级变化](https://github.com/chorusfruit-233/ColorDuo/issues/14#issuecomment-6649192663)。0.3.14 正式版保留该修复，并纳入 [PR #15 的审查修正与 Wi-Fi 标准显示](PR15-REVIEW.md)。
+
 ## 共享代码来源与当前规则
 
 代码源自 HyperDuo `e9dffbcc8f65a5f3dc379c0b25ccdc0462a8a28d`。`0.2.0` 起按 iPhone Duo 的公开状态语义自主维护；保留已有布局与配置迁移，允许修正继承的状态判断和绘制规则。ColorOS 接入、数据单位归一化、发布与验证由 Codex 维护。

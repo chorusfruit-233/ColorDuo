@@ -1121,6 +1121,8 @@ public final class Prefs {
      * growing rather than spilling over the outline.
      */
     public static final String KEY_WIFI_SCALE = "wifi_scale";
+    /** Show all recognised standards on the module Wi-Fi icon, including Wi-Fi 4/5. */
+    public static final String KEY_SHOW_WIFI_STANDARD = "show_wifi_standard";
 
     /**
      * Drops the network type while Wi-Fi is connected, for issue 48.
@@ -1623,6 +1625,7 @@ public final class Prefs {
     public static final int DEF_BOLT_SCALE = 100;
     /** 100%: the arcs exactly as the fit has always drawn them, so nothing moves on upgrade. */
     public static final int DEF_WIFI_SCALE = 100;
+    public static final boolean DEF_SHOW_WIFI_STANDARD = false;
     /**
      * 100%: a bead whose diameter is exactly the ring's thickness, which is what
      * {@code TrioGeometry.arcRowDotR} derives, so an install that never touches this key

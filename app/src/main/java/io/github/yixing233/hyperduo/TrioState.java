@@ -46,6 +46,7 @@ final class TrioState {
 
     /** Latest resolved signal levels; shared by every trio host. */
     static volatile int sWifiLevel = -1;
+    static volatile String sWifiStandard = "";
     static volatile int sMobileLevel = -1;
 
     /**
@@ -239,6 +240,7 @@ final class TrioState {
 
     // Signal levels (shared).
     int wifiLevel = -1;
+    String wifiStandard = "";
     int mobileLevel = -1;
     int dataSlot = -1;
     DuoPolicy.Radio mobileService = DuoPolicy.Radio.UNKNOWN;
@@ -307,6 +309,7 @@ final class TrioState {
         wifiLevel = sWifiLevel;
         mobileLevel = sMobileLevel;
         wifiPresent = WifiPresence.forDisplay(sWifiPresent);
+        wifiStandard = wifiPresent ? sWifiStandard : "";
         islandHideBattery = sIslandHideBattery;
         mobileType = sMobileType;
         // The three battery values are read straight from their statics by the

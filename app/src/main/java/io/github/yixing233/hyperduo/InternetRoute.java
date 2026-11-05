@@ -39,9 +39,7 @@ final class InternetRoute {
     private static Path read(ConnectivityManager manager, NetworkCapabilities caps) {
         if(caps==null) return Path.UNKNOWN;
         // Android's VPN capabilities often already include the physical transport.
-        Path direct=transport(caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI),
-                caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR),
-                caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET));
+        Path direct=transport(caps);
         if(!caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN) || direct!=Path.UNKNOWN) return direct;
         Object underlying=Refl.callByName(caps,"getUnderlyingNetworks");
         if(!(underlying instanceof Iterable<?>)) return Path.UNKNOWN;
@@ -49,14 +47,27 @@ final class InternetRoute {
         for(Object item:(Iterable<?>)underlying) {
             if(!(item instanceof Network)) continue;
             NetworkCapabilities physical=manager.getNetworkCapabilities((Network)item);
-            if(physical==null || physical.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) continue;
-            Path path=transport(physical.hasTransport(NetworkCapabilities.TRANSPORT_WIFI),
-                    physical.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR),
-                    physical.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET));
-            if(path==Path.UNKNOWN) continue;
+            if(physical==null || physical.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) return Path.UNKNOWN;
+            Path path=transport(physical);
+            if(path==Path.UNKNOWN) return Path.UNKNOWN;
             if(result!=Path.UNKNOWN && result!=path) return Path.UNKNOWN;
             result=path;
         }
         return result;
+    }
+
+    private static Path transport(NetworkCapabilities caps) {
+        // getTransportTypes is hidden from the public SDK on this Android release.
+        // Resolve it on SystemUI's framework object, retaining the public transports
+        // when a vendor restricts hidden members.
+        boolean other=caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+                || caps.hasTransport(NetworkCapabilities.TRANSPORT_BLUETOOTH);
+        Object types=Refl.callByName(caps,"getTransportTypes");
+        if(types instanceof int[]) for(int type:(int[])types) {
+            if(type!=NetworkCapabilities.TRANSPORT_VPN && type!=NetworkCapabilities.TRANSPORT_WIFI
+                    && type!=NetworkCapabilities.TRANSPORT_CELLULAR) other=true;
+        }
+        return transport(caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI),
+                caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR),other);
     }
 }

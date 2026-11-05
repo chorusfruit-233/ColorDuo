@@ -418,4 +418,6 @@
 <string name="advanced_capsule">胶囊结构高级参数</string>
 <string name="advanced_dual_sim">双卡同位高级参数</string>
 <string name="advanced_network_type">网络类型高级参数</string>
+    <string name="wifi_standard_title">显示 Wi-Fi 标准</string>
+    <string name="wifi_standard_summary">在模块 Wi-Fi 图标上显示 4、5、6、6E 或 7，包括系统通常省略的 Wi-Fi 4/5。</string>
 </resources>

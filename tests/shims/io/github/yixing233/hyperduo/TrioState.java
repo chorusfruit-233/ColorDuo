@@ -16,6 +16,7 @@ package io.github.yixing233.hyperduo;
  * reads.
  */
 final class TrioState {
+    String wifiStandard = "";
 
     static final int SIM_SLOTS = 2;
 

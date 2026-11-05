@@ -50,6 +50,7 @@ internal enum class ContentControl(val owner: TrioSettingsPart) {
     ChargeFlowDirection(TrioSettingsPart.Battery),
     // --- per component: its own switch ----------------------------------------
     Wifi(TrioSettingsPart.Wifi),
+    WifiStandard(TrioSettingsPart.Wifi),
     /**
      * The signal card: one switch for the aggregate meter, then one per card.
      *
@@ -194,6 +195,10 @@ internal fun ContentControlRow(
                 master) { index -> update { it.setTrioStyle(styles[index]) } }
         }
         ContentControl.Wifi -> Unit // Handled above by WifiPositionControl, which returns.
+        ContentControl.WifiStandard -> ContentToggle(settings.showWifiStandard,
+            R.string.wifi_standard_title, R.string.wifi_standard_summary, master) { value ->
+                update { it.setShowWifiStandard(value) }
+            }
         // The aggregate meter's own switch is gone with the aggregate meter: the signal
         // is now always the two cards' rows, so "show mobile dots" would be a second
         // name for something the cards already decide.

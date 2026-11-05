@@ -3,6 +3,14 @@ import java.util.*;
 import org.junit.Test;
 import static org.junit.Assert.*;
 public class SliderWriteQueueTest {
+ @Test public void separateControlsKeepTheirPendingWrites() {
+  List<Runnable> jobs=new ArrayList<>();List<Integer> left=new ArrayList<>(),right=new ArrayList<>();
+  SliderWriteQueue a=new SliderWriteQueue(jobs::add,jobs::remove,left::add);
+  SliderWriteQueue b=new SliderWriteQueue(jobs::add,jobs::remove,right::add);
+  a.submit(1);b.submit(2);a.submit(3);
+  a.flush();assertEquals(List.of(3),left);assertTrue(right.isEmpty());assertTrue(b.hasPending());
+  b.flush();assertEquals(List.of(2),right);assertTrue(jobs.isEmpty());
+ }
  @Test public void coalescesAndFlushesFinalValue() {
   List<Runnable> jobs=new ArrayList<>();List<Integer> writes=new ArrayList<>();
   SliderWriteQueue q=new SliderWriteQueue(jobs::add,jobs::remove,writes::add);

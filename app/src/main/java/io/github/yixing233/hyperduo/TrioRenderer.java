@@ -32,6 +32,11 @@ public final class TrioRenderer {
     private static final Paint STROKE = new Paint(Paint.ANTI_ALIAS_FLAG);
     private static final Paint FILL = new Paint(Paint.ANTI_ALIAS_FLAG);
     private static final Paint TEXT = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private static final Paint WIFI_STANDARD_TEXT = new Paint(Paint.ANTI_ALIAS_FLAG);
+    static {
+        WIFI_STANDARD_TEXT.setTypeface(Typeface.create("sans-serif-condensed", Typeface.BOLD));
+        WIFI_STANDARD_TEXT.setTextAlign(Paint.Align.LEFT);
+    }
     private static final Path BOLT = buildBolt();
     private static final RectF BOLT_BOUNDS = new RectF();
     static { BOLT.computeBounds(BOLT_BOUNDS, true); }
@@ -329,7 +334,7 @@ public final class TrioRenderer {
         drawInto(canvas, w, h, s.level, s.charging, s.quickCharging, s.powerSave, s.low,
                 s.wifiPresent ? s.wifiLevel : -1, s.mobileLevel, s.slotLevels, s.mobileType,
                 s.foreground(), cfg, true, s.wifiPresent, s.dataSlot, s.chargingPaused,
-                s.mobileService == DuoPolicy.Radio.REGISTERING, s.chargingSpeed);
+                s.mobileService == DuoPolicy.Radio.REGISTERING, 0f, s.chargingSpeed, s.wifiStandard);
     }
 
     /** Draw a frame using the exact scale already measured for its SystemUI host. */
@@ -339,7 +344,7 @@ public final class TrioRenderer {
         drawInto(canvas,w,h,s.level,s.charging,s.quickCharging,s.powerSave,s.low,
                 s.wifiPresent?s.wifiLevel:-1,s.mobileLevel,s.slotLevels,s.mobileType,
                 s.foreground(),cfg,clear,s.wifiPresent,s.dataSlot,s.chargingPaused,
-                s.mobileService==DuoPolicy.Radio.REGISTERING,scale,s.chargingSpeed);
+                s.mobileService==DuoPolicy.Radio.REGISTERING,scale,s.chargingSpeed,s.wifiStandard);
     }
 
     /**
@@ -431,6 +436,17 @@ public final class TrioRenderer {
                                  int fg, TrioSettings cfg, boolean clearWhenDone,
                                  boolean wifiConnected, int dataSlot, boolean chargingPaused, boolean radioMuted,
                                  float physicalScale, ChargeSpeed chargingSpeed) {
+        drawInto(canvas,w,h,level,charging,quickCharging,powerSave,low,wifiLevel,mobileLevel,
+                slotLevels,mobileType,fg,cfg,clearWhenDone,wifiConnected,dataSlot,chargingPaused,
+                radioMuted,physicalScale,chargingSpeed,"6");
+    }
+
+    private static void drawInto(Canvas canvas, int w, int h, int level, boolean charging,
+                                 boolean quickCharging, boolean powerSave, boolean low,
+                                 int wifiLevel, int mobileLevel, int[] slotLevels, String mobileType,
+                                 int fg, TrioSettings cfg, boolean clearWhenDone,
+                                 boolean wifiConnected, int dataSlot, boolean chargingPaused, boolean radioMuted,
+                                 float physicalScale, ChargeSpeed chargingSpeed, String wifiStandard) {
         if (w <= 0 || h <= 0 || cfg == null) {
             return;
         }
@@ -446,6 +462,8 @@ public final class TrioRenderer {
         // switches themselves, which is what used to let the two arrangements
         // drift apart - and let the documentation drift from both.
         final TrioAppearance appearance = TrioAppearance.of(cfg);
+        wifiStandard = cfg.showWifiStandard && wifiConnected && wifiLevel >= 0
+                && wifiStandard != null ? wifiStandard : "";
         // Use the same route-aware decision for pixels and layout occupancy.
         final String shownType = appearance.visibleMobileType(mobileType, wifiConnected);
         // The capsule's length belongs to the frame: every horizontal quantity below reads it
@@ -502,13 +520,13 @@ public final class TrioRenderer {
 
         if (capsule) {
             drawCapsuleLayout(canvas, level, charging, boltColor, wifiLevel, mobileLevel, shownType,
-                    slots, sims, role, fg, appearance, wifiConnected, dataSlot, radioMuted, flowPhase);
+                    slots, sims, role, fg, appearance, wifiConnected, dataSlot, radioMuted, flowPhase, wifiStandard);
         } else if (rect) {
             drawRectLayout(canvas, level, charging, boltColor, wifiLevel, mobileLevel,
-                    DuoPolicy.automaticLevels(slots, dataSlot), sims, shownType, role, fg, appearance, radioMuted);
+                    DuoPolicy.automaticLevels(slots, dataSlot), sims, shownType, role, fg, appearance, radioMuted, wifiStandard);
         } else {
             drawRingLayout(canvas, level, charging, boltColor, wifiLevel, mobileLevel,
-                    slots, sims, shownType, role, fg, appearance, wifiConnected, radioMuted, flowPhase);
+                    slots, sims, shownType, role, fg, appearance, wifiConnected, radioMuted, flowPhase, wifiStandard);
         }
 
         canvas.restoreToCount(save);
@@ -526,17 +544,17 @@ public final class TrioRenderer {
     private static void drawRingLayout(Canvas canvas, int level, boolean charging,
                                        int boltColor, int wifiLevel, int mobileLevel,
                                        int[] slotLevels, int sims, String mobileType, int role,
-                                       int fg, TrioAppearance a, boolean wifiConnected, boolean radioMuted, float flowPhase) {
+                                       int fg, TrioAppearance a, boolean wifiConnected, boolean radioMuted, float flowPhase, String wifiStandard) {
         final TrioAppearance.Ring r = a.ring(level, charging, wifiLevel, mobileType, sims,
                 wifiConnected);
         drawFreeRing(canvas, level, boltColor, wifiLevel, mobileLevel,
-                slotLevels, mobileType, role, fg, a, r, radioMuted, flowPhase);
+                slotLevels, mobileType, role, fg, a, r, radioMuted, flowPhase, wifiStandard);
     }
 
     /** Explicit slots share the editor's thirds and fit ink on BOTH axes. */
     private static void drawFreeRing(Canvas c, int level, int boltColor, int wifiLevel,
                                      int mobileLevel, int[] levels, String type, int role, int fg,
-                                     TrioAppearance a, TrioAppearance.Ring r, boolean radioMuted, float flowPhase) {
+                                     TrioAppearance a, TrioAppearance.Ring r, boolean radioMuted, float flowPhase, String wifiStandard) {
         final float topOpening = ringOpeningDegrees(a,r,0,level,type);
         final float bottomOpening = ringOpeningDegrees(a,r,2,level,type);
         final float sweep = 360f-bottomOpening;
@@ -568,7 +586,7 @@ public final class TrioRenderer {
                 if(a.splitMode==1)c.translate(0,alignedY(a,z,(TrioGeometry.W_INK_H+extra)*scale/2)-cy);
                 c.scale(scale, scale);
                 c.translate(-TrioGeometry.W_CX, -TrioGeometry.W_INK_CY);
-                drawWifiArcs(c, wifiLevel, fg, a);
+                drawWifiArcs(c, wifiLevel, fg, a, wifiStandard);
             } else if (part == Prefs.PART_BOLT) {
                 // The bolt is fitted to its slot, then multiplied by the user's size. The
                 // product is NOT re-clamped to the slot: a user asking for a bigger bolt
@@ -897,7 +915,7 @@ public final class TrioRenderer {
     private static void drawRectLayout(Canvas canvas, int level, boolean charging,
                                        int boltColor, int wifiLevel, int mobileLevel,
                                        int[] slotLevels, int sims, String mobileType, int role,
-                                       int fg, TrioAppearance a, boolean radioMuted) {
+                                       int fg, TrioAppearance a, boolean radioMuted, String wifiStandard) {
         final TrioAppearance.Rect r = a.rect(level, charging, wifiLevel, mobileType, sims);
         if (r.dots && !radioMuted) {
             drawRectDots(canvas, mobileLevel, slotLevels, r.dual, fg, a);
@@ -911,7 +929,7 @@ public final class TrioRenderer {
         if (r.bolt) {
             drawRectBolt(canvas, boltColor, a);
         } else if (r.wifi) {
-            drawRectWifi(canvas, wifiLevel, fg, a);
+            drawRectWifi(canvas, wifiLevel, fg, a, wifiStandard);
         } else if (r.type) {
             drawRectType(canvas, mobileType, fg, a);
         }
@@ -944,7 +962,7 @@ public final class TrioRenderer {
     private static void drawCapsuleLayout(Canvas canvas, int level, boolean charging,
                                           int boltColor, int wifiLevel, int mobileLevel, String mobileType,
                                           int[] slotLevels, int sims, int role, int fg,
-                                          TrioAppearance a, boolean wifiConnected, int dataSlot, boolean radioMuted, float flowPhase) {
+                                          TrioAppearance a, boolean wifiConnected, int dataSlot, boolean radioMuted, float flowPhase, String wifiStandard) {
         final float stroke = a.ringStroke * TrioGeometry.CAP_STROKE_RATIO;
         final TrioAppearance.Capsule cap =
                 a.capsule(level, charging, wifiLevel, mobileType, sims, wifiConnected);
@@ -988,11 +1006,11 @@ public final class TrioRenderer {
         // The interior's two cells divide its width by what they actually draw, so a size the
         // user asks for is not capped by width reserved for a string that is not on screen.
         drawCapsuleCell(canvas, stroke, TrioZones.Zone.TOP, cap, level, boltColor,
-                wifiLevel, mobileType, fg, a);
+                wifiLevel, mobileType, fg, a, wifiStandard);
         drawCapsuleCell(canvas, stroke, TrioZones.Zone.CENTRE, cap, level, boltColor,
-                wifiLevel, mobileType, fg, a);
+                wifiLevel, mobileType, fg, a, wifiStandard);
         drawCapsuleCell(canvas, stroke, TrioZones.Zone.BOTTOM, cap, level, boltColor,
-                wifiLevel, mobileType, fg, a);
+                wifiLevel, mobileType, fg, a, wifiStandard);
 
         if (!radioMuted && cap.dotParts[TrioZones.Zone.CENTRE.ordinal()] == Prefs.PART_SIM_PAIR) {
             drawPair(canvas, slotLevels, TrioGeometry.capPairCx(stroke,a) + a.capsuleRightDx,
@@ -1004,7 +1022,7 @@ public final class TrioRenderer {
         // both hold a reading now, and painting the column last is what keeps a wide
         // piece (the arcs) from being covered by the interior's own ink.
         drawCapsuleLeft(canvas, stroke, cap, level, boltColor, wifiLevel, mobileLevel,
-                slotLevels, mobileType, fg, a);
+                slotLevels, mobileType, fg, a, wifiStandard);
     }
 
     /**
@@ -1019,7 +1037,7 @@ public final class TrioRenderer {
     private static void drawCapsuleLeft(Canvas c, float stroke, TrioAppearance.Capsule cap,
                                        int level, int boltColor, int wifiLevel,
                                        int mobileLevel, int[] slotLevels, String type,
-                                       int fg, TrioAppearance a) {
+                                       int fg, TrioAppearance a, String wifiStandard) {
         // From the layout's LEFT cell, the same place the three bands read theirs:
         // the left column is a cell of the capsule now, not a setting beside it.
         final int part = cap.parts[TrioZones.Zone.LEFT.ordinal()];
@@ -1063,7 +1081,7 @@ public final class TrioRenderer {
                         bodyTypeSize(a), SlotAlign.LEFT);
                 break;
             case Prefs.PART_WIFI:
-                drawCapsuleWifi(c, stroke, wifiLevel, fg, a, cx, cy);
+                drawCapsuleWifi(c, stroke, wifiLevel, fg, a, cx, cy, wifiStandard);
                 break;
             case Prefs.PART_BOLT:
                 drawCapsuleBolt(c, stroke, boltColor,
@@ -1086,7 +1104,7 @@ public final class TrioRenderer {
     private static void drawCapsuleCell(Canvas c, float stroke, TrioZones.Zone band,
                                         TrioAppearance.Capsule cap, int level,
                                         int boltColor, int wifiLevel, String type,
-                                        int fg, TrioAppearance a) {
+                                        int fg, TrioAppearance a, String wifiStandard) {
         // A cell that draws nothing. The LEFT cell is deliberately not routed here:
         // it has its own centre and its own dispatcher, because it is the one cell
         // whose x is not the bands' shared centre.
@@ -1131,7 +1149,7 @@ public final class TrioRenderer {
                 drawCapsuleBolt(c, stroke, boltColor, a, cx, cy);
                 break;
             case Prefs.PART_WIFI:
-                drawCapsuleWifi(c, stroke, wifiLevel, fg, a, cx, cy);
+                drawCapsuleWifi(c, stroke, wifiLevel, fg, a, cx, cy, wifiStandard);
                 break;
             // CENTRE on every branch: an opening is a full-width row, so it has no edge to
             // sit against. The right cell of the BODY is the one that leans right.
@@ -1585,7 +1603,7 @@ public final class TrioRenderer {
 
     /** The Wi-Fi group moved and scaled into a capsule cell centred on {@code (cx, cy)}. */
     private static void drawCapsuleWifi(Canvas c, float stroke, int level, int fg,
-                                        TrioAppearance a, float cx, float cy) {
+                                        TrioAppearance a, float cx, float cy, String wifiStandard) {
         // The user's size multiplies the fit, and the placement below is recomputed from the
         // product: offset = centre - reference * scale only stays centred while the scale it
         // was derived from is the scale being drawn.
@@ -1599,7 +1617,7 @@ public final class TrioRenderer {
         c.translate(cx - TrioGeometry.W_CX * scale,
                 cy - TrioGeometry.W_INK_CY * scale);
         c.scale(scale, scale);
-        drawWifiArcs(c, level, fg, a);
+        drawWifiArcs(c, level, fg, a, wifiStandard);
         c.restoreToCount(save);
     }
 
@@ -1701,12 +1719,12 @@ public final class TrioRenderer {
     }
 
     /** The Wi-Fi group moved into the top slot; the arcs themselves are unchanged. */
-    private static void drawRectWifi(Canvas c, int level, int fg, TrioAppearance a) {
+    private static void drawRectWifi(Canvas c, int level, int fg, TrioAppearance a, String wifiStandard) {
         final int save = c.save();
         c.translate(TrioGeometry.rectWifiOffsetX(), TrioGeometry.rectWifiOffsetY(a.arcStroke));
         final float rectScale = TrioGeometry.RECT_WIFI_SCALE * a.wifiScaleFactor();
         c.scale(rectScale, rectScale);
-        drawWifiArcs(c, level, fg, a);
+        drawWifiArcs(c, level, fg, a, wifiStandard);
         c.restoreToCount(save);
     }
 
@@ -2017,7 +2035,26 @@ public final class TrioRenderer {
      * their own: each caller positions the group first. Both arrangements draw
      * the identical group, which is what keeps the Wi-Fi icon the same in both.
      */
-    private static void drawWifiArcs(Canvas c, int level, int fg, TrioAppearance a) {
+    private static void drawWifiArcs(Canvas c, int level, int fg, TrioAppearance a, String wifiStandard) {
+        drawWifiArcsRaw(c, level, fg, a);
+        if (wifiStandard == null || wifiStandard.isEmpty() || level < 0) return;
+        // A compact right-hand marker shares the dot's baseline. Keep the arcs
+        // centred at their normal size, and align every generation's main digit.
+        boolean sixE = wifiStandard.equals("6E");
+        String main = sixE ? "6" : wifiStandard;
+        float x = TrioGeometry.W_CX + 11.5f;
+        float baseline = TrioGeometry.W_BOTTOM - 0.5f;
+        WIFI_STANDARD_TEXT.setColor(fg);
+        WIFI_STANDARD_TEXT.setTextSize(13.5f);
+        c.drawText(main, x, baseline, WIFI_STANDARD_TEXT);
+        if (sixE) {
+            x += WIFI_STANDARD_TEXT.measureText(main) + 0.5f;
+            WIFI_STANDARD_TEXT.setTextSize(8.5f);
+            c.drawText("E", x, baseline - 5f, WIFI_STANDARD_TEXT);
+        }
+    }
+
+    private static void drawWifiArcsRaw(Canvas c, int level, int fg, TrioAppearance a) {
         STROKE.setStrokeWidth(a.arcStroke);
         STROKE.setColor(fg);
         if (level >= 3) {

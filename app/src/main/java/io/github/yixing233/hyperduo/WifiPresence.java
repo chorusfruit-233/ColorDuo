@@ -181,6 +181,9 @@ final class WifiPresence {
             final ConnectivityManager connectivity = context.getSystemService(ConnectivityManager.class);
             boolean wifiNetwork = false;
             boolean networksKnown = false;
+            WifiInfo primaryInfo = null;
+            WifiInfo onlyInfo = null;
+            int wifiNetworks = 0;
             if (connectivity != null) {
                 try {
                     // Inspect Wi-Fi independently of the default route, which may be mobile or VPN.
@@ -189,13 +192,22 @@ final class WifiPresence {
                         if (capabilities == null || !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
                                 || capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) continue;
                         wifiNetwork = true;
+                        wifiNetworks++;
                         if (capabilities.getTransportInfo() instanceof WifiInfo) {
-                            info = (WifiInfo) capabilities.getTransportInfo();
+                            WifiInfo candidate = (WifiInfo) capabilities.getTransportInfo();
+                            Object primary = Refl.callByName(candidate, "isPrimary");
+                            if (Boolean.TRUE.equals(primary)) primaryInfo = candidate;
+                            if (!Boolean.FALSE.equals(primary)) onlyInfo = candidate;
                         }
-                        break;
                     }
                     networksKnown = true;
                 } catch (RuntimeException ignored) { /* legacy and association fallbacks remain */ }
+            }
+            // WifiManager reports the primary connection. A secondary Wi-Fi must not
+            // replace its standard/RSSI just because it appeared first in getAllNetworks.
+            if (primaryInfo != null) info = primaryInfo;
+            else if (info == null || info.getSupplicantState() != SupplicantState.COMPLETED) {
+                info = wifiNetworks == 1 ? onlyInfo : null;
             }
             Boolean next = null;
             if (wifiNetwork || (info != null && info.getSupplicantState() == SupplicantState.COMPLETED)) {
@@ -213,6 +225,8 @@ final class WifiPresence {
             if (next == null) return;
             final int before = TrioState.sWifiLevel;
             publish(next);
+            publishStandard(next && info != null ? WifiStandard.label(info.getWifiStandard(),
+                    info.getFrequency()) : "");
             if (!next) {
                 TrioState.sWifiLevel = -1;
             } else {
@@ -231,9 +245,17 @@ final class WifiPresence {
 
     private static void publish(boolean next) {
         connected = Boolean.valueOf(next);
+        if (!next) publishStandard("");
         final int before = TrioState.sWifiLevel;
         if (!next) TrioState.sWifiLevel = -1;
         final boolean changed = TrioState.setWifiPresent(next);
         if (changed || before != TrioState.sWifiLevel) TrioHooks.invalidateHosts();
+    }
+
+    private static void publishStandard(String next) {
+        if (!next.equals(TrioState.sWifiStandard)) {
+            TrioState.sWifiStandard = next;
+            TrioHooks.invalidateHosts();
+        }
     }
 }

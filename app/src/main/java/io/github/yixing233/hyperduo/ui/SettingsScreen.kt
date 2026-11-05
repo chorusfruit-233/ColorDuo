@@ -2224,8 +2224,9 @@ internal fun IntSlider(
     onValueChange: (Int) -> Unit,
     step: Int = 1,
     valueTextSuffix: String? = null,
+    identity: Any = title,
 ) {
-    androidx.compose.runtime.key(title, min, max) {
+    androidx.compose.runtime.key(identity, min, max) {
     var draft by remember { mutableStateOf(value) }
     val output = rememberUpdatedState(onValueChange)
     val writer = remember {

@@ -104,6 +104,7 @@ public final class TrioPreviewView extends View {
         physicalState.chargingPaused=chargingPaused;
         physicalState.powerSave=powerSave;physicalState.low=low;
         physicalState.wifiPresent=wifiLevel>=0;physicalState.wifiLevel=wifiLevel;
+        physicalState.wifiStandard=wifiLevel>=0 ? "6" : "";
         physicalState.mobileLevel=mobileLevel;physicalState.slotLevels=slotLevels;
         physicalState.sims=0;
         if(slotLevels!=null) for(int signal:slotLevels) if(signal>=0) physicalState.sims++;

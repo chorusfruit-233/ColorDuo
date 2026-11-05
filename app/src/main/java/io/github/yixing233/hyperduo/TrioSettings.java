@@ -221,6 +221,7 @@ public final class TrioSettings {
     public int boltScale;
     /** Wi-Fi arcs' size, in percent; see {@link Prefs#KEY_WIFI_SCALE}. */
     public int wifiScale;
+    public boolean showWifiStandard;
     /** Drop the network type while Wi-Fi is up; see {@link Prefs#KEY_TYPE_HIDE_ON_WIFI}. */
     public boolean typeHideOnWifi;
     /** While charging the ring centre shows the percentage; see {@link Prefs#KEY_CHARGING_SHOWS_VALUE}. */
@@ -417,6 +418,7 @@ public final class TrioSettings {
         s.typeSuffixScale = Prefs.DEF_TYPE_SUFFIX_SCALE;
         s.boltScale = Prefs.DEF_BOLT_SCALE;
         s.wifiScale = Prefs.DEF_WIFI_SCALE;
+        s.showWifiStandard = Prefs.DEF_SHOW_WIFI_STANDARD;
         s.typeHideOnWifi = Prefs.DEF_TYPE_HIDE_ON_WIFI;
         s.chargingShowsValue = Prefs.DEF_CHARGING_SHOWS_VALUE;
         s.pausedGrayAll = Prefs.DEF_PAUSED_GRAY_ALL;
@@ -645,6 +647,7 @@ public final class TrioSettings {
         s.wifiScale = Prefs.clamp(
                 p.getInt(Prefs.KEY_WIFI_SCALE, Prefs.DEF_WIFI_SCALE),
                 Prefs.MIN_WIFI_SCALE, Prefs.MAX_WIFI_SCALE);
+        s.showWifiStandard = p.getBoolean(Prefs.KEY_SHOW_WIFI_STANDARD, Prefs.DEF_SHOW_WIFI_STANDARD);
         s.typeHideOnWifi = p.getBoolean(Prefs.KEY_TYPE_HIDE_ON_WIFI,
                 Prefs.DEF_TYPE_HIDE_ON_WIFI);
         s.pausedGrayAll = p.getBoolean(Prefs.KEY_PAUSED_GRAY_ALL, Prefs.DEF_PAUSED_GRAY_ALL);
@@ -1036,6 +1039,7 @@ public final class TrioSettings {
         s.typeSuffixScale = typeSuffixScale;
         s.boltScale = boltScale;
         s.wifiScale = wifiScale;
+        s.showWifiStandard = showWifiStandard;
         s.typeHideOnWifi = typeHideOnWifi;
         s.chargingShowsValue = chargingShowsValue;
         s.pausedGrayAll = pausedGrayAll;
@@ -1170,6 +1174,7 @@ public final class TrioSettings {
             case Prefs.KEY_TYPE_SUFFIX_SCALE: typeSuffixScale = src.typeSuffixScale; return true;
             case Prefs.KEY_BOLT_SCALE: boltScale = src.boltScale; return true;
             case Prefs.KEY_WIFI_SCALE: wifiScale = src.wifiScale; return true;
+            case Prefs.KEY_SHOW_WIFI_STANDARD: showWifiStandard = src.showWifiStandard; return true;
             case Prefs.KEY_TYPE_HIDE_ON_WIFI: typeHideOnWifi = src.typeHideOnWifi; return true;
             case Prefs.KEY_PAUSED_GRAY_ALL: pausedGrayAll = src.pausedGrayAll; return true;
             case Prefs.KEY_CHARGE_FLOW: chargeFlow = src.chargeFlow; return true;
@@ -1360,6 +1365,7 @@ public final class TrioSettings {
         s.wifiScale = Prefs.clamp(
                 bundle.getInt(Prefs.KEY_WIFI_SCALE, Prefs.DEF_WIFI_SCALE),
                 Prefs.MIN_WIFI_SCALE, Prefs.MAX_WIFI_SCALE);
+        s.showWifiStandard = bundle.getBoolean(Prefs.KEY_SHOW_WIFI_STANDARD, Prefs.DEF_SHOW_WIFI_STANDARD);
         s.typeHideOnWifi = bundle.getBoolean(Prefs.KEY_TYPE_HIDE_ON_WIFI,
                 Prefs.DEF_TYPE_HIDE_ON_WIFI);
         s.pausedGrayAll = bundle.getBoolean(Prefs.KEY_PAUSED_GRAY_ALL, Prefs.DEF_PAUSED_GRAY_ALL);
@@ -1513,6 +1519,7 @@ public final class TrioSettings {
         b.putInt(Prefs.KEY_TYPE_SUFFIX_SCALE, typeSuffixScale);
         b.putInt(Prefs.KEY_BOLT_SCALE, boltScale);
         b.putInt(Prefs.KEY_WIFI_SCALE, wifiScale);
+        b.putBoolean(Prefs.KEY_SHOW_WIFI_STANDARD, showWifiStandard);
         b.putBoolean(Prefs.KEY_TYPE_HIDE_ON_WIFI, typeHideOnWifi);
         b.putBoolean(Prefs.KEY_CHARGING_SHOWS_VALUE, chargingShowsValue);
         b.putBoolean(Prefs.KEY_PAUSED_GRAY_ALL, pausedGrayAll);
@@ -1676,6 +1683,7 @@ public final class TrioSettings {
                 && typeSuffixScale == s.typeSuffixScale
                 && boltScale == s.boltScale
                 && wifiScale == s.wifiScale
+                && showWifiStandard == s.showWifiStandard
                 && typeHideOnWifi == s.typeHideOnWifi
                 && chargingShowsValue == s.chargingShowsValue
                 && pausedGrayAll == s.pausedGrayAll

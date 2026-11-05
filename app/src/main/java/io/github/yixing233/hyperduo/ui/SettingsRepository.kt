@@ -294,6 +294,7 @@ class SettingsRepository(context: Context) {
     fun setBoltScale(value: Int) = writeInt(Prefs.KEY_BOLT_SCALE, value)
     /** Wi-Fi arcs' size, in percent; see [Prefs.KEY_WIFI_SCALE]. */
     fun setWifiScale(value: Int) = writeInt(Prefs.KEY_WIFI_SCALE, value)
+    fun setShowWifiStandard(value: Boolean) = writeBoolean(Prefs.KEY_SHOW_WIFI_STANDARD, value)
     /** Drop the network type while Wi-Fi is up; see [Prefs.KEY_TYPE_HIDE_ON_WIFI]. */
     fun setTypeHideOnWifi(value: Boolean) =
         writeBoolean(Prefs.KEY_TYPE_HIDE_ON_WIFI, value)

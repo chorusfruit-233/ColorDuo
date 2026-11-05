@@ -9,6 +9,7 @@ import java.util.Arrays;
 /** Executes real settings transport, ownership and rendering with the existing desktop shims. */
 public final class ColorOsSettingsTest {
     public static void main(String[] args) {
+        wifiStandardSettings();
         hdVisibilitySettings();
         adjustableGeometry();
         signalIconScaleSettings();
@@ -428,6 +429,19 @@ public final class ColorOsSettingsTest {
         old.putInt(Prefs.KEY_SIGNAL_ICON_SCALE,999);
         check(TrioSettings.fromBundle(old).signalIconScale==200,"oversized icon scales clamp safely");
     }
+    private static void wifiStandardSettings() {
+        TrioSettings previous = TrioSettings.defaults();
+        check(!previous.showWifiStandard, "existing installations keep their Wi-Fi layout");
+        TrioSettings enabled = previous.copy();enabled.showWifiStandard = true;
+        check(!enabled.equals(previous) && enabled.copy().showWifiStandard, "badge switch participates in snapshots and change detection");
+        check(TrioSettings.fromBundle(enabled.toBundle()).showWifiStandard, "full framework reconnect retains the badge switch");
+        check(previous.applyKeyFrom(enabled, Prefs.KEY_SHOW_WIFI_STANDARD) && previous.showWifiStandard,
+                "single-key remote updates apply the badge switch");
+        Bundle unrelated = new Bundle();unrelated.putBoolean(Prefs.KEY_DEBUG_LOG, true);
+        check(TrioSettings.fromBundle(unrelated, enabled).showWifiStandard, "partial reload cannot reset the badge switch");
+        check(!TrioSettings.fromBundle(new Bundle()).showWifiStandard, "old configuration migrates without enabling badges");
+    }
+
     private static void hdVisibilitySettings() {
         TrioSettings system=TrioSettings.defaults();
         check(!system.hideHd,"HD defaults to the system, including old installations without the key");

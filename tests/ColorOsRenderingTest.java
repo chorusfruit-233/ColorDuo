@@ -72,6 +72,7 @@ public final class ColorOsRenderingTest {
         physicalSizing();
         activeNetworkTypePolicy();
         automaticWifiUsesTypePosition();
+        wifiStandardBadges();
         fullCapsule();
         clockHandoff();
         readableDefaults();
@@ -90,6 +91,56 @@ public final class ColorOsRenderingTest {
         System.out.println("Capsule fill, live clock handoff and reachable percentage sizing passed: " + checks + " checks");
     }
 
+
+    private static void wifiStandardBadges() {
+        for (int layout = 0; layout < 3; layout++) for (int scale : new int[] {60, 100, 300}) {
+            TrioSettings cfg = TrioSettings.defaults();
+            cfg.trioStyle = layout == 2 ? Prefs.STYLE_CAPSULE : Prefs.STYLE_RING;
+            cfg.splitMode = layout == 1 ? 1 : 0;
+            cfg.glyphScale = scale;
+            cfg.typeHideOnWifi = true;
+            cfg.mobileTypeMode = Prefs.MOBILE_TYPE_IN_RING;
+            cfg.showWifi = false; // Automatic Wi-Fi also works with manual Wi-Fi handed back.
+            cfg = TrioZones.withPiece(cfg, TrioZones.Zone.CENTRE.ordinal(), TrioZones.Part.TYPE);
+            cfg.showWifiStandard = true;
+            TrioState state = new TrioState();state.mobileType = "5G";
+            state.wifiPresent = true;
+            TrioSizing.Metrics size = TrioSizing.measure(TrioAppearance.of(cfg), 1f, 128, 480);
+            for (int level : new int[] {0, 2, 4}) for (String standard : new String[] {"4", "5", "6", "6E", "7"}) {
+                state.wifiLevel = level;state.wifiStandard = standard;
+                try (Frame frame = new Frame()) {
+                    TrioRenderer.drawSizedState(frame, size.width, size.height, state, cfg, size.scale, false);
+                    boolean sixE = standard.equals("6E");
+                    int at = frame.texts.indexOf(sixE ? "6" : standard);
+                    check(at >= 0 && (!sixE || frame.texts.indexOf("E") == at + 1),
+                            "every supported standard appears in ring, ellipse and capsule");
+                    check(!frame.texts.contains("5G"), "automatic Wi-Fi badge replaces the mobile type");
+                    for (int i = 0; i < (sixE ? 2 : 1); i++) {
+                        java.awt.geom.Rectangle2D ink = frame.textBounds.get(at + i);
+                        check(ink.getMinX() >= -1 && ink.getMinY() >= -1
+                                && ink.getMaxX() <= size.width + 1 && ink.getMaxY() <= size.height + 1,
+                                "standard marker stays inside the measured host at every supported glyph scale");
+                    }
+                    if (sixE) {
+                        java.awt.geom.Rectangle2D digit = frame.textBounds.get(at), suffix = frame.textBounds.get(at + 1);
+                        check(suffix.getMinX() >= digit.getMaxX() - 1 && suffix.getMaxY() < digit.getMaxY(),
+                                "6E uses an attached, smaller raised suffix without overlapping the main digit");
+                    }
+                }
+            }
+            cfg.showWifiStandard = false;state.wifiStandard = "6E";
+            try (Frame frame = new Frame()) {
+                TrioRenderer.drawSizedState(frame, size.width, size.height, state, cfg, size.scale, false);
+                check(!frame.texts.contains("E"), "turning the switch off removes the badge immediately");
+            }
+            cfg.showWifiStandard = true;state.wifiPresent = false;
+            try (Frame frame = new Frame()) {
+                TrioRenderer.drawSizedState(frame, size.width, size.height, state, cfg, size.scale, false);
+                check(!frame.texts.contains("E") && String.join("",frame.texts).contains("5G"),
+                        "default cellular route hides Wi-Fi and its cached badge together");
+            }
+        }
+    }
 
     private static float renderedOpening(int part,int valueSize,int valueWeight,int boltScale) {
         TrioSettings settings=TrioSettings.defaults();
