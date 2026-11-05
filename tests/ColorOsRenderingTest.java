@@ -27,6 +27,8 @@ public final class ColorOsRenderingTest {
         final List<Integer> textColors = new ArrayList<>();
         final List<String> texts = new ArrayList<>();
         final List<java.awt.geom.Rectangle2D> textBounds = new ArrayList<>();
+        final List<java.awt.geom.Rectangle2D> wifiArcBounds = new ArrayList<>();
+        final List<Float> textStrokes = new ArrayList<>();
         float textSize;
 
         Frame() { this(new BufferedImage(480, 400, BufferedImage.TYPE_INT_ARGB).createGraphics()); }
@@ -42,6 +44,14 @@ public final class ColorOsRenderingTest {
             arcs.add(sweep);
             ellipseArcs.add(new float[]{oval.width(),oval.height(),start,sweep});
             arcColors.add(paint.getColor());
+            if (Math.abs(((oval.left+oval.right)/2f)-TrioGeometry.W_CX)<0.01f
+                    && (Math.abs(((oval.top+oval.bottom)/2f)-TrioGeometry.W1_CY)<0.01f
+                        || Math.abs(((oval.top+oval.bottom)/2f)-TrioGeometry.W2_CY)<0.01f)) {
+                java.awt.Shape shape = new java.awt.geom.Arc2D.Float(oval.left,oval.top,
+                        oval.width(),oval.height(),-start,-sweep,java.awt.geom.Arc2D.OPEN);
+                wifiArcBounds.add(graphics.getTransform().createTransformedShape(
+                        paint.stroke().createStrokedShape(shape)).getBounds2D());
+            }
             super.drawArc(oval, start, sweep, center, paint);
         }
         @Override public void drawPath(Path path, Paint paint) {
@@ -56,6 +66,9 @@ public final class ColorOsRenderingTest {
             texts.add(text);
             textColors.add(paint.getColor());
             textSize = paint.getTextSize();
+            java.awt.geom.Point2D pen = graphics.getTransform().deltaTransform(
+                    new java.awt.geom.Point2D.Float(paint.getStrokeWidth(),0),null);
+            textStrokes.add((float)Math.hypot(pen.getX(),pen.getY()));
             android.graphics.Rect ink = new android.graphics.Rect();
             paint.getTextBounds(text, 0, text.length(), ink);
             float left = x - (paint.getTextAlign() == Paint.Align.CENTER ? paint.measureText(text) * 0.5f
@@ -73,6 +86,7 @@ public final class ColorOsRenderingTest {
         activeNetworkTypePolicy();
         automaticWifiUsesTypePosition();
         wifiStandardBadges();
+        wifiStandardReadabilityControls();
         fullCapsule();
         clockHandoff();
         readableDefaults();
@@ -91,6 +105,94 @@ public final class ColorOsRenderingTest {
         System.out.println("Capsule fill, live clock handoff and reachable percentage sizing passed: " + checks + " checks");
     }
 
+
+    private static final class MarkerSample {
+        final double height,coverage;
+        MarkerSample(double h,double c){height=h;coverage=c;}
+    }
+
+    private static MarkerSample markerSample(int layout,int size,int weight,int zone,boolean paired) {
+        return markerSample(layout,size,weight,zone,paired,100);
+    }
+
+    private static MarkerSample markerSample(int layout,int size,int weight,int zone,boolean paired,int iconScale) {
+        TrioSettings cfg=TrioSettings.defaults();cfg.glyphScale=300;cfg.wifiScale=iconScale;
+        cfg.trioStyle=layout==2?Prefs.STYLE_CAPSULE:Prefs.STYLE_RING;
+        cfg.splitMode=layout==1?1:0;cfg.showWifiStandard=true;
+        cfg.wifiStandardScale=size;cfg.wifiStandardWeight=weight;
+        cfg.typeHideOnWifi=true;cfg.mobileTypeMode=Prefs.MOBILE_TYPE_IN_RING;
+        cfg=TrioZones.withPiece(cfg,zone,TrioZones.Part.TYPE);
+        if(paired)cfg=TrioZones.withPiece(cfg,TrioZones.Zone.CENTRE.ordinal(),TrioZones.Part.SIM_PAIR);
+        TrioState state=new TrioState();state.wifiLevel=3;state.wifiPresent=true;
+        state.wifiStandard="6E";state.mobileType="5G";state.slotLevels=new int[]{4,2};state.sims=2;
+        TrioSizing.Metrics m=TrioSizing.measure(TrioAppearance.of(cfg),4f,300,480);
+        BufferedImage image=new BufferedImage(480,400,BufferedImage.TYPE_INT_ARGB);
+        try(Frame frame=new Frame(image.createGraphics())) {
+            TrioRenderer.drawSizedState(frame,m.width,m.height,state,cfg,m.scale,false);
+            int at=frame.texts.indexOf("6"),suffix=frame.texts.indexOf("E");
+            check(at>=0 && suffix==at+1,"size and weight controls retain both parts of 6E");
+            java.awt.geom.Rectangle2D main=frame.textBounds.get(at);
+            for(int i:new int[]{at,suffix}) {
+                java.awt.geom.Rectangle2D r=frame.textBounds.get(i);
+                float pad=frame.textStrokes.get(i)/2f;
+                check(r.getMinX()-pad>=-1 && r.getMinY()-pad>=-1
+                        && r.getMaxX()+pad<=m.width+1 && r.getMaxY()+pad<=m.height+1,
+                        "largest and heaviest standard markers fit the real measured host");
+                for(java.awt.geom.Rectangle2D arc:frame.wifiArcBounds)
+                    check(r.getMinX()-pad>=arc.getMaxX()-0.2,
+                            "enlarged markers have their own space beside the Wi-Fi arcs");
+            }
+            if(paired) {
+                double pairLeft=Double.POSITIVE_INFINITY;
+                for(float[] circle:frame.circles)pairLeft=Math.min(pairLeft,circle[0]-circle[2]);
+                check(frame.textBounds.get(suffix).getMaxX()<pairLeft,
+                        "left-hand standards stop before a centre SIM pair");
+            }
+            double coverage=0;
+            int left=Math.max(0,(int)Math.floor(main.getMinX())-2),right=Math.min(image.getWidth(),(int)Math.ceil(main.getMaxX())+2);
+            int top=Math.max(0,(int)Math.floor(main.getMinY())-2),bottom=Math.min(image.getHeight(),(int)Math.ceil(main.getMaxY())+2);
+            for(int y=top;y<bottom;y++)for(int x=left;x<right;x++)coverage+=(image.getRGB(x,y)>>>24)/255.0;
+            return new MarkerSample(main.getHeight(),coverage);
+        }
+    }
+
+    private static BufferedImage unknownStandardFrame(TrioSettings cfg) {
+        TrioState state=new TrioState();state.wifiLevel=3;state.wifiPresent=true;state.wifiStandard="";
+        TrioSizing.Metrics m=TrioSizing.measure(TrioAppearance.of(cfg),4f,300,480);
+        BufferedImage image=new BufferedImage(480,400,BufferedImage.TYPE_INT_ARGB);
+        try(Frame f=new Frame(image.createGraphics())) {
+            TrioRenderer.drawSizedState(f,m.width,m.height,state,cfg,m.scale,false);
+        }
+        return image;
+    }
+
+    private static void wifiStandardReadabilityControls() {
+        for(int layout=0;layout<3;layout++) {
+            MarkerSample small=markerSample(layout,50,900,TrioZones.Zone.CENTRE.ordinal(),false);
+            MarkerSample normal=markerSample(layout,100,900,TrioZones.Zone.CENTRE.ordinal(),false);
+            MarkerSample large=markerSample(layout,250,900,TrioZones.Zone.CENTRE.ordinal(),false);
+            check(normal.height>small.height*1.4 && large.height>normal.height*1.2,
+                    "size control increases actual on-screen ink rather than just the stored value");
+            markerSample(layout,250,1000,TrioZones.Zone.CENTRE.ordinal(),false,Prefs.MAX_WIFI_SCALE);
+            MarkerSample bold=markerSample(layout,100,700,TrioZones.Zone.CENTRE.ordinal(),false);
+            check(normal.coverage>bold.coverage,"weight 900 paints visibly more ink than weight 700");
+            for(int zone:new int[]{0,1,2})for(int size:new int[]{50,100,250})for(int weight:new int[]{100,900,1000})
+                markerSample(layout,size,weight,zone,false);
+        }
+        for(int size:new int[]{50,100,250})for(int weight:new int[]{100,900,1000})
+            markerSample(2,size,weight,TrioZones.Zone.LEFT.ordinal(),true);
+        for(int style:new int[]{Prefs.STYLE_RING,Prefs.STYLE_CAPSULE}) {
+            TrioSettings cfg=TrioSettings.defaults();cfg.trioStyle=style;cfg.glyphScale=300;
+            cfg.typeHideOnWifi=true;cfg.mobileTypeMode=Prefs.MOBILE_TYPE_IN_RING;
+            cfg=TrioZones.withPiece(cfg,TrioZones.Zone.TOP.ordinal(),TrioZones.Part.TYPE);
+            cfg.wifiStandardScale=250;cfg.wifiStandardWeight=1000;
+            cfg.showWifiStandard=false;BufferedImage off=unknownStandardFrame(cfg);
+            cfg.showWifiStandard=true;BufferedImage unknown=unknownStandardFrame(cfg);
+            check(java.util.Arrays.equals(off.getRGB(0,0,480,400,null,0,480),
+                    unknown.getRGB(0,0,480,400,null,0,480)),
+                    "unknown standards do not add empty space or widen an opening");
+        }
+    }
 
     private static void wifiStandardBadges() {
         for (int layout = 0; layout < 3; layout++) for (int scale : new int[] {60, 100, 300}) {

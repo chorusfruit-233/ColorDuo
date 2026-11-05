@@ -440,6 +440,17 @@ public final class ColorOsSettingsTest {
         Bundle unrelated = new Bundle();unrelated.putBoolean(Prefs.KEY_DEBUG_LOG, true);
         check(TrioSettings.fromBundle(unrelated, enabled).showWifiStandard, "partial reload cannot reset the badge switch");
         check(!TrioSettings.fromBundle(new Bundle()).showWifiStandard, "old configuration migrates without enabling badges");
+        check(enabled.wifiStandardScale==100 && enabled.wifiStandardWeight==900,"old installs receive larger heavier marker defaults");
+        enabled.wifiStandardScale=225;enabled.wifiStandardWeight=1000;
+        TrioSettings loaded=TrioSettings.fromBundle(enabled.copy().toBundle());
+        check(loaded.wifiStandardScale==225 && loaded.wifiStandardWeight==1000,"size and weight survive full replay and copying");
+        check(previous.applyKeyFrom(enabled,Prefs.KEY_WIFI_STANDARD_SCALE)
+                && previous.applyKeyFrom(enabled,Prefs.KEY_WIFI_STANDARD_WEIGHT)
+                && previous.wifiStandardScale==225 && previous.wifiStandardWeight==1000,"independent live updates apply both controls");
+        check(TrioSettings.fromBundle(unrelated,enabled).wifiStandardScale==225,"partial updates preserve marker geometry");
+        Bundle invalid=new Bundle();invalid.putInt(Prefs.KEY_WIFI_STANDARD_SCALE,9999);invalid.putInt(Prefs.KEY_WIFI_STANDARD_WEIGHT,-1);
+        loaded=TrioSettings.fromBundle(invalid);
+        check(loaded.wifiStandardScale==250 && loaded.wifiStandardWeight==100,"remote out-of-range inputs use the editor limits");
     }
 
     private static void hdVisibilitySettings() {

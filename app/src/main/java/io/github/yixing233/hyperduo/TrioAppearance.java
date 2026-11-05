@@ -244,6 +244,9 @@ public final class TrioAppearance {
     public final int boltScale;
     /** Wi-Fi arcs' size, in percent; see {@link Prefs#KEY_WIFI_SCALE}. */
     public final int wifiScale;
+    public final boolean showWifiStandard;
+    public final int wifiStandardScale;
+    public final int wifiStandardWeight;
     /**
      * The network type steps aside while Wi-Fi is up; see {@link Prefs#KEY_TYPE_HIDE_ON_WIFI}.
      *
@@ -394,6 +397,9 @@ public final class TrioAppearance {
         typeSuffixScale = c.typeSuffixScale;
         boltScale = c.boltScale;
         wifiScale = c.wifiScale;
+        showWifiStandard = c.showWifiStandard;
+        wifiStandardScale = Prefs.clamp(c.wifiStandardScale, Prefs.MIN_WIFI_STANDARD_SCALE, Prefs.MAX_WIFI_STANDARD_SCALE);
+        wifiStandardWeight = Prefs.clamp(c.wifiStandardWeight, Prefs.MIN_WIFI_STANDARD_WEIGHT, Prefs.MAX_WIFI_STANDARD_WEIGHT);
         dotScale = c.dotScale;
         splitMode = Prefs.clamp(c.splitMode, Prefs.MIN_SPLIT_MODE, Prefs.MAX_SPLIT_MODE);
         splitLink = Prefs.clamp(c.splitLink, Prefs.MIN_SPLIT_LINK, Prefs.MAX_SPLIT_LINK);

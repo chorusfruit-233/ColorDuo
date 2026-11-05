@@ -421,4 +421,8 @@
 <string name="advanced_network_type">Network type advanced options</string>
     <string name="wifi_standard_title">Show Wi-Fi standard</string>
     <string name="wifi_standard_summary">Show 4, 5, 6, 6E or 7 on the module Wi-Fi icon, including Wi-Fi 4/5 normally omitted by the system.</string>
+    <string name="wifi_standard_scale_title">Standard marker size</string>
+    <string name="wifi_standard_scale_summary">Default %1$d%%; range %2$d%%–%3$d%%.</string>
+    <string name="wifi_standard_weight_title">Standard marker weight</string>
+    <string name="wifi_standard_weight_summary">Default %1$d; range %2$d–%3$d.</string>
 </resources>

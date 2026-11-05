@@ -142,7 +142,14 @@ public class Canvas {
         }
         if (paint.getLetterSpacing() == 0f) {
             g.setFont(font);
-            g.drawString(text, startX, y);
+            if (paint.getStyle() == Paint.Style.FILL_AND_STROKE && paint.getStrokeWidth() > 0f) {
+                java.awt.Shape ink = font.createGlyphVector(g.getFontRenderContext(), text).getOutline(startX, y);
+                g.fill(ink);
+                g.setStroke(paint.stroke());
+                g.draw(ink);
+            } else {
+                g.drawString(text, startX, y);
+            }
         } else {
             // Deliver each glyph individually so tracking is honoured.
             float cursor = startX;

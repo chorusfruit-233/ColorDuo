@@ -224,4 +224,16 @@ class LayoutControlsTest {
         assertTrue(advancedGroupsFor(slidersForEditor(TrioSettingsPart.Mobile,a),
             contentControlsFor(TrioSettingsPart.Mobile,independent),a).isEmpty())
     }
+    @Test fun wifiStandardSizeAndWeightAreIndependentFromTheWholeIcon() {
+        val s = settings().apply { wifiScale = 150; wifiStandardScale = 225; wifiStandardWeight = 900 }
+        val a = TrioAppearance.of(s)
+        val rows = slidersForEditor(TrioSettingsPart.Wifi, a)
+        val size = rows.single { it.titleRes(a) == R.string.wifi_standard_scale_title }
+        val weight = rows.single { it.titleRes(a) == R.string.wifi_standard_weight_title }
+        assertEquals(50, size.min); assertEquals(250, size.max)
+        assertEquals(100, weight.min); assertEquals(1000, weight.max)
+        assertEquals(225, size.read(s)); assertEquals(900, weight.read(s))
+        assertEquals(150, s.wifiScale)
+        assertTrue(size.enabled(a) && weight.enabled(a))
+    }
 }
