@@ -13,35 +13,6 @@ public final class TrioSizing {
     }
 
     static Bounds bounds(TrioAppearance a) {
-        Bounds base=artworkBounds(a);
-        if(!a.showWifiStandard || !a.ownsWifi()) return base;
-        // A standard number owns additional host space. It must never change the
-        // Wi-Fi arc group's centre or component scale inside the battery artwork.
-        float scale;
-        if(a.capsule) {
-            scale=TrioGeometry.capWifiScale(a.ringStroke*TrioGeometry.CAP_STROKE_RATIO)*a.wifiScaleFactor();
-        } else if(a.rect) {
-            scale=TrioGeometry.RECT_WIFI_SCALE*a.wifiScaleFactor();
-        } else {
-            float extra=Math.max(0f,a.arcStroke-TrioGeometry.W_STROKE);
-            scale=0f;
-            for(int zone=0;zone<3;zone++) {
-                float room=78f-a.ringStroke;
-                if(a.splitMode==1 && zone!=1)room=Math.min(room,TrioGeometry.splitOpeningWidth(a,zone));
-                float height=zone==0?TrioGeometry.DOT_BOX_TOP:zone==1
-                        ?TrioGeometry.DOT_BOX_CENTRE:TrioGeometry.DOT_BOX_BOTTOM;
-                scale=Math.max(scale,Math.min(room/(TrioGeometry.W_INK_W+extra),
-                        height/(TrioGeometry.W_INK_H+extra))*a.wifiScaleFactor());
-            }
-        }
-        float size=24f*a.wifiStandardScale/100f;
-        // Conservative ASCII 6E bounds also cover a fallback system font and its outline.
-        float xPad=(size*1.5f+2f)*scale+Math.max(0f,a.ringStroke-Prefs.DEF_RING_STROKE)/2f+4f;
-        float yPad=(Math.max(0f,size*1.05f-39f)+2f)*scale;
-        return new Bounds(base.x-xPad,base.y-yPad,base.width+2*xPad,base.height+2*yPad);
-    }
-
-    static Bounds artworkBounds(TrioAppearance a) {
         TrioGeometry.setCapsuleLength(a.capsuleLength);
         final TrioGeometry.SplitRing split = a.ring && (a.splitMode == 1 || a.drawsSimPair() || a.signalIconScale != 100)
                 ? new TrioGeometry.SplitRing(a) : null;

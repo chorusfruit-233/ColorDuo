@@ -28,6 +28,7 @@ public final class ColorOsRenderingTest {
         final List<String> texts = new ArrayList<>();
         final List<java.awt.geom.Rectangle2D> textBounds = new ArrayList<>();
         final List<java.awt.geom.Rectangle2D> wifiArcBounds = new ArrayList<>();
+        final List<java.awt.geom.Rectangle2D> wifiDotBounds = new ArrayList<>();
         final List<java.awt.geom.Rectangle2D> outlineBounds = new ArrayList<>();
         final List<Float> textStrokes = new ArrayList<>();
         float textSize;
@@ -63,6 +64,7 @@ public final class ColorOsRenderingTest {
             java.awt.geom.Rectangle2D bounds = graphics.getTransform().createTransformedShape(
                     new java.awt.geom.Rectangle2D.Float(ink.left,ink.top,ink.width(),ink.height())).getBounds2D();
             pathBounds.add(bounds);
+            if (ink.left>51f&&ink.right<68f&&ink.top>69f&&ink.bottom<82f)wifiDotBounds.add(bounds);
             if (paint.getStyle() == Paint.Style.STROKE) outlineBounds.add(bounds);
             super.drawPath(path, paint);
         }
@@ -120,6 +122,11 @@ public final class ColorOsRenderingTest {
     }
 
     private static MarkerSample markerSample(int layout,int size,int weight,int zone,boolean paired,int iconScale) {
+        return markerSample(layout,size,weight,zone,paired,iconScale,"6E");
+    }
+
+    private static MarkerSample markerSample(int layout,int size,int weight,int zone,boolean paired,int iconScale,
+                                              String standard) {
         TrioSettings cfg=TrioSettings.defaults();cfg.glyphScale=300;cfg.wifiScale=iconScale;
         cfg.trioStyle=layout==2?Prefs.STYLE_CAPSULE:Prefs.STYLE_RING;
         cfg.splitMode=layout==1?1:0;cfg.showWifiStandard=true;
@@ -128,28 +135,29 @@ public final class ColorOsRenderingTest {
         cfg=TrioZones.withPiece(cfg,zone,TrioZones.Part.TYPE);
         if(paired)cfg=TrioZones.withPiece(cfg,TrioZones.Zone.CENTRE.ordinal(),TrioZones.Part.SIM_PAIR);
         TrioState state=new TrioState();state.wifiLevel=3;state.wifiPresent=true;
-        state.wifiStandard="6E";state.mobileType="5G";state.slotLevels=new int[]{4,2};state.sims=2;
+        state.wifiStandard=standard;state.mobileType="5G";state.slotLevels=new int[]{4,2};state.sims=2;
         TrioSizing.Metrics m=TrioSizing.measure(TrioAppearance.of(cfg),4f,300,480);
         BufferedImage image=new BufferedImage(480,400,BufferedImage.TYPE_INT_ARGB);
         try(Frame frame=new Frame(image.createGraphics())) {
             TrioRenderer.drawSizedState(frame,m.width,m.height,state,cfg,m.scale,false);
             int at=frame.texts.indexOf("6"),suffix=frame.texts.indexOf("E");
-            check(at>=0 && suffix==at+1,"size and weight controls retain both parts of 6E");
+            check(at>=0 && (!standard.equals("6E") || suffix==at+1),
+                    "size and weight controls retain the complete Wi-Fi standard");
             java.awt.geom.Rectangle2D main=frame.textBounds.get(at);
-            for(int i:new int[]{at,suffix}) {
+            for(int i:suffix<0?new int[]{at}:new int[]{at,suffix}) {
                 java.awt.geom.Rectangle2D r=frame.textBounds.get(i);
                 float pad=frame.textStrokes.get(i)/2f;
                 check(r.getMinX()-pad>=-1 && r.getMinY()-pad>=-1
                         && r.getMaxX()+pad<=m.width+1 && r.getMaxY()+pad<=m.height+1,
                         "largest and heaviest standard markers fit the real measured host");
                 for(java.awt.geom.Rectangle2D arc:frame.wifiArcBounds)
-                    check(zone==TrioZones.Zone.LEFT.ordinal()
-                                    ? r.getMaxX()+pad<=arc.getMinX()+0.2
-                                    : r.getMinX()-pad>=arc.getMaxX()-0.2,
-                            "independent markers stay beside the Wi-Fi arcs");
-                if (layout != 2) for (java.awt.geom.Rectangle2D outline : frame.outlineBounds)
-                    check(r.getMinX()-pad>outline.getMaxX(),
-                            "ring standards use reserved space beyond the battery outline");
+                    check(r.getMinY()-pad>arc.getMaxY(),
+                            "lower-right standard clears the Wi-Fi arcs");
+                for(java.awt.geom.Rectangle2D dot:frame.wifiDotBounds)
+                    check(r.getMinX()-pad>dot.getMaxX(),
+                            "standard stays to the right of the Wi-Fi dot");
+                if(layout==0&&zone==TrioZones.Zone.CENTRE.ordinal())
+                    assertMarkerInsideRing(r,pad,cfg,m);
             }
             if(paired) {
                 double pairLeft=Double.POSITIVE_INFINITY;
@@ -223,8 +231,13 @@ public final class ColorOsRenderingTest {
             MarkerSample small=markerSample(layout,50,900,TrioZones.Zone.CENTRE.ordinal(),false);
             MarkerSample normal=markerSample(layout,100,900,TrioZones.Zone.CENTRE.ordinal(),false);
             MarkerSample large=markerSample(layout,250,900,TrioZones.Zone.CENTRE.ordinal(),false);
-            check(normal.height>small.height*1.4 && large.height>normal.height*1.2,
-                    "size control increases actual on-screen ink rather than just the stored value");
+            check(normal.height>small.height+1 && large.height>=normal.height-1,
+                    "size control grows the badge until its available corner is full: layout="+layout
+                            +" small="+small.height+" normal="+normal.height+" large="+large.height);
+            MarkerSample digitSmall=markerSample(layout,50,900,TrioZones.Zone.CENTRE.ordinal(),false,100,"6");
+            MarkerSample digitNormal=markerSample(layout,100,900,TrioZones.Zone.CENTRE.ordinal(),false,100,"6");
+            check(digitNormal.height>digitSmall.height*1.4,
+                    "ordinary standard numbers retain a visibly larger default size");
             markerSample(layout,250,1000,TrioZones.Zone.CENTRE.ordinal(),false,Prefs.MAX_WIFI_SCALE);
             MarkerSample bold=markerSample(layout,100,700,TrioZones.Zone.CENTRE.ordinal(),false);
             check(normal.coverage>bold.coverage,"weight 900 paints visibly more ink than weight 700");
@@ -234,6 +247,50 @@ public final class ColorOsRenderingTest {
         for(int size:new int[]{50,100,250})for(int weight:new int[]{100,900,1000})
             markerSample(2,size,weight,TrioZones.Zone.LEFT.ordinal(),true);
         wifiArcAnchorsStayFixed();
+        wifiStandardStaysInsideGlyph();
+    }
+
+    private static void assertMarkerInsideRing(java.awt.geom.Rectangle2D ink,float pad,
+                                               TrioSettings cfg,TrioSizing.Metrics m) {
+        float[] t=new float[3];check(TrioSizing.transform(m.width,m.height,TrioAppearance.of(cfg),m.scale,t),
+                "ring transform resolves for badge clearance");
+        double x=ink.getMaxX()+pad-(TrioGeometry.B_CX*t[0]+t[1]);
+        double cy=TrioGeometry.B_CY*t[0]+t[2];
+        double y=Math.max(Math.abs(ink.getMinY()-pad-cy),Math.abs(ink.getMaxY()+pad-cy));
+        double radius=(TrioGeometry.B_R-cfg.ringStroke/2f-1f)*t[0];
+        check(x*x+y*y<=radius*radius+0.1,"standard remains inside the battery ring");
+    }
+
+    private static void wifiStandardStaysInsideGlyph() {
+        for(int layout=0;layout<3;layout++)for(int scale:new int[]{60,100,300})
+                for(boolean automatic:new boolean[]{false,true}) {
+            TrioSettings cfg=TrioSettings.defaults();cfg.glyphScale=scale;cfg.showWifi=true;
+            cfg.trioStyle=layout==2?Prefs.STYLE_CAPSULE:Prefs.STYLE_RING;cfg.splitMode=layout==1?1:0;
+            cfg.typeHideOnWifi=automatic;cfg.mobileTypeMode=Prefs.MOBILE_TYPE_IN_RING;
+            cfg=TrioZones.withPiece(cfg,TrioZones.Zone.CENTRE.ordinal(),
+                    automatic?TrioZones.Part.TYPE:TrioZones.Part.WIFI);
+            cfg.showWifiStandard=false;
+            TrioSizing.Metrics before=TrioSizing.measure(TrioAppearance.of(cfg),4f,400,600);
+            cfg.showWifiStandard=true;
+            for(int size:new int[]{50,100,250})for(int weight:new int[]{100,900,1000}) {
+                cfg.wifiStandardScale=size;cfg.wifiStandardWeight=weight;
+                TrioSizing.Metrics after=TrioSizing.measure(TrioAppearance.of(cfg),4f,400,600);
+                check(before.width==after.width&&before.height==after.height
+                                &&Math.abs(before.scale-after.scale)<0.0001f,
+                        "standard controls never add an external column or resize the glyph");
+                TrioState state=new TrioState();state.wifiLevel=3;state.wifiPresent=true;
+                for(String standard:new String[]{"4","5","6","6E","7"}) {
+                    state.wifiStandard=standard;
+                    try(Frame f=new Frame()) {
+                        TrioRenderer.drawSizedState(f,after.width,after.height,state,cfg,after.scale,false);
+                        int at=f.texts.indexOf(standard.equals("6E")?"6":standard);
+                        check(at>=0,"all standards remain visible while fitted inside");
+                        if(layout==0)for(int i=at;i<=at+(standard.equals("6E")?1:0);i++)
+                            assertMarkerInsideRing(f.textBounds.get(i),f.textStrokes.get(i)/2f,cfg,after);
+                    }
+                }
+            }
+        }
     }
 
     private static void wifiStandardBadges() {

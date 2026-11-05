@@ -421,7 +421,7 @@
     <string name="wifi_standard_title">显示 Wi-Fi 标准</string>
     <string name="wifi_standard_summary">在模块 Wi-Fi 图标上显示 4、5、6、6E 或 7，包括系统通常省略的 Wi-Fi 4/5。</string>
     <string name="wifi_standard_scale_title">标准号大小</string>
-    <string name="wifi_standard_scale_summary">默认 %1$d%%，可调 %2$d%%–%3$d%%。</string>
+    <string name="wifi_standard_scale_summary">默认 %1$d%%，可调 %2$d%%–%3$d%%；空间不足时仅缩小标准号。</string>
     <string name="wifi_standard_weight_title">标准号字重</string>
     <string name="wifi_standard_weight_summary">默认 %1$d，可调 %2$d–%3$d。</string>
 </resources>
