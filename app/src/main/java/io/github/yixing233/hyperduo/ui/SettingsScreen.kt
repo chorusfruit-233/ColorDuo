@@ -68,6 +68,12 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.runtime.rememberUpdatedState
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -544,7 +550,7 @@ fun SettingsScreen(repository: SettingsRepository) {
                                 // brings its own list. Wrapping it in one lazy item is exactly
                                 // what removed the rubber band - the host had nothing left to
                                 // scroll once that single tall item was on screen.
-                                SettingsTab.Parts -> item {
+                                SettingsTab.Parts -> {
                                     PartsPage(
                                         settings = settingsState.value,
                                         onEdit = { partEditing.value = it },
@@ -562,6 +568,7 @@ fun SettingsScreen(repository: SettingsRepository) {
                                 }
                                 SettingsTab.About -> aboutTab(
                                     settingsState.value, serviceState.value, updater, showMessage,
+                                    onRestart = { restarter.reset(); restarting = true },
                                 ) { block -> update(block) }
                             }
                         }
@@ -591,6 +598,13 @@ fun SettingsScreen(repository: SettingsRepository) {
                     },
                     onDismiss = { partEditing.value = null },
                     onDismissFinished = {},
+                    extraContent = if (editingPart == TrioSettingsPart.Appearance) ({
+                        FontSettingsRows(settingsState.value, installingFont,
+                            { fontPicker.launch(arrayOf("*/*")) }, { path ->
+                                update { it.setFontPath("") }
+                                scope.launch { FontInstaller.remove(path) }
+                            })
+                    }) else null,
                 )
             }
             val current = editing
@@ -1414,32 +1428,10 @@ private fun LazyListScope.aboutTab(
     service: XposedService?,
     updater: UpdateController,
     showMessage: (String) -> Unit,
+    onRestart: () -> Unit,
     update: ((SettingsRepository) -> Unit) -> Unit,
 ) {
-    item { ActivatedRow(settings = settings, service = service) }
-    item { InfoCard(service = service) }
-    item { UpdateCard(updater, showMessage) }
-    item {
-        Card {
-            SwitchPreference(
-                checked = settings.debugLog,
-                onCheckedChange = { value -> update { it.setDebugLog(value) } },
-                title = stringResource(R.string.debug_title),
-                summary = stringResource(R.string.debug_summary),
-                insideMargin = SettingsItemMargin,
-            )
-        }
-    }
-    // issue #38: the launcher entry is a separate activity-alias, so it can be switched off
-    // without touching the LSPosed entry point (which is the MainActivity itself, advertising
-    // MODULE_SETTINGS). Disabling the alias is the documented way to hide an icon: unlike a
-    // launcher-side shortcut it survives reboots, and unlike removing the filter it leaves the
-    // activity reachable from the manager.
-    //
-    // A card of its own, like the log switch above. It used to sit inside InfoCard's column,
-    // under the key/value rows - where its own inside margin and its 4dp title/summary gap
-    // had nothing to align against, so the row read as inset against the values above it and
-    // as a slab against the footnote below.
+    item { SectionTitle(stringResource(R.string.app_preferences)) }
     item {
         Card {
             val context = LocalContext.current
@@ -1459,8 +1451,6 @@ private fun LazyListScope.aboutTab(
             )
         }
     }
-    // The shell's own appearance. It lives on the About page rather than the drawing page
-    // because it is about this screen, not about the glyph the drawing page edits.
     item {
         Column {
             SectionTitle(stringResource(R.string.nav_section))
@@ -1486,6 +1476,23 @@ private fun LazyListScope.aboutTab(
                     insideMargin = SettingsItemMargin,
                 ) { index -> update { it.setNavLabels(index) } }
             }
+        }
+    }
+    item { SectionTitle(stringResource(R.string.updates_section)) }
+    item { UpdateCard(updater, showMessage) }
+    item { SectionTitle(stringResource(R.string.diagnostics_title)) }
+    item { Card { ArrowPreference(title = stringResource(R.string.restart_title), onClick = onRestart) } }
+    item { ActivatedRow(settings = settings, service = service) }
+    item { InfoCard(service = service) }
+    item {
+        Card {
+            SwitchPreference(
+                checked = settings.debugLog,
+                onCheckedChange = { value -> update { it.setDebugLog(value) } },
+                title = stringResource(R.string.debug_title),
+                summary = stringResource(R.string.debug_summary),
+                insideMargin = SettingsItemMargin,
+            )
         }
     }
 }
@@ -2212,25 +2219,43 @@ internal fun IntSlider(
     min: Int,
     max: Int,
     title: String,
-    summary: String,
+    summary: String?,
     enabled: Boolean,
     onValueChange: (Int) -> Unit,
     step: Int = 1,
     valueTextSuffix: String? = null,
 ) {
+    androidx.compose.runtime.key(title, min, max) {
+    var draft by remember { mutableStateOf(value) }
+    val output = rememberUpdatedState(onValueChange)
+    val writer = remember {
+        val handler = Handler(Looper.getMainLooper())
+        SliderWriteQueue({ handler.postDelayed(it, 80L) }, { handler.removeCallbacks(it) },
+            { output.value(it) })
+    }
+    LaunchedEffect(value) { if (!writer.hasPending()) draft = value }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(writer, lifecycle) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) writer.flush()
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer); writer.flush() }
+    }
     SliderPreference(
-        value = value.toFloat(),
+        value = draft.toFloat(),
         // Rounded here rather than stored rounded: the slider reports floats,
         // and every preset in this screen is a whole number. Snapping through
         // [step] keeps a wide range (100..900) from producing values no font
         // actually ships.
         onValueChange = { raw ->
             val snapped = Math.round(raw / step) * step
-            onValueChange(snapped.coerceIn(min, max))
+            draft = snapped.coerceIn(min, max)
+            writer.submit(draft)
         },
         title = title,
         summary = summary,
-        valueText = value.toString() + (valueTextSuffix ?: ""),
+        valueText = draft.toString() + (valueTextSuffix ?: ""),
         enabled = enabled,
         valueRange = min.toFloat()..max.toFloat(),
         // NO discrete steps. Compose treats steps as the number of marks BETWEEN the
@@ -2241,6 +2266,8 @@ internal fun IntSlider(
         steps = 0,
         insideMargin = SettingsItemMargin,
     )
+
+    }
 }
 
 /**

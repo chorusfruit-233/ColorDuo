@@ -42,10 +42,10 @@ internal enum class ContentControl(val owner: TrioSettingsPart) {
     /** Master switch, then layout: both decide what exists at all. */
     Enabled(TrioSettingsPart.Appearance),
     Style(TrioSettingsPart.Appearance),
-    SplitMode(TrioSettingsPart.Appearance),
-    SplitLink(TrioSettingsPart.Appearance),
-    SplitCap(TrioSettingsPart.Appearance),
-    PausedGray(TrioSettingsPart.Appearance),
+    SplitMode(TrioSettingsPart.Structure),
+    SplitLink(TrioSettingsPart.Structure),
+    SplitCap(TrioSettingsPart.Structure),
+    PausedGray(TrioSettingsPart.Battery),
     ChargeFlow(TrioSettingsPart.Battery),
     ChargeFlowDirection(TrioSettingsPart.Battery),
     // --- per component: its own switch ----------------------------------------
@@ -108,9 +108,10 @@ internal fun contentControlsFor(part: TrioSettingsPart, settings: TrioSettings):
     val inside = a.slotted && !a.signalOutOfRing
     val paired = inside && a.hasRingPart(Prefs.PART_SIM_PAIR)
     return ContentControl.entries.filter { control ->
-        control.owner == part && when (control) {
+        control.owner == part && control !in listOf(ContentControl.Enabled, ContentControl.Style) && when (control) {
             ContentControl.SplitMode -> a.ring
             ContentControl.SplitLink, ContentControl.SplitCap -> a.ring && a.splitMode == 1
+            ContentControl.ChargeFlowDirection -> settings.chargeFlow
             ContentControl.SignalLayout -> inside
             ContentControl.SimPair, ContentControl.PairSim1, ContentControl.PairSim2,
             ContentControl.PairShape, ContentControl.PairMirror, ContentControl.PairReverse,
@@ -520,7 +521,7 @@ private fun RingPositionControl(
         TrioZones.Part.CLOCK -> R.string.ring_position_clock
     }
     val paired = part == TrioZones.Part.SIM_PAIR
-    val unplaced = if (paired) emptyList() else listOf(R.string.ring_position_native)
+    val unplaced = if (paired) emptyList() else listOf(if (part == TrioZones.Part.TYPE) R.string.signal_hidden else R.string.ring_position_native)
     val choice = if (paired) (selected - 1).coerceAtLeast(0) else selected
     ContentChoice(choice, title,
         null,

@@ -420,13 +420,13 @@ private fun DrawingEditorCard(
         // NOT inside a DrawingSection, because that card already insets its content by the
         // same 18dp - nesting the two added up and made the row read narrower than any other
         // row on the screen.
-        if (appearance.capsule) {
+        run {
             Card {
                 ArrowPreference(
-                    title = stringResource(R.string.capsule_container_title),
+                    title = stringResource(R.string.structure_title),
                     summary = stringResource(R.string.capsule_container_summary),
                     insideMargin = DrawingItemMargin,
-                    onClick = { containerSheet = true },
+                    onClick = { editing = TrioSettingsPart.Structure },
                 )
             }
         }
@@ -634,31 +634,27 @@ private fun DrawingSection(
  * <p>Emitted into the host list as a single item, like the drawing page, so the list that
  * scrolls it is the same one that scrolls every other page.
  */
-@Composable
-internal fun PartsPage(
+internal fun LazyListScope.PartsPage(
     settings: TrioSettings,
     onEdit: (TrioSettingsPart) -> Unit,
     installingFont: Boolean,
     onChooseFont: () -> Unit,
     onClearFont: (String) -> Unit,
 ) {
-    val a = TrioAppearance.of(settings)
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        partsForPage(settings).forEach { part ->
-            PartRow(part, settings, onClick = { onEdit(part) })
-        }
+    items(partsForPage(settings), key = { it.name }, contentType = { "component" }) { part ->
+        PartRow(part, settings.trioStyle == Prefs.STYLE_RING, onClick = { onEdit(part) })
+    }
+}
 
-        // The face the glyph's text is drawn in. Here rather than on the About page: it is a
-        // property of the ink, and About answers questions about the BUILD (version, framework,
-        // scope) rather than about how the glyph looks.
+@Composable
+internal fun FontSettingsRows(settings: TrioSettings, installingFont: Boolean,
+    onChooseFont: () -> Unit, onClearFont: (String) -> Unit) {
         SmallTitle(
             text = stringResource(R.string.group_font),
             modifier = Modifier.padding(top = 4.dp),
             insideMargin = PaddingValues(horizontal = 18.dp, vertical = 8.dp),
         )
+
         Card {
             val chosen = settings.fontPath
             ArrowPreference(
@@ -690,8 +686,6 @@ internal fun PartsPage(
                 onClick = { onClearFont(chosen) },
             )
         }
-
-    }
 }
 
 /** The components this arrangement can hold, in the order the page lists them. */
@@ -709,24 +703,23 @@ internal fun partsForPage(settings: TrioSettings): List<TrioSettingsPart> {
     val slotted = style == Prefs.STYLE_RING || style == Prefs.STYLE_CAPSULE
     return listOf(TrioSettingsPart.Appearance, TrioSettingsPart.Battery, TrioSettingsPart.Wifi,
         TrioSettingsPart.Mobile, TrioSettingsPart.Value, TrioSettingsPart.Bolt,
-        TrioSettingsPart.Type, TrioSettingsPart.Readouts) +
+        TrioSettingsPart.Readouts) +
         if (slotted) listOf(TrioSettingsPart.Clock) else emptyList()
 }
 
 @Composable
 private fun PartRow(
     part: TrioSettingsPart,
-    settings: TrioSettings,
+    ring: Boolean,
     onClick: () -> Unit,
 ) {
-    val a = TrioAppearance.of(settings)
     // The row is its NAME and nothing else. A summary was tried - the first size row, then a
     // placeholder for the cards that only hold colours - and both were noise: the number is
     // one tap away in the sheet the row opens, and "this one has no size" is a sentence about
     // the absence of a feature, which is not what a list of components is for.
     Card {
         ArrowPreference(
-            title = stringResource(if (part == TrioSettingsPart.Battery && a.ring)
+            title = stringResource(if (part == TrioSettingsPart.Battery && ring)
                 R.string.drawing_part_ring else drawingPartLabel(part)),
             summary = null,
             insideMargin = SettingsItemMargin,
@@ -738,6 +731,7 @@ private fun PartRow(
 private fun drawingPartLabel(part: TrioSettingsPart): Int = when (part) {
     TrioSettingsPart.Appearance -> R.string.drawing_part_appearance
     TrioSettingsPart.Readouts -> R.string.drawing_part_readouts
+    TrioSettingsPart.Wifi -> R.string.show_wifi_title
     else -> part.part?.let(::occupantLabelRes) ?: part.labelRes
 }
 

@@ -386,6 +386,23 @@ class SettingsRepository(context: Context) {
     fun setColorLowOnDark(value: Int) = writeInt(Prefs.KEY_COLOR_LOW_ON_DARK, value)
     fun setColorLowOnLight(value: Int) = writeInt(Prefs.KEY_COLOR_LOW_ON_LIGHT, value)
 
+    fun resetComponentColors(roles: List<String>) {
+        val defaults = TrioSettings.defaults().toBundle()
+        val keys = mapOf(
+            "Low" to "low", "Critical" to "critical", "Charging" to "charging",
+            "QuickCharging" to "quick_charging", "FlashCharging" to "flash_charging", "SuperCharging" to "super_charging",
+            "BoltCharging" to "bolt_charging", "BoltQuickCharging" to "bolt_quick_charging",
+            "BoltFlashCharging" to "bolt_flash_charging", "BoltSuperCharging" to "bolt_super_charging")
+        preferences().edit(commit = true) {
+            for (role in roles) for (background in listOf("dark", "light")) {
+                val key = "color_${keys.getValue(role)}_on_$background"
+                require(defaults.containsKey(key))
+                putInt(key, defaults.getInt(key))
+            }
+        }
+        syncAllToFramework()
+    }
+
     /** Restores all role colours to their defaults in one write. */
     fun resetRoleColors() {
         preferences().edit(commit = true) {

@@ -23,6 +23,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -49,6 +53,7 @@ import com.kyant.backdrop.backdrops.layerBackdrop
  * it opens is titled with it.
  */
 internal enum class TrioSettingsPart(val part: TrioZones.Part?, val labelRes: Int) {
+    Structure(null, R.string.structure_title),
     Appearance(null, R.string.drawing_part_appearance),
     Battery(null, R.string.drawing_part_battery),
     Readouts(null, R.string.perf_pair_title),
@@ -81,6 +86,7 @@ internal enum class TrioSettingsPart(val part: TrioZones.Part?, val labelRes: In
          */
         fun of(part: TrioZones.Part?): TrioSettingsPart? = when (part) {
             null -> null
+            TrioZones.Part.TYPE -> Wifi
             TrioZones.Part.SIM_1, TrioZones.Part.SIM_2, TrioZones.Part.SIM_PAIR -> Mobile
             else -> entries.firstOrNull { it.part == part }
         }
@@ -163,7 +169,9 @@ internal class SliderSpec(
  * percentage-weight row, which is gated on the percentage switch rather than on
  * the rule that decides whether a percentage is drawn.
  */
-internal fun geometrySliders(): List<SliderSpec> {
+private val sliderTable by lazy { buildGeometrySliders() }
+internal fun geometrySliders(): List<SliderSpec> = sliderTable
+private fun buildGeometrySliders(): List<SliderSpec> {
     val value = TrioZones.Part.VALUE
     val wifi = TrioZones.Part.WIFI
     val mobile = TrioZones.Part.MOBILE
@@ -207,51 +215,51 @@ internal fun geometrySliders(): List<SliderSpec> {
         SliderSpec(scope = SliderScope.SplitLeft, group = GeometryGroup.Stroke, part = null,
             min = Prefs.MIN_SPLIT_LEFT_DISTANCE, max = Prefs.MAX_SPLIT_LEFT_DISTANCE, read = { it.splitLeftDistance },
             write = { r, v -> r.setSplitLeftDistance(v) }, titleRes = { R.string.split_left_distance_title },
-            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Appearance),
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Structure),
         SliderSpec(scope = SliderScope.SplitLeft, group = GeometryGroup.Stroke, part = null,
             min = Prefs.MIN_SPLIT_LEFT_BEND, max = Prefs.MAX_SPLIT_LEFT_BEND, read = { it.splitLeftBend },
             write = { r, v -> r.setSplitLeftBend(v) }, titleRes = { R.string.split_left_bend_title },
-            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Appearance),
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Structure),
         SliderSpec(scope = SliderScope.SplitLeft, group = GeometryGroup.Stroke, part = null,
             min = Prefs.MIN_SPLIT_LEFT_HEIGHT, max = Prefs.MAX_SPLIT_LEFT_HEIGHT, read = { it.splitLeftHeight },
             write = { r, v -> r.setSplitLeftHeight(v) }, titleRes = { R.string.split_left_height_title },
-            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Appearance),
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Structure),
         SliderSpec(scope = SliderScope.SplitLeft, group = GeometryGroup.Stroke, part = null,
             min = Prefs.MIN_SPLIT_LEFT_TOP, max = Prefs.MAX_SPLIT_LEFT_TOP, read = { it.splitLeftTop },
             write = { r, v -> r.setSplitLeftTop(v) }, titleRes = { R.string.split_left_top_title },
-            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Appearance),
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Structure),
         SliderSpec(scope = SliderScope.SplitLeft, group = GeometryGroup.Stroke, part = null,
             min = Prefs.MIN_SPLIT_LEFT_BOTTOM, max = Prefs.MAX_SPLIT_LEFT_BOTTOM, read = { it.splitLeftBottom },
             write = { r, v -> r.setSplitLeftBottom(v) }, titleRes = { R.string.split_left_bottom_title },
-            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Appearance),
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Structure),
         SliderSpec(scope = SliderScope.SplitLeft, group = GeometryGroup.Stroke, part = null,
             min = Prefs.MIN_SPLIT_LEFT_Y, max = Prefs.MAX_SPLIT_LEFT_Y, read = { it.splitLeftY },
             write = { r, v -> r.setSplitLeftY(v) }, titleRes = { R.string.split_left_y_title },
-            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Appearance),
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Structure),
         SliderSpec(scope = SliderScope.SplitRight, group = GeometryGroup.Stroke, part = null,
             min = Prefs.MIN_SPLIT_RIGHT_DISTANCE, max = Prefs.MAX_SPLIT_RIGHT_DISTANCE, read = { it.splitRightDistance },
             write = { r, v -> r.setSplitRightDistance(v) }, titleRes = { R.string.split_right_distance_title },
-            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Appearance),
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Structure),
         SliderSpec(scope = SliderScope.SplitRight, group = GeometryGroup.Stroke, part = null,
             min = Prefs.MIN_SPLIT_RIGHT_BEND, max = Prefs.MAX_SPLIT_RIGHT_BEND, read = { it.splitRightBend },
             write = { r, v -> r.setSplitRightBend(v) }, titleRes = { R.string.split_right_bend_title },
-            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Appearance),
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Structure),
         SliderSpec(scope = SliderScope.SplitRight, group = GeometryGroup.Stroke, part = null,
             min = Prefs.MIN_SPLIT_RIGHT_HEIGHT, max = Prefs.MAX_SPLIT_RIGHT_HEIGHT, read = { it.splitRightHeight },
             write = { r, v -> r.setSplitRightHeight(v) }, titleRes = { R.string.split_right_height_title },
-            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Appearance),
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Structure),
         SliderSpec(scope = SliderScope.SplitRight, group = GeometryGroup.Stroke, part = null,
             min = Prefs.MIN_SPLIT_RIGHT_TOP, max = Prefs.MAX_SPLIT_RIGHT_TOP, read = { it.splitRightTop },
             write = { r, v -> r.setSplitRightTop(v) }, titleRes = { R.string.split_right_top_title },
-            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Appearance),
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Structure),
         SliderSpec(scope = SliderScope.SplitRight, group = GeometryGroup.Stroke, part = null,
             min = Prefs.MIN_SPLIT_RIGHT_BOTTOM, max = Prefs.MAX_SPLIT_RIGHT_BOTTOM, read = { it.splitRightBottom },
             write = { r, v -> r.setSplitRightBottom(v) }, titleRes = { R.string.split_right_bottom_title },
-            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Appearance),
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Structure),
         SliderSpec(scope = SliderScope.SplitRight, group = GeometryGroup.Stroke, part = null,
             min = Prefs.MIN_SPLIT_RIGHT_Y, max = Prefs.MAX_SPLIT_RIGHT_Y, read = { it.splitRightY },
             write = { r, v -> r.setSplitRightY(v) }, titleRes = { R.string.split_right_y_title },
-            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Appearance),
+            summaryRes = { R.string.geometry_value_summary }, enabled = { it.glyph && it.ring && it.splitMode == 1 }, editorOwner = TrioSettingsPart.Structure),
         SliderSpec(
             group = GeometryGroup.Text,
             part = TrioZones.Part.CLOCK,
@@ -278,7 +286,7 @@ internal fun geometrySliders(): List<SliderSpec> {
             enabled = { it.glyph },
             hints = { listOf(it.glyph to R.string.master_title) },
         ),
-        SliderSpec(scope = SliderScope.CapsuleStructure,
+        SliderSpec(scope = SliderScope.CapsuleStructure, editorOwner = TrioSettingsPart.Structure,
             group = GeometryGroup.Scale,
             part = null,
             min = Prefs.MIN_CAPSULE_NUDGE_X,
@@ -289,7 +297,7 @@ internal fun geometrySliders(): List<SliderSpec> {
             summaryRes = { R.string.capsule_nudge_left_dx_summary },
             enabled = { it.glyph && it.capsule },
         ),
-        SliderSpec(scope = SliderScope.CapsuleStructure,
+        SliderSpec(scope = SliderScope.CapsuleStructure, editorOwner = TrioSettingsPart.Structure,
             group = GeometryGroup.Scale,
             part = null,
             min = Prefs.MIN_CAPSULE_NUDGE,
@@ -300,7 +308,7 @@ internal fun geometrySliders(): List<SliderSpec> {
             summaryRes = { R.string.capsule_nudge_left_dy_summary },
             enabled = { it.glyph && it.capsule },
         ),
-        SliderSpec(scope = SliderScope.CapsuleStructure,
+        SliderSpec(scope = SliderScope.CapsuleStructure, editorOwner = TrioSettingsPart.Structure,
             group = GeometryGroup.Scale,
             part = null,
             // Mirrored span: the right cell leans right, so its travel is to the LEFT.
@@ -312,7 +320,7 @@ internal fun geometrySliders(): List<SliderSpec> {
             summaryRes = { R.string.capsule_nudge_right_dx_summary },
             enabled = { it.glyph && it.capsule },
         ),
-        SliderSpec(scope = SliderScope.CapsuleStructure,
+        SliderSpec(scope = SliderScope.CapsuleStructure, editorOwner = TrioSettingsPart.Structure,
             group = GeometryGroup.Scale,
             part = null,
             min = Prefs.MIN_CAPSULE_NUDGE,
@@ -327,7 +335,7 @@ internal fun geometrySliders(): List<SliderSpec> {
         // the shape that can change without changing its form: the caps keep their radius, the
         // height does not move, and every proportion the design states against the height is
         // untouched. This is what "make the capsule wider" means physically.
-        SliderSpec(scope = SliderScope.CapsuleStructure,
+        SliderSpec(scope = SliderScope.CapsuleStructure, editorOwner = TrioSettingsPart.Structure,
             group = GeometryGroup.Scale,
             part = null,
             min = Prefs.MIN_CAPSULE_LENGTH,
@@ -726,7 +734,7 @@ internal fun CapsuleContainerRows(
     if (specs.isEmpty()) {
         return
     }
-    val a = TrioAppearance.of(settings)
+    val a = remember(settings) { TrioAppearance.of(settings) }
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         specs.forEach { spec ->
             val hint = gateHintFor(spec, a)
@@ -746,14 +754,14 @@ internal fun capsuleContainerSliders(): List<SliderSpec> =
 
 internal fun slidersForEditor(part: TrioSettingsPart, a: TrioAppearance): List<SliderSpec> {
     val rows = when (part) {
-        TrioSettingsPart.Appearance, TrioSettingsPart.Battery, TrioSettingsPart.Readouts ->
+        TrioSettingsPart.Structure, TrioSettingsPart.Appearance, TrioSettingsPart.Battery, TrioSettingsPart.Readouts ->
             geometrySliders().filter { it.part == null && it.editorOwner == part }
         else -> part.part?.let(::slidersForPart).orEmpty()
     }
     return rows.filter { spec ->
         when (spec.scope) {
-            SliderScope.Shared -> true
-            SliderScope.CapsuleStructure -> false // Its dedicated, scrollable sheet owns these.
+            SliderScope.Shared -> spec.titleRes(a) != R.string.glyph_scale_title
+            SliderScope.CapsuleStructure -> a.capsule // Its dedicated, scrollable sheet owns these.
             SliderScope.SplitLeft -> a.ring && a.splitMode == 1
             SliderScope.SplitRight -> a.ring && a.splitMode == 1 && a.splitLink == 0
             SliderScope.PairedSignal -> a.slotted && !a.signalOutOfRing && a.hasRingPart(Prefs.PART_SIM_PAIR)
@@ -770,14 +778,14 @@ internal fun slidersForEditor(part: TrioSettingsPart, a: TrioAppearance): List<S
  * offer and say so instead of showing a row that would do nothing.
  */
 internal fun roleColorsForPart(part: TrioZones.Part): List<RoleColor> = when (part) {
-    TrioZones.Part.VALUE -> listOf(RoleColor.Low, RoleColor.Critical)
+    TrioZones.Part.VALUE -> emptyList()
     TrioZones.Part.BOLT -> listOf(RoleColor.BoltCharging, RoleColor.BoltQuickCharging,
         RoleColor.BoltFlashCharging, RoleColor.BoltSuperCharging)
     else -> emptyList()
 }
 
 internal fun roleColorsForEditor(part: TrioSettingsPart): List<RoleColor> = when (part) {
-    TrioSettingsPart.Appearance -> RoleColor.entries
+    TrioSettingsPart.Appearance -> emptyList()
     TrioSettingsPart.Battery -> listOf(RoleColor.Low, RoleColor.Charging, RoleColor.QuickCharging,
         RoleColor.FlashCharging, RoleColor.SuperCharging, RoleColor.Critical)
     else -> part.part?.let(::roleColorsForPart).orEmpty()
@@ -812,10 +820,19 @@ internal fun PartSettingsSheet(
     onDismissFinished: () -> Unit,
     preview: (@Composable () -> Unit)? = null,
     ringSettings: TrioSettings = settings,
+    extraContent: (@Composable () -> Unit)? = null,
 ) {
-    val a = TrioAppearance.of(settings)
-    val rows = slidersForEditor(part, a)
-    val controls = contentControlsFor(part, settings)
+    // Old preview/outside shortcuts resolve to the same canonical network editor.
+    if (part == TrioSettingsPart.Type) {
+        PartSettingsSheet(show, TrioSettingsPart.Wifi, settings, update, onEditColor,
+            onResetColors, onDismiss, onDismissFinished, preview, ringSettings, extraContent)
+        return
+    }
+    val a = remember(settings) { TrioAppearance.of(settings) }
+    val rows = slidersForEditor(part, a) +
+        if (part == TrioSettingsPart.Wifi) slidersForEditor(TrioSettingsPart.Type, a) else emptyList()
+    val controls = contentControlsFor(part, settings) +
+        if (part == TrioSettingsPart.Wifi) contentControlsFor(TrioSettingsPart.Type, settings) else emptyList()
     val colors = roleColorsForEditor(part)
     val configuration = LocalConfiguration.current
     val compact = configuration.screenHeightDp < 600 || configuration.fontScale > 1.3f
@@ -853,8 +870,14 @@ internal fun PartSettingsSheet(
                 Column(modifier = Modifier.weight(1f, fill = false)
                     .verticalScroll(rememberScrollState()).padding(horizontal = 4.dp)) {
                     if (compact) preview?.invoke()
-                    controls.forEach { control -> ContentControlRow(control, settings, update, ringSettings) }
-                if (rows.isEmpty() && colors.isEmpty() && controls.isEmpty()) {
+                    if (part == TrioSettingsPart.Appearance) {
+                        ArrowPreference(title = stringResource(R.string.color_reset_all), onClick = onResetColors)
+                    }
+                    if (controls.isNotEmpty()) Text(stringResource(R.string.edit_display))
+                    controls.filter { advancedGroup(it) == null }
+                        .forEach { control -> ContentControlRow(control, settings, update, ringSettings) }
+                    Text(stringResource(R.string.edit_appearance))
+                if (rows.isEmpty() && colors.isEmpty() && controls.isEmpty() && part != TrioSettingsPart.Appearance) {
                     Text(
                         text = stringResource(R.string.drawing_settings_none),
                         style = MiuixTheme.textStyles.footnote1,
@@ -863,7 +886,7 @@ internal fun PartSettingsSheet(
                     )
                 }
 
-                if (colors.isNotEmpty()) {
+                if (part == TrioSettingsPart.Appearance) {
                     SwitchPreference(
                         checked = a.roleColors,
                         title = stringResource(R.string.color_role_title),
@@ -871,7 +894,10 @@ internal fun PartSettingsSheet(
                         enabled = a.glyph,
                         onCheckedChange = { value -> update { it.setRoleColors(value) } },
                     )
-                    if (part != TrioSettingsPart.Bolt) {
+
+                }
+
+                    if (part == TrioSettingsPart.Battery) {
                         IntSlider(
                             value = settings.lowThreshold,
                             min = Prefs.MIN_LOW_THRESHOLD,
@@ -887,20 +913,10 @@ internal fun PartSettingsSheet(
                             onValueChange = { value -> update { it.setLowThreshold(value) } },
                         )
                     }
-                }
-
-                rows.forEach { spec ->
-                    // The hint is resolved in a composable scope and passed down, the
-                    // same shape the size page uses: a row that is live has nothing to
-                    // explain, and a tooltip saying nothing would still eat the press.
-                    val hint = gateHintFor(spec, a)
-                    if (hint == null) {
-                        SliderRow(spec, settings, update)
-                    } else {
-                        TooltipBox(text = hint, enabled = true) {
-                            SliderRow(spec, settings, update)
-                        }
-                    }
+                if (colors.isNotEmpty() && !a.roleColors) Text(stringResource(R.string.colors_global_hint))
+                extraContent?.invoke()
+                rows.filter { it.enabled(a) && !isAdvancedSlider(it, a) }.forEach { spec ->
+                    SliderRow(spec, settings, update)
                 }
 
                 colors.forEach { role ->
@@ -922,13 +938,21 @@ internal fun PartSettingsSheet(
                     )
                 }
 
-                    if (part == TrioSettingsPart.Appearance) {
+                // Each disclosure owns its controls and sliders as children AFTER its row.
+                advancedGroupsFor(rows, controls, a).forEach { group ->
+                    androidx.compose.runtime.key(part, group, a.style) {
+                        AdvancedParameterSection(group, part, rows, controls, a, settings,
+                            update, ringSettings)
+                    }
+                }
+
+                    if (colors.isNotEmpty()) {
                     ArrowPreference(
-                        title = stringResource(R.string.color_reset),
+                        title = stringResource(R.string.color_reset_component),
                         summary = stringResource(R.string.color_reset_summary),
                         insideMargin = SettingsItemMargin,
                         enabled = a.glyph && a.roleColors,
-                        onClick = onResetColors,
+                        onClick = { update { it.resetComponentColors(colors.map { role -> role.name }) } },
                     )
                     }
                 }
@@ -944,7 +968,7 @@ internal fun SliderRow(
     settings: TrioSettings,
     update: ((SettingsRepository) -> Unit) -> Unit,
 ) {
-    val a = TrioAppearance.of(settings)
+    val a = remember(settings) { TrioAppearance.of(settings) }
     val maximum = spec.maxFor(a)
     val defaults = remember { TrioSettings.defaults() }
     IntSlider(
@@ -953,7 +977,7 @@ internal fun SliderRow(
         max = maximum,
         step = spec.step,
         title = stringResource(spec.titleRes(a)),
-        summary = stringResource(
+        summary = if (spec.part == TrioZones.Part.VALUE) null else stringResource(
             spec.summaryRes(a),
             spec.read(defaults).coerceIn(spec.min, maximum),
             spec.min,
@@ -976,4 +1000,59 @@ internal fun SliderRow(
 private fun gateHintFor(spec: SliderSpec, a: TrioAppearance): String? {
     val missing = spec.hints(a).firstOrNull { !it.first } ?: return null
     return stringResource(R.string.gate_hint, stringResource(missing.second))
+}
+
+internal fun isAdvancedSlider(spec: SliderSpec, a: TrioAppearance): Boolean =
+    spec.scope in listOf(SliderScope.SplitLeft, SliderScope.SplitRight, SliderScope.CapsuleStructure) ||
+    spec.titleRes(a) in listOf(R.string.pair_pitch_title,R.string.pair_bend_title,R.string.pair_x_title,
+        R.string.pair_y_title,R.string.sim_stack_gap_title,R.string.out_type_margin_left_title,
+        R.string.out_type_margin_right_title,R.string.type_suffix_scale_title)
+
+/** One functional owner per disclosure; never split advanced controls above its trigger. */
+internal enum class AdvancedGroup(val titleRes: Int) {
+    LeftArc(R.string.advanced_left_arc), RightArc(R.string.advanced_right_arc),
+    Capsule(R.string.advanced_capsule), DualSim(R.string.advanced_dual_sim),
+    NetworkType(R.string.advanced_network_type)
+}
+
+internal fun advancedGroup(control: ContentControl): AdvancedGroup? = when (control) {
+    ContentControl.PairMirror, ContentControl.PairReverse, ContentControl.PairSingle -> AdvancedGroup.DualSim
+    else -> null
+}
+
+internal fun advancedGroup(spec: SliderSpec, a: TrioAppearance): AdvancedGroup? = when {
+    spec.scope == SliderScope.SplitLeft -> AdvancedGroup.LeftArc
+    spec.scope == SliderScope.SplitRight -> AdvancedGroup.RightArc
+    spec.scope == SliderScope.CapsuleStructure -> AdvancedGroup.Capsule
+    spec.scope == SliderScope.PairedSignal -> AdvancedGroup.DualSim
+    isAdvancedSlider(spec, a) && spec.part == TrioZones.Part.TYPE -> AdvancedGroup.NetworkType
+    else -> null
+}
+
+internal fun advancedGroupsFor(rows: List<SliderSpec>, controls: List<ContentControl>,
+    a: TrioAppearance): List<AdvancedGroup> = AdvancedGroup.entries.filter { group ->
+        controls.any { advancedGroup(it) == group } ||
+            rows.any { it.enabled(a) && advancedGroup(it, a) == group }
+    }
+
+@Composable
+private fun AdvancedParameterSection(group: AdvancedGroup, part: TrioSettingsPart,
+    rows: List<SliderSpec>, controls: List<ContentControl>, a: TrioAppearance,
+    settings: TrioSettings, update: ((SettingsRepository) -> Unit) -> Unit,
+    ringSettings: TrioSettings) {
+    var expanded by rememberSaveable(part, group, a.style) { mutableStateOf(false) }
+    val childControls = controls.filter { advancedGroup(it) == group }
+    val childRows = rows.filter { it.enabled(a) && advancedGroup(it, a) == group }
+    Column(Modifier.fillMaxWidth()) {
+        ArrowPreference(
+            title = stringResource(group.titleRes),
+            summary = stringResource(if (expanded) R.string.advanced_hide else R.string.advanced_show),
+            onClick = { expanded = !expanded })
+        if (expanded) {
+            Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp)) {
+                childControls.forEach { control -> ContentControlRow(control, settings, update, ringSettings) }
+                childRows.forEach { spec -> SliderRow(spec, settings, update) }
+            }
+        }
+    }
 }
