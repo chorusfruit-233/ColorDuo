@@ -581,14 +581,24 @@ public final class TrioRenderer {
             if (part == Prefs.PART_WIFI) {
                 // The reference bounds include the default stroke. Extra thickness
                 // must count before scaling, otherwise the arcs escape their slot.
-                final WifiInk ink = wifiInk(a, !wifiStandard.isEmpty());
+                final float extra = Math.max(0f, a.arcStroke - TrioGeometry.W_STROKE);
+                // The slot fit, then the user's own size inside it.
                 final float room = a.splitMode == 1 && z != 1
                         ? Math.min(width, TrioGeometry.splitOpeningWidth(a,z)) : width;
-                final float scale = Math.min(room / ink.width(), height / ink.height()) * a.wifiScaleFactor();
-                if(a.splitMode==1)c.translate(0,alignedY(a,z,ink.height()*scale/2)-cy);
+                final float scale = Math.min(room / (TrioGeometry.W_INK_W + extra),
+                        height / (TrioGeometry.W_INK_H + extra)) * a.wifiScaleFactor();
+                if(a.splitMode==1)c.translate(0,alignedY(a,z,(TrioGeometry.W_INK_H+extra)*scale/2)-cy);
                 c.scale(scale, scale);
-                c.translate(-ink.cx(), -ink.cy());
-                drawWifiArcs(c, wifiLevel, fg, a, wifiStandard);
+                c.translate(-TrioGeometry.W_CX, -TrioGeometry.W_INK_CY);
+                // The standard has its own outboard column, beyond the outline.
+                // Reserving that space must not recenter or refit the Wi-Fi arcs.
+                float markerEdge = Float.NaN;
+                if (a.showWifiStandard && !wifiStandard.isEmpty() && wifiLevel >= 0) {
+                    final float right = a.splitMode == 1 ? new TrioGeometry.SplitRing(a).maxX
+                            : TrioGeometry.B_CX + TrioGeometry.B_R + a.ringStroke / 2f;
+                    markerEdge = TrioGeometry.W_CX + (right + 2f - cx) / scale;
+                }
+                drawWifiArcs(c, wifiLevel, fg, a, wifiStandard, false, markerEdge);
             } else if (part == Prefs.PART_BOLT) {
                 // The bolt is fitted to its slot, then multiplied by the user's size. The
                 // product is NOT re-clamped to the slot: a user asking for a bigger bolt
@@ -1063,17 +1073,13 @@ public final class TrioRenderer {
         // So an icon is centred in a half-step from the anchor: close enough to the edge to
         // read as the start of the row, far enough that the icon is not clipped by the
         // stroke. See capLeftIconCx for the figure.
-        final float leftWidth = capsuleLeftWidth(cap,stroke,a);
-        final float cx = (part == Prefs.PART_WIFI && !wifiStandard.isEmpty()
-                ? TrioGeometry.capReadingEdge(stroke, true) + wifiInk(a,true).width()
-                    * capsuleWifiScale(stroke,a,wifiStandard,leftWidth)/2f
-                : TrioGeometry.capLeftIconCx(stroke, part)) + a.capsuleLeftDx;
+        final float cx = TrioGeometry.capLeftIconCx(stroke, part) + a.capsuleLeftDx;
         // What the two interior cells actually draw, so each gets the width its own string
         // needs instead of the clock-and-number ratio. See TrioGeometry.capReadingSlotWidth.
         // Dot rows are not offered in this column: drawCapsuleDots paints the two OPENINGS,
         // whose y come from the outline geometry. A row here would need its own baseline.
         // LEFT on every branch: this cell reads from its inner edge, nudge or no nudge.
-
+        final float leftWidth = capsuleLeftWidth(cap,stroke,a);
         switch (part) {
             case Prefs.PART_CLOCK:
                 drawCapsuleTime(c, stroke, fg, a, cx, cy, -1f, SlotAlign.LEFT, leftWidth);
@@ -1087,7 +1093,7 @@ public final class TrioRenderer {
                         bodyTypeSize(a), SlotAlign.LEFT);
                 break;
             case Prefs.PART_WIFI:
-                drawCapsuleWifi(c, stroke, wifiLevel, fg, a, cx, cy, wifiStandard, leftWidth);
+                drawCapsuleWifi(c, stroke, wifiLevel, fg, a, cx, cy, wifiStandard, 1);
                 break;
             case Prefs.PART_BOLT:
                 drawCapsuleBolt(c, stroke, boltColor,
@@ -1130,13 +1136,9 @@ public final class TrioRenderer {
             // TEXT ends at this edge (right-aligned); an ICON is centred on it and would hang
             // half of itself outside the outline. Same split as the left cell, mirrored - see
             // TrioGeometry.capRightIconCx.
-            cx = part == Prefs.PART_WIFI && !wifiStandard.isEmpty()
-                    ? TrioGeometry.capReadingEdge(stroke, false) - wifiInk(a,true).width()
-                        * capsuleWifiScale(stroke,a,wifiStandard,TrioGeometry.capReadingTrackWidth(stroke))/2f
-                        + a.capsuleRightDx
-                    : (part == Prefs.PART_BOLT || part == Prefs.PART_WIFI)
-                        ? TrioGeometry.capRightIconCx(stroke, part) + a.capsuleRightDx
-                        : TrioGeometry.capReadingEdge(stroke, false) + a.capsuleRightDx;
+            cx = (part == Prefs.PART_BOLT || part == Prefs.PART_WIFI)
+                    ? TrioGeometry.capRightIconCx(stroke, part) + a.capsuleRightDx
+                    : TrioGeometry.capReadingEdge(stroke, false) + a.capsuleRightDx;
         }
         final float cy;
         switch (band) {
@@ -1159,8 +1161,7 @@ public final class TrioRenderer {
                 drawCapsuleBolt(c, stroke, boltColor, a, cx, cy);
                 break;
             case Prefs.PART_WIFI:
-                drawCapsuleWifi(c, stroke, wifiLevel, fg, a, cx, cy, wifiStandard,
-                        opening ? TrioGeometry.capOpeningWidth() : TrioGeometry.capReadingTrackWidth(stroke));
+                drawCapsuleWifi(c, stroke, wifiLevel, fg, a, cx, cy, wifiStandard, opening ? 0 : 2);
                 break;
             // CENTRE on every branch: an opening is a full-width row, so it has no edge to
             // sit against. The right cell of the BODY is the one that leans right.
@@ -1269,7 +1270,9 @@ public final class TrioRenderer {
         }
         if (part == Prefs.PART_WIFI && a.showWifiStandard && !wifiStandard.isEmpty()) {
             WifiInk ink = wifiInk(a,true);
-            return ink.width()*capsuleWifiScale(stroke,a,wifiStandard,TrioGeometry.capOpeningWidth())/2f
+            float reach=Math.max(TrioGeometry.W_CX-ink.left,ink.right-TrioGeometry.W_CX)
+                    *TrioGeometry.capWifiScale(stroke)*a.wifiScaleFactor();
+            return Math.min(reach,TrioGeometry.capOpeningWidth()/2f)
                     + TrioGeometry.capDotClearance() + stroke*0.5f;
         }
         return TrioGeometry.capPieceReach(part, level, type, stroke,
@@ -1617,23 +1620,28 @@ public final class TrioRenderer {
         return fitSize(text, requested, slotWidth, suffixPercent);
     }
 
-    /** The Wi-Fi group moved and scaled into a capsule cell centred on {@code (cx, cy)}. */
+    /** Wi-Fi arcs keep their cell centre; the optional standard uses independent space. */
     private static void drawCapsuleWifi(Canvas c, float stroke, int level, int fg,
-                                        TrioAppearance a, float cx, float cy, String wifiStandard, float room) {
+                                        TrioAppearance a, float cx, float cy, String wifiStandard, int markerSide) {
         // The user's size multiplies the fit, and the placement below is recomputed from the
         // product: offset = centre - reference * scale only stays centred while the scale it
         // was derived from is the scale being drawn.
-        final WifiInk ink = wifiInk(a, !wifiStandard.isEmpty());
-        final float scale = capsuleWifiScale(stroke, a, wifiStandard, room);
+        final float scale = TrioGeometry.capWifiScale(stroke) * a.wifiScaleFactor();
         final int save = c.save();
         // The caller hands over the CENTRE this cell wants, so the group is placed by
         // subtracting its own ink centre - not by rewriting the right-hand slot's offset.
         // The old expression anchored on capRightCx and then shifted by (cx - capRightCx),
         // which cancels out but only while cx is a CENTRE; once the left cell started
         // passing its own edge it put the arcs half a glyph off.
-        c.translate(cx - ink.cx() * scale, cy - ink.cy() * scale);
+        c.translate(cx - TrioGeometry.W_CX * scale,
+                cy - TrioGeometry.W_INK_CY * scale);
         c.scale(scale, scale);
-        drawWifiArcs(c, level, fg, a, wifiStandard);
+        float edge = markerSide == 1
+                ? TrioGeometry.W_CX+(TrioGeometry.CAP_LEFT-stroke/2f-2f-cx)/scale
+                : markerSide == 2
+                    ? TrioGeometry.W_CX+(TrioGeometry.capRight()+stroke/2f+2f-cx)/scale
+                    : Float.NaN;
+        drawWifiArcs(c, level, fg, a, wifiStandard, markerSide == 1, edge);
         c.restoreToCount(save);
     }
 
@@ -1737,16 +1745,12 @@ public final class TrioRenderer {
     /** The Wi-Fi group moved into the top slot; the arcs themselves are unchanged. */
     private static void drawRectWifi(Canvas c, int level, int fg, TrioAppearance a, String wifiStandard) {
         final int save = c.save();
-        final WifiInk ink = wifiInk(a, !wifiStandard.isEmpty());
-        final float fit = wifiStandard.isEmpty() ? 1f
-                : Math.min(1f, TrioGeometry.W_INK_W/ink.width());
-        final float rectScale = TrioGeometry.RECT_WIFI_SCALE * a.wifiScaleFactor()*fit;
-        c.translate(TrioGeometry.rectWifiOffsetX()+TrioGeometry.W_CX*TrioGeometry.RECT_WIFI_SCALE
-                        *a.wifiScaleFactor()-ink.cx()*rectScale,
-                TrioGeometry.rectWifiOffsetY(a.arcStroke)+TrioGeometry.W_INK_CY*TrioGeometry.RECT_WIFI_SCALE
-                        *a.wifiScaleFactor()-ink.cy()*rectScale);
+        c.translate(TrioGeometry.rectWifiOffsetX(), TrioGeometry.rectWifiOffsetY(a.arcStroke));
+        final float rectScale = TrioGeometry.RECT_WIFI_SCALE * a.wifiScaleFactor();
         c.scale(rectScale, rectScale);
-        drawWifiArcs(c, level, fg, a, wifiStandard);
+        final float markerEdge = (TrioGeometry.RECT_INK_X + TrioGeometry.RECT_INK_W
+                + 2f - TrioGeometry.rectWifiOffsetX()) / rectScale;
+        drawWifiArcs(c, level, fg, a, wifiStandard, false, markerEdge);
         c.restoreToCount(save);
     }
 
@@ -2081,7 +2085,7 @@ public final class TrioRenderer {
         WIFI_STANDARD_TEXT.setStyle(embolden>0?Paint.Style.FILL_AND_STROKE:Paint.Style.FILL);
     }
 
-    /** Shared by fitting, centring and capsule openings; measured only on a parameter change. */
+    /** Capsule opening clearance only; never used to fit or centre the Wi-Fi arcs. */
     private static WifiInk wifiInk(TrioAppearance a,boolean marker) {
         marker=marker&&a.showWifiStandard;
         if(cachedWifiInk!=null && cachedWifiScale==a.wifiStandardScale
@@ -2118,26 +2122,36 @@ public final class TrioRenderer {
         return cachedWifiInk=new WifiInk(left,top,right,bottom);
     }
 
-    private static float capsuleWifiScale(float stroke,TrioAppearance a,String standard,float room) {
-        if(standard.isEmpty()) return TrioGeometry.capWifiScale(stroke)*a.wifiScaleFactor();
-        WifiInk ink=wifiInk(a,true);
-        return Math.min(TrioGeometry.capWifiScale(stroke)*TrioGeometry.W_INK_H/ink.height(),
-                room/ink.width())*a.wifiScaleFactor();
-    }
 
-    private static void drawWifiArcs(Canvas c,int level,int fg,TrioAppearance a,String standard) {
+    private static void drawWifiArcs(Canvas c,int level,int fg,TrioAppearance a,String standard,
+                                     boolean markerLeft,float edge) {
         drawWifiArcsRaw(c,level,fg,a);
         if(standard==null || standard.isEmpty() || level<0) return;
         float size=wifiStandardSize(a);
         float extra=Math.max(0f,a.arcStroke-TrioGeometry.W_STROKE)/2f;
-        float x=TrioGeometry.W_CX+27f+extra,baseline=TrioGeometry.W_BOTTOM-0.5f;
+        float baseline=TrioGeometry.W_BOTTOM-0.5f;
         boolean sixE=standard.equals("6E");
         String main=sixE?"6":standard;
         prepareWifiStandard(a,size);
+        float mainWidth=WIFI_STANDARD_TEXT.measureText(main),width=mainWidth;
+        if(sixE) {
+            prepareWifiStandard(a,size*0.65f);
+            width+=size*0.05f+WIFI_STANDARD_TEXT.measureText("E");
+            prepareWifiStandard(a,size);
+        }
+        float x;
+        if(markerLeft) {
+            float end=TrioGeometry.W_CX-27f-extra-size*0.05f;
+            if(Float.isFinite(edge))end=Math.min(end,edge);
+            x=end-width;
+        } else {
+            x=TrioGeometry.W_CX+27f+extra;
+            if(Float.isFinite(edge))x=Math.max(x,edge);
+        }
         WIFI_STANDARD_TEXT.setColor(fg);
         c.drawText(main,x,baseline,WIFI_STANDARD_TEXT);
         if(sixE) {
-            x+=WIFI_STANDARD_TEXT.measureText(main)+size*0.05f;
+            x+=mainWidth+size*0.05f;
             prepareWifiStandard(a,size*0.65f);
             c.drawText("E",x,baseline-size*0.32f,WIFI_STANDARD_TEXT);
         }
