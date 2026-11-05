@@ -17,6 +17,8 @@ Wi-Fi 标准入口：组件 → Wi-Fi 与网络类型 → 显示 Wi-Fi 标准，
 
 审查与参考实现见 [PR15-REVIEW.md](PR15-REVIEW.md)。
 
+已发布：[源码仓库](https://github.com/chorusfruit-233/ColorDuo/releases/tag/v0.3.14) · [Xposed 模块仓](https://github.com/Xposed-Modules-Repo/io.github.chorusfruit_233.colorduo/releases/tag/10047-0.3.14)。
+
 ## 0.3.14-test1
 
 - 针对 [#14](https://github.com/chorusfruit-233/ColorDuo/issues/14) 的移动信号等级不刷新：接管信号时主动订阅 ColorOS 原生信号流，保持系统等级算法更新。
