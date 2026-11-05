@@ -849,7 +849,7 @@ public final class TrioRenderer {
             float dy = one && two || a.pairSingle == 1 ? (row-.5f)*pitch : 0;
             for (int dot=0; dot<4; dot++) {
                 float bend=a.simDotBend(dot);
-                FILL.setColor(dot < Math.min(4,levels[slot]) ? fg : withAlpha(fg,a.trackAlpha));
+                FILL.setColor(dot < Math.min(4,levels[slot]) ? fg : withAlpha(fg,a.signalTrackAlpha));
                 c.drawCircle(cx+a.pairX+(dot-1.5f)*12f*a.pairPitch/100f*scale,
                         cy+a.pairY+(dy+bend)*scale, radius*scale, FILL);
             }
@@ -858,7 +858,7 @@ public final class TrioRenderer {
 
     private static void drawArcDotRow(Canvas c, int active, int zone, float radius,
                                       int fg, TrioAppearance a) {
-        final int inactive = withAlpha(fg, a.trackAlpha);
+        final int inactive = withAlpha(fg, a.signalTrackAlpha);
         if (zone == 1) {
             // The middle third is not a notch: the ring runs past it on both sides, so
             // there is no bare arc to thread beads onto. It keeps the row it has always
@@ -1423,7 +1423,7 @@ public final class TrioRenderer {
      * The two four-dot rows, riding the outline's own centreline so a dot sits
      * exactly in the gap it interrupts.
      *
-     * <p>Unlit steps are drawn too, at {@code trackAlpha}: the outline has a gap
+     * <p>Unlit steps are drawn too, at {@code signalTrackAlpha}: the outline has a gap
      * there, and leaving it empty would read as a break in the line rather than
      * as an empty step.
      */
@@ -1449,7 +1449,7 @@ public final class TrioRenderer {
                 dual && automatic != null ? automatic[0] : level);
         final int bottom = capsuleSignalLevel(cap, TrioZones.Zone.BOTTOM, slotLevels,
                 dual && automatic != null ? automatic[1] : level);
-        final int inactive = withAlpha(fg, a.trackAlpha);
+        final int inactive = withAlpha(fg, a.signalTrackAlpha);
         final int topActive = top < 0 ? 0 : Math.min(TrioGeometry.RECT_DOT_ROWS, top);
         final int bottomActive = bottom < 0 ? 0 : Math.min(TrioGeometry.RECT_DOT_ROWS, bottom);
         final float topY = TrioGeometry.capDotTopY();
@@ -1682,7 +1682,7 @@ public final class TrioRenderer {
                                      int fg, TrioAppearance a) {
         final int left = (dual && slotLevels != null) ? slotLevels[0] : level;
         final int right = (dual && slotLevels != null) ? slotLevels[1] : level;
-        final int inactive = withAlpha(fg, a.trackAlpha);
+        final int inactive = withAlpha(fg, a.signalTrackAlpha);
         final int leftActive = left < 0 ? 0 : Math.min(TrioGeometry.RECT_DOT_ROWS, left);
         final int rightActive = right < 0 ? 0 : Math.min(TrioGeometry.RECT_DOT_ROWS, right);
         for (int i = 0; i < TrioGeometry.RECT_DOT_ROWS; i++) {
@@ -2329,7 +2329,7 @@ public final class TrioRenderer {
         final float dotR = TrioGeometry.STACK_DOT_D * scale / 2f;
         final float dotCy = baseline
                 + (TrioGeometry.STACK_DOT_GAP + TrioGeometry.STACK_DOT_D / 2f) * scale;
-        final int inactive = withAlpha(fg, a.trackAlpha);
+        final int inactive = withAlpha(fg, a.signalTrackAlpha);
         for (int i = 0; i < columns; i++) {
             final float left = x0 + i * TrioGeometry.STACK_PITCH * scale;
             FILL.setColor(i < bars ? fg : inactive);

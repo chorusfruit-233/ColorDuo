@@ -289,6 +289,7 @@ public final class TrioSettings {
     public int[] outOrder = Prefs.OUT_DEFAULT_ORDER.clone();
     public int typeWeight;
     public int trackAlpha;
+    public int signalTrackAlpha;
 
     /**
      * Draws the battery's charging power beside the out-of-ring reading.
@@ -461,6 +462,7 @@ public final class TrioSettings {
         s.outOrder = Prefs.OUT_DEFAULT_ORDER.clone();
         s.typeWeight = Prefs.DEF_TYPE_WEIGHT;
         s.trackAlpha = Prefs.DEF_TRACK_ALPHA;
+        s.signalTrackAlpha = Prefs.DEF_SIGNAL_TRACK_ALPHA;
         s.debugLog = Prefs.DEF_DEBUG_LOG;
         return s;
     }
@@ -702,6 +704,10 @@ public final class TrioSettings {
         s.trackAlpha = Prefs.clamp(
                 p.getInt(Prefs.KEY_TRACK_ALPHA, Prefs.DEF_TRACK_ALPHA),
                 Prefs.MIN_TRACK_ALPHA, Prefs.MAX_TRACK_ALPHA);
+        // Old snapshots retain their appearance until the app persists the independent key.
+        s.signalTrackAlpha = Prefs.clamp(
+                p.getInt(Prefs.KEY_SIGNAL_TRACK_ALPHA, s.trackAlpha),
+                Prefs.MIN_SIGNAL_TRACK_ALPHA, Prefs.MAX_SIGNAL_TRACK_ALPHA);
         s.debugLog = p.getBoolean(Prefs.KEY_DEBUG_LOG, Prefs.DEF_DEBUG_LOG);
         return s;
     }
@@ -1086,6 +1092,7 @@ public final class TrioSettings {
         s.outOrder = outOrder == null ? Prefs.OUT_DEFAULT_ORDER.clone() : outOrder.clone();
         s.typeWeight = typeWeight;
         s.trackAlpha = trackAlpha;
+        s.signalTrackAlpha = signalTrackAlpha;
 
         s.debugLog = debugLog;
         return s;
@@ -1226,6 +1233,7 @@ public final class TrioSettings {
                 return true;
             case Prefs.KEY_TYPE_WEIGHT: typeWeight = src.typeWeight; return true;
             case Prefs.KEY_TRACK_ALPHA: trackAlpha = src.trackAlpha; return true;
+            case Prefs.KEY_SIGNAL_TRACK_ALPHA: signalTrackAlpha = src.signalTrackAlpha; return true;
             case Prefs.KEY_DEBUG_LOG: debugLog = src.debugLog; return true;
             default: return false;
         }
@@ -1426,6 +1434,10 @@ public final class TrioSettings {
         s.trackAlpha = Prefs.clamp(
                 bundle.getInt(Prefs.KEY_TRACK_ALPHA, Prefs.DEF_TRACK_ALPHA),
                 Prefs.MIN_TRACK_ALPHA, Prefs.MAX_TRACK_ALPHA);
+        // Old snapshots retain their appearance until the app persists the independent key.
+        s.signalTrackAlpha = Prefs.clamp(
+                bundle.getInt(Prefs.KEY_SIGNAL_TRACK_ALPHA, s.trackAlpha),
+                Prefs.MIN_SIGNAL_TRACK_ALPHA, Prefs.MAX_SIGNAL_TRACK_ALPHA);
         s.debugLog = bundle.getBoolean(Prefs.KEY_DEBUG_LOG, Prefs.DEF_DEBUG_LOG);
         return s;
     }
@@ -1572,6 +1584,7 @@ public final class TrioSettings {
         b.putString(Prefs.KEY_OUT_ORDER, Prefs.encodeOutOrder(outOrder));
         b.putInt(Prefs.KEY_TYPE_WEIGHT, typeWeight);
         b.putInt(Prefs.KEY_TRACK_ALPHA, trackAlpha);
+        b.putInt(Prefs.KEY_SIGNAL_TRACK_ALPHA, signalTrackAlpha);
 
         b.putBoolean(Prefs.KEY_DEBUG_LOG, debugLog);
         return b;
@@ -1743,7 +1756,17 @@ public final class TrioSettings {
                 && java.util.Arrays.equals(outOrder, s.outOrder)
                 && typeWeight == s.typeWeight
                 && trackAlpha == s.trackAlpha
+                && signalTrackAlpha == s.signalTrackAlpha
                 && debugLog == s.debugLog;
+    }
+
+    /** Preserve the old shared opacity once, before either editor can change it. */
+    public static boolean migrateSignalTrackAlpha(SharedPreferences preferences) {
+        if (preferences.contains(Prefs.KEY_SIGNAL_TRACK_ALPHA)) return true;
+        int previous = Prefs.clamp(
+                preferences.getInt(Prefs.KEY_TRACK_ALPHA, Prefs.DEF_SIGNAL_TRACK_ALPHA),
+                Prefs.MIN_SIGNAL_TRACK_ALPHA, Prefs.MAX_SIGNAL_TRACK_ALPHA);
+        return preferences.edit().putInt(Prefs.KEY_SIGNAL_TRACK_ALPHA, previous).commit();
     }
 
     /** Freeze the existing shared palette once before either editor can change it. */

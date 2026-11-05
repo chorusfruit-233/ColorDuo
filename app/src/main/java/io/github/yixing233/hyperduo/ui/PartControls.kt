@@ -721,6 +721,21 @@ private fun buildGeometrySliders(): List<SliderSpec> {
         ),
         SliderSpec(
             group = GeometryGroup.Track,
+            part = mobile,
+            min = Prefs.MIN_SIGNAL_TRACK_ALPHA,
+            max = Prefs.MAX_SIGNAL_TRACK_ALPHA,
+            read = { it.signalTrackAlpha },
+            write = { r, v -> r.setSignalTrackAlpha(v) },
+            titleRes = { R.string.signal_track_alpha_title },
+            summaryRes = { R.string.signal_track_alpha_summary },
+            enabled = { it.glyph && it.foldsMobile() },
+            hints = { a -> listOf(
+                a.glyph to R.string.master_title,
+                a.foldsMobile() to R.string.show_mobile_title,
+            ) },
+        ),
+        SliderSpec(
+            group = GeometryGroup.Track,
             part = null,
             min = Prefs.MIN_TRACK_ALPHA,
             max = Prefs.MAX_TRACK_ALPHA,

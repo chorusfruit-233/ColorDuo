@@ -110,6 +110,36 @@ class LayoutControlsTest {
         assertFalse(rows.any { it == ContentControl.SignalLayout || it == ContentControl.SimPair || it == ContentControl.Sim1 })
     }
 
+    @Test fun signalOpacityHasOneIndependentControlForEverySignalArrangement() {
+        for (style in listOf(Prefs.STYLE_RING, Prefs.STYLE_CAPSULE)) {
+            for (paired in listOf(false, true)) {
+                val placed = TrioZones.withPiece(settings(style), 0, TrioZones.Part.SIM_1)
+                val s = TrioZones.withSignalArrangement(placed, paired).apply {
+                    trackAlpha = 53
+                    signalTrackAlpha = 180
+                }
+                for (outside in listOf(false, true)) {
+                    s.signalMode = if (outside) Prefs.SIGNAL_OUT_RING else Prefs.SIGNAL_IN_RING
+                    s.stackedSignal = outside
+                    val a = TrioAppearance.of(s)
+                    val row = slidersForEditor(TrioSettingsPart.Mobile, a)
+                        .single { it.titleRes(a) == R.string.signal_track_alpha_title }
+                    assertTrue("style=$style paired=$paired outside=$outside", row.enabled(a))
+                    assertEquals(180, row.read(s))
+                    assertEquals(0, row.min)
+                    assertEquals(255, row.maxFor(a))
+                    assertFalse(slidersForEditor(TrioSettingsPart.Battery, a).contains(row))
+                    assertEquals(53, slidersForEditor(TrioSettingsPart.Battery, a)
+                        .single { it.titleRes(a) == R.string.track_alpha_title }.read(s))
+                    if (outside) {
+                        s.stackedSignal = false
+                        assertFalse(row.enabled(TrioAppearance.of(s)))
+                    }
+                }
+            }
+        }
+    }
+
     @Test fun switchingArrangementAtomicallyReplacesTheSignalPlacement() {
         var s = TrioZones.withPiece(settings(), 0, TrioZones.Part.SIM_1)
         s = TrioZones.withPiece(s, 2, TrioZones.Part.SIM_2)

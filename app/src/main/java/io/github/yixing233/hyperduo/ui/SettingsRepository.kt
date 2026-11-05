@@ -51,6 +51,9 @@ class SettingsRepository(context: Context) {
         appContext.getSharedPreferences(Prefs.NAME, Context.MODE_PRIVATE)
 
     init {
+        if (!TrioSettings.migrateSignalTrackAlpha(preferences())) {
+            Log.w(TAG, "cannot persist independent signal opacity")
+        }
         if (!TrioSettings.migrateBoltColors(preferences())) {
             Log.w(TAG, "cannot persist independent bolt colors")
         }
@@ -451,6 +454,7 @@ class SettingsRepository(context: Context) {
     fun setTypeSuffixScale(value: Int) = writeInt(Prefs.KEY_TYPE_SUFFIX_SCALE, value)
     fun setTypeWeight(value: Int) = writeInt(Prefs.KEY_TYPE_WEIGHT, value)
     fun setTrackAlpha(value: Int) = writeInt(Prefs.KEY_TRACK_ALPHA, value)
+    fun setSignalTrackAlpha(value: Int) = writeInt(Prefs.KEY_SIGNAL_TRACK_ALPHA, value)
 
     /** Overall size of the trio glyph, in percent - see [Prefs.KEY_GLYPH_SCALE]. */
     fun setGlyphScale(value: Int) = writeInt(Prefs.KEY_GLYPH_SCALE, value)

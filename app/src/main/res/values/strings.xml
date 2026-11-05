@@ -230,6 +230,8 @@
 
     <string name="track_alpha_title">底纹浓度</string>
     <string name="track_alpha_summary">默认 %1$d，可调 %2$d–%3$d。</string>
+    <string name="signal_track_alpha_title">信号底纹浓度</string>
+    <string name="signal_track_alpha_summary">只调整未点亮的信号格，不影响电池底纹。默认 %1$d，%2$d 为透明，%3$d 与亮格同色。</string>
 
     <string name="nav_section">界面</string>
     <string name="nav_style_title">底栏样式</string>

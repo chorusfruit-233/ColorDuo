@@ -1245,6 +1245,7 @@ public final class Prefs {
     public static final int DEF_SIM_STACK_GAP = 50, MIN_SIM_STACK_GAP = 0, MAX_SIM_STACK_GAP = 300;
     public static final String KEY_TYPE_WEIGHT = "type_weight";
     public static final String KEY_TRACK_ALPHA = "track_alpha";
+    public static final String KEY_SIGNAL_TRACK_ALPHA = "signal_track_alpha";
 
     public static final String KEY_DEBUG_LOG = "debug_log";
 
@@ -1642,6 +1643,7 @@ public final class Prefs {
     public static final int DEF_DOT_SCALE = 100;
     public static final int DEF_TYPE_WEIGHT = 700;
     public static final int DEF_TRACK_ALPHA = 56;
+    public static final int DEF_SIGNAL_TRACK_ALPHA = 56;
 
     public static final boolean DEF_DEBUG_LOG = false;
 
@@ -1833,6 +1835,8 @@ public final class Prefs {
     public static final int MAX_TYPE_WEIGHT = 900;
     public static final int MIN_TRACK_ALPHA = 0;
     public static final int MAX_TRACK_ALPHA = 255;
+    public static final int MIN_SIGNAL_TRACK_ALPHA = 0;
+    public static final int MAX_SIGNAL_TRACK_ALPHA = 255;
     /**
      * The glyph-size span, in percent of the fit the host box implies.
      *
