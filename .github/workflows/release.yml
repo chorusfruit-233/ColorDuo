@@ -105,7 +105,7 @@ jobs:
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
             --title "$VERSION_NAME" --notes-file dist/CHANGELOG.md \
             --draft "${flags[@]}"
-          gh release upload "v$VERSION_NAME" "dist/ColorDuo-$VERSION_NAME-legacy.apk" --repo "$GITHUB_REPOSITORY"
+          gh release upload "v$VERSION_NAME" "dist/ColorDuoLegacy-$VERSION_NAME.apk" --repo "$GITHUB_REPOSITORY"
       - name: Remove signing key
         if: always()
         run: |

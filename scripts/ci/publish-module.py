@@ -14,7 +14,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from artifacts import ROOT, github_prefix, validate_version, verify_apk
+from artifacts import ROOT, apk_filename, github_prefix, validate_version, verify_apk
 
 OWNER = "chorusfruit-233"
 SOURCE = OWNER + "/ColorDuo"
@@ -167,7 +167,7 @@ def publish_release(args, source, digest, repo):
                    "--title", args.version, "--notes-file", str(notes), "--draft"]
         command.append(f"--prerelease={str(bool(source['prerelease'])).lower()}")
         gh(*command)
-    # Keep modern first for clients predating explicit flavor selection.
+    # Upload every APK before making the release visible to module managers.
     gh("release", "upload", tag, str(apks[0]), str(apks[0].parent / "SHA256SUMS"),
        "--repo", MODULE, "--clobber")
     for apk in apks[1:]:
@@ -215,11 +215,11 @@ def main():
     latest = optional(f"repos/{SOURCE}/releases/latest")
     source["is_latest"] = latest is not None and latest["id"] == source["id"]
     metadata = {"applicationId": PACKAGE, "versionName": args.version, "versionCode": int(args.version_code)}
-    args.apks = ([args.directory / f"ColorDuo-{args.version}-{flavor}.apk" for flavor in ("modern", "legacy")]
+    args.apks = ([args.directory / apk_filename(args.version, flavor) for flavor in ("modern", "legacy")]
                  if args.directory is not None else [args.apk])
     certs = set()
     for apk in args.apks:
-        flavor = "legacy" if apk.name.endswith("-legacy.apk") else "modern"
+        flavor = "legacy" if apk.name.startswith("ColorDuoLegacy-") else "modern"
         cert, _ = verify_apk(apk, "release", metadata, Path(os.environ["ANDROID_HOME"]), flavor)
         certs.add(cert)
     if len(certs) != 1:

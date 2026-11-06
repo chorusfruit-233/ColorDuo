@@ -49,7 +49,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release download "v$VERSION_NAME" --repo "$GITHUB_REPOSITORY" \
-            --pattern "ColorDuo-$VERSION_NAME-modern.apk" --pattern "ColorDuo-$VERSION_NAME-legacy.apk" \
+            --pattern "ColorDuo-$VERSION_NAME-modern.apk" --pattern "ColorDuoLegacy-$VERSION_NAME.apk" \
             --pattern SHA256SUMS --dir dist
       - name: Apply, accept invitation and publish
         env:

@@ -63,6 +63,16 @@ class PublicationTest(unittest.TestCase):
                 archive.writestr("META-INF/xposed/scope.list", scope)
             return api["module_metadata"](apk)
 
+    def test_old_updater_never_selects_legacy_in_any_asset_order(self):
+        modern = api["apk_filename"]("0.4.0", "modern")
+        legacy = api["apk_filename"]("0.4.0", "legacy")
+        self.assertEqual(modern, "ColorDuo-0.4.0-modern.apk")
+        self.assertEqual(legacy, "ColorDuoLegacy-0.4.0.apk")
+        for names in ([legacy, modern], [modern, legacy], sorted([legacy, modern])):
+            selected = next(name for name in names
+                            if name.lower().startswith("colorduo-") and name.lower().endswith(".apk"))
+            self.assertEqual(selected, modern)
+
     def test_modern_xposed_metadata(self):
         self.assertEqual(self.check_module()["properties"]["minApiVersion"], "102")
 

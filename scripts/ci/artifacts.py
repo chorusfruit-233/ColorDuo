@@ -128,6 +128,16 @@ def verify_build_set(builds):
             raise ValueError("API variants disagree on " + key)
 
 
+def apk_filename(version, flavor, suffix=""):
+    # Old modern updaters accept any ColorDuo-*.apk, irrespective of asset order.
+    # Keep legacy outside that pattern; GitHub does not preserve upload order.
+    if flavor == "legacy":
+        return f"ColorDuoLegacy-{version}{suffix}.apk"
+    if flavor == "modern":
+        return f"ColorDuo-{version}-modern{suffix}.apk"
+    raise ValueError("Unknown Xposed API flavor")
+
+
 def package_apk(args):
     out = args.output
     if out.exists() and any(out.iterdir()):
@@ -155,7 +165,7 @@ def package_apk(args):
         if args.variant == "release" and not namespace_matches:
             raise ValueError(f"Release application ID must start with {prefix}")
         suffix = f"-debug-{commit[:7]}" if args.variant == "debug" else ""
-        target = out / f"ColorDuo-{version}-{flavor}{suffix}.apk"
+        target = out / apk_filename(version, flavor, suffix)
         shutil.copy2(apk, target)
         digest = hashlib.sha256(target.read_bytes()).hexdigest()
         builds.append({**metadata, "variant": args.variant, "flavor": flavor, "commit": commit,

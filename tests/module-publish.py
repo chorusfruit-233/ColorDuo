@@ -122,7 +122,7 @@ class ModulePublicationTest(unittest.TestCase):
 
     def test_both_source_apks_are_verified_before_publication(self):
         with tempfile.TemporaryDirectory() as directory:
-            files = [Path(directory) / f"ColorDuo-0.4.0-{flavor}.apk" for flavor in ("modern", "legacy")]
+            files = [Path(directory) / module["apk_filename"]("0.4.0", flavor) for flavor in ("modern", "legacy")]
             for apk in files:
                 apk.write_bytes(apk.name.encode())
             hashes = {apk.name: hashlib.sha256(apk.read_bytes()).hexdigest() for apk in files}
@@ -135,9 +135,9 @@ class ModulePublicationTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "published source asset"):
                 module["validate_source_assets"](files, checksums, source)
 
-    def test_uploads_modern_before_legacy_for_older_updaters(self):
+    def test_uploads_both_apks_before_publishing(self):
         with tempfile.TemporaryDirectory() as directory:
-            apks = [Path(directory) / f"ColorDuo-0.4.0-{flavor}.apk" for flavor in ("modern", "legacy")]
+            apks = [Path(directory) / module["apk_filename"]("0.4.0", flavor) for flavor in ("modern", "legacy")]
             args = type("Args", (), {"version_code": "10052", "version": "0.4.0", "apks": apks})()
             gh = mock.Mock()
             source = {"body": "Dual API release", "prerelease": False, "is_latest": True}

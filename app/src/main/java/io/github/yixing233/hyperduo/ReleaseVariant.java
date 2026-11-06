@@ -7,7 +7,9 @@ public final class ReleaseVariant {
     public static int score(String name, String version, String flavor) {
         if (!"modern".equals(flavor) && !"legacy".equals(flavor)) return 0;
         String stem = "ColorDuo-" + version;
-        if ((stem + "-" + flavor + ".apk").equalsIgnoreCase(name)) return 2;
+        String current = "legacy".equals(flavor) ? "ColorDuoLegacy-" + version + ".apk"
+                : stem + "-modern.apk";
+        if (current.equalsIgnoreCase(name)) return 2;
         // Releases before API flavours were all modern. Legacy must never use this fallback.
         return "modern".equals(flavor) && (stem + ".apk").equalsIgnoreCase(name) ? 1 : 0;
     }

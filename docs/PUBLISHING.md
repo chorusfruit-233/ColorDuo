@@ -11,7 +11,7 @@
 
 文档修改跳过测试包构建；同一分支的新构建取消旧构建。Android 环境统一使用 JDK 21、SDK 37 和仓库内的 Gradle Wrapper，Gradle 缓存由公共安装步骤管理。
 
-测试包名称为 `ColorDuo-<version>-<modern或legacy>-debug-<commit>.apk`，版本从 Gradle 产物读取。下载包还含 `SHA256SUMS` 和 `build-info.json`；后者的 `builds` 数组按 modern、legacy 记录实际包名、版本、签名指纹、Xposed 元数据和模块仓用户名匹配结果。
+测试包名称为 `ColorDuo-<version>-modern-debug-<commit>.apk` 与 `ColorDuoLegacy-<version>-debug-<commit>.apk`，版本从 Gradle 产物读取。下载包还含 `SHA256SUMS` 和 `build-info.json`；后者的 `builds` 数组按 modern、legacy 记录实际包名、版本、签名指纹、Xposed 元数据和模块仓用户名匹配结果。
 
 ## 发布签名与草稿
 
@@ -64,4 +64,4 @@ Prepare release 只创建源码仓库的 Release 草稿，并附两个 APK 和�
 
 ## 双 API 产物
 
-正式包固定命名为 `ColorDuo-<version>-modern.apk` 与 `ColorDuo-<version>-legacy.apk`。两包必须同时验证成功才创建 Release；上传顺序固定 modern 在先，兼容过去只选第一个 APK 的更新器。新版更新器按自身 flavor 选包，legacy 不回退到旧的无后缀 modern 包。模块仓发布会重新核对两个公开源文件的签名及 SHA-256。
+正式包固定命名为 `ColorDuo-<version>-modern.apk` 与 `ColorDuoLegacy-<version>.apk`。两包必须同时验证成功才创建 Release；legacy 文件名不匹配旧更新器的 `ColorDuo-*.apk` 规则，避免 GitHub 改变附件顺序时旧用户误装 legacy。新版更新器按自身 flavor 选包，legacy 不回退到旧的无后缀 modern 包。模块仓发布会重新核对两个公开源文件的签名及 SHA-256。

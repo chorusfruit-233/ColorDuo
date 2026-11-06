@@ -96,7 +96,7 @@ adb logcat -v time -s LSPosedFramework | rg 'ColorDuo|io\.github\.chorusfruit233
 
 ## 构建产物与分发
 
-[Build ColorDuo](../.github/workflows/build.yml) 在 main 代码推送、PR 和手动触发时运行共用检查，再构建测试 APK，上传 `ColorDuo-<version>-debug-<commit>` artifact；文档修改不触发构建。产物打包步骤读取 APK 的实际版本，校验签名、现代 Xposed 入口及作用域，并附校验文件和构建信息。
+[Build ColorDuo](../.github/workflows/build.yml) 在 main 代码推送、PR 和手动触发时运行共用检查，再构建测试 APK，分别上传 `ColorDuo-<version>-<flavor>-debug-<commit>` artifact；文档修改不触发构建。产物打包步骤读取 APK 的实际版本，校验签名、对应 API 的 Xposed 入口及作用域，并附校验文件和构建信息。
 
 [Prepare release](../.github/workflows/release.yml) 手动构建私有签名的 release APK，通过版本、更新记录、签名和模块结构校验后创建 Release 草稿。具体 secrets、模块仓素材及申请状态见 [构建与模块仓发布](PUBLISHING.md)。
 
