@@ -35,7 +35,7 @@ public final class TrioRenderer {
     private static final Paint WIFI_STANDARD_TEXT = new Paint(Paint.ANTI_ALIAS_FLAG);
     private static final Typeface WIFI_STANDARD_FACE = Typeface.create("sans-serif-condensed", Typeface.NORMAL);
     private static final Rect WIFI_STANDARD_INK = new Rect();
-    private static final WifiBadge[] WIFI_BADGES = new WifiBadge[4];
+    private static final WifiBadge[] WIFI_BADGES = new WifiBadge[24];
     private static int nextWifiBadge;
     private static final float WIFI_BADGE_RIGHT = 34f;
     private static final float WIFI_STANDARD_MAX_OUTLINE = 0.08f;
@@ -1272,8 +1272,14 @@ public final class TrioRenderer {
             return 0f;
         }
         if (part == Prefs.PART_WIFI && a.showWifiStandard && !wifiStandard.isEmpty()) {
+            float markerReach=WIFI_BADGE_RIGHT;
+            if(a.wifiStandardScale>100) {
+                WifiBadge badge=wifiBadge(a,wifiStandard,Float.POSITIVE_INFINITY,0,WIFI_BADGE_RIGHT,Float.POSITIVE_INFINITY);
+                if(badge!=null)markerReach=Math.max(Math.max(Math.abs(badge.mainInk.left),badge.mainInk.right),
+                        badge.suffixInk==null?0:badge.suffixInk.right);
+            }
             float reach=Math.max(TrioGeometry.W_INK_W/2f
-                    +Math.max(0f,a.arcStroke-TrioGeometry.W_STROKE)/2f,WIFI_BADGE_RIGHT)
+                    +Math.max(0f,a.arcStroke-TrioGeometry.W_STROKE)/2f,markerReach)
                     *TrioGeometry.capWifiScale(stroke)*a.wifiScaleFactor();
             return Math.min(reach,TrioGeometry.capOpeningWidth()/2f)
                     + TrioGeometry.capDotClearance() + stroke*0.5f;
@@ -2070,21 +2076,112 @@ public final class TrioRenderer {
     private static WifiBadge wifiBadge(TrioAppearance a,String text,float radius,float dy,float right,float bottom) {
         for(WifiBadge cached:WIFI_BADGES)
             if(cached!=null&&cached.matches(a,text,radius,dy,right,bottom))return cached;
-        float requested=24f*a.wifiStandardScale/100f;
-        WifiBadge badge=new WifiBadge(a,text,radius,dy,right,bottom,requested,0.85f);
-        if(!badge.fits()) {
-            float low=0.25f,high=requested;
-            badge=new WifiBadge(a,text,radius,dy,right,bottom,low,0.85f);
-            if(!badge.fits())return null;
-            for(int i=0;i<12;i++) {
+        WifiBadge badge=fittedWifiBadge(a,text,radius,dy,right,bottom,24f*Math.min(100,a.wifiStandardScale)/100f);
+        if(a.wifiStandardScale>100) {
+            float base=badge==null?wifiStandardInkHeight(a,text,24f):badge.mainInk.height()-1.3f;
+            float fraction=(a.wifiStandardScale-100f)/(Prefs.MAX_WIFI_STANDARD_SCALE-100f);
+            float target=base+(wifiSymbolInkHeight(a)*0.95f-base)*fraction;
+            float low=0.25f,high=Math.max(24f,target*4f);
+            for(int i=0;i<14;i++) {
                 float size=(low+high)/2f;
-                WifiBadge candidate=new WifiBadge(a,text,radius,dy,right,bottom,size,0.85f);
-                if(candidate.fits()){low=size;badge=candidate;}else high=size;
+                if(wifiStandardInkHeight(a,text,size)<=target)low=size;else high=size;
             }
+            // Large sizes are deliberate. The user owns their position; do not squeeze
+            // them back into the old corner or the battery ring's interior.
+            badge=new WifiBadge(a,text,radius,dy,right,bottom,low,0.85f);
         }
         WIFI_BADGES[nextWifiBadge]=badge;
         nextWifiBadge=(nextWifiBadge+1)%WIFI_BADGES.length;
         return badge;
+    }
+
+    private static float wifiSymbolInkHeight(TrioAppearance a) {
+        float bottom=Math.max(TrioGeometry.W_BOTTOM,65.25f+a.arcStroke/2f);
+        return bottom-(TrioGeometry.W_TOP-a.arcStroke/2f);
+    }
+
+    private static float wifiStandardInkHeight(TrioAppearance a,String text,float size) {
+        String main=text.equals("6E")?"6":text;
+        prepareWifiStandard(a,size,0.85f);
+        WIFI_STANDARD_TEXT.setStyle(Paint.Style.FILL);WIFI_STANDARD_TEXT.setStrokeWidth(0);
+        WIFI_STANDARD_TEXT.getTextBounds(main,0,main.length(),WIFI_STANDARD_INK);
+        return WIFI_STANDARD_INK.bottom-WIFI_STANDARD_INK.top+size*WIFI_STANDARD_MAX_OUTLINE;
+    }
+
+    /** Keep the previous small/default sizes, then grow above 100% toward the full Wi-Fi height. */
+    private static WifiBadge fittedWifiBadge(TrioAppearance a,String text,float radius,float dy,
+                                              float right,float bottom,float requested) {
+        WifiBadge badge=new WifiBadge(a,text,radius,dy,right,bottom,requested,0.85f);
+        if(badge.fits())return badge;
+        float low=0.25f,high=requested;
+        badge=new WifiBadge(a,text,radius,dy,right,bottom,low,0.85f);
+        if(!badge.fits())return null;
+        for(int i=0;i<12;i++) {
+            float size=(low+high)/2f;
+            WifiBadge candidate=new WifiBadge(a,text,radius,dy,right,bottom,size,0.85f);
+            if(candidate.fits()){low=size;badge=candidate;}else high=size;
+        }
+        return badge;
+    }
+
+    /** Reserve the actual enlarged marker in the host instead of clipping it or shrinking its font. */
+    static TrioSizing.Bounds includeWifiStandardBounds(TrioAppearance a,TrioSizing.Bounds original) {
+        if(!a.showWifiStandard||a.wifiStandardScale<=100||!a.ownsWifi())return original;
+        float[] box={original.x,original.y,original.x+original.width,original.y+original.height};
+        if(a.ring) {
+            int[] parts=a.ring(100,false,3,"5G",2,true).parts;
+            for(int z=0;z<3;z++)if(parts[z]==Prefs.PART_WIFI) {
+                float extra=Math.max(0,a.arcStroke-TrioGeometry.W_STROKE),width=78f-a.ringStroke;
+                float height=z==0?TrioGeometry.DOT_BOX_TOP:z==1?TrioGeometry.DOT_BOX_CENTRE:TrioGeometry.DOT_BOX_BOTTOM;
+                float room=a.splitMode==1&&z!=1?Math.min(width,TrioGeometry.splitOpeningWidth(a,z)):width;
+                float scale=Math.min(room/(TrioGeometry.W_INK_W+extra),height/(TrioGeometry.W_INK_H+extra))*a.wifiScaleFactor();
+                if(scale<=0)continue;
+                float cy=a.splitMode==1?alignedY(a,z,(TrioGeometry.W_INK_H+extra)*scale/2):TrioGeometry.ZONE_CY[z];
+                float radius=z==1?(TrioGeometry.B_R-a.ringStroke/2f-1.5f)/scale:Float.POSITIVE_INFINITY;
+                includeWifiBadge(box,a,TrioGeometry.B_CX,cy,scale,radius,(cy-TrioGeometry.B_CY)/scale,
+                        (TrioGeometry.INK_X+TrioGeometry.INK_W-TrioGeometry.B_CX-1f)/scale,
+                        (TrioGeometry.INK_Y+TrioGeometry.INK_H-cy-1f)/scale);
+            }
+        } else if(a.capsule) {
+            float stroke=a.ringStroke*TrioGeometry.CAP_STROKE_RATIO;
+            int[] parts=a.capsule(100,false,3,"5G",2,true).parts;
+            float scale=TrioGeometry.capWifiScale(stroke)*a.wifiScaleFactor();
+            if(scale>0)for(int z=0;z<parts.length;z++)if(parts[z]==Prefs.PART_WIFI) {
+                boolean opening=z==0||z==2;
+                float cx=opening?TrioGeometry.CAP_INK_X+TrioGeometry.capInkW()/2:
+                        z==3?TrioGeometry.capLeftIconCx(stroke,Prefs.PART_WIFI)+a.capsuleLeftDx:
+                        TrioGeometry.capRightIconCx(stroke,Prefs.PART_WIFI)+a.capsuleRightDx;
+                float cy=opening?TrioGeometry.capOpeningCy(z==0,stroke):
+                        TrioGeometry.capInteriorCy(stroke)+(z==3?a.capsuleLeftDy:a.capsuleRightDy);
+                includeWifiBadge(box,a,cx,cy,scale,Float.POSITIVE_INFINITY,0,
+                        opening?WIFI_BADGE_RIGHT:(TrioGeometry.capReadingEdge(stroke,false)-cx-1f)/scale,
+                        ((opening?TrioGeometry.CAP_INK_BOTTOM:TrioGeometry.capInteriorBottom(stroke))-cy-1f)/scale);
+            }
+        } else if(a.rect(100,false,3,"5G",2).wifi) {
+            float scale=TrioGeometry.RECT_WIFI_SCALE*a.wifiScaleFactor();
+            float cx=TrioGeometry.rectWifiOffsetX()+TrioGeometry.W_CX*scale;
+            float cy=TrioGeometry.rectWifiOffsetY(a.arcStroke)+TrioGeometry.W_INK_CY*scale;
+            includeWifiBadge(box,a,cx,cy,scale,Float.POSITIVE_INFINITY,0,
+                    (TrioGeometry.RECT_INK_X+TrioGeometry.RECT_INK_W-cx-1f)/scale,
+                    (TrioGeometry.RECT_INK_Y+TrioGeometry.RECT_INK_H-cy-1f)/scale);
+        }
+        return new TrioSizing.Bounds(box[0],box[1],box[2]-box[0],box[3]-box[1]);
+    }
+
+    private static void includeWifiBadge(float[] box,TrioAppearance a,float cx,float cy,float scale,
+                                         float radius,float dy,float right,float bottom) {
+        // Reserve every supported label so a Wi-Fi protocol transition never changes host size.
+        for(String standard:new String[]{"4","5","6","6E","7"}) {
+            WifiBadge badge=wifiBadge(a,standard,radius,dy,right,bottom);
+            if(badge==null)continue;
+            for(int i=0;i<(badge.suffixInk==null?1:2);i++) {
+                RectF ink=i==0?badge.mainInk:badge.suffixInk;
+                box[0]=Math.min(box[0],cx+ink.left*scale-1);
+                box[1]=Math.min(box[1],cy+ink.top*scale-1);
+                box[2]=Math.max(box[2],cx+ink.right*scale+1);
+                box[3]=Math.max(box[3],cy+ink.bottom*scale+1);
+            }
+        }
     }
 
     private static void drawWifiArcs(Canvas c,int level,int fg,TrioAppearance a,String standard,

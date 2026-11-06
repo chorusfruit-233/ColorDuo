@@ -44,11 +44,11 @@ public final class TrioSizing {
             capMinY=Math.min(capMinY,TrioGeometry.capDotTopY()-radius);
             capMaxY=Math.max(capMaxY,TrioGeometry.capDotBottomY()+radius);
         }
-        if (split != null) return new Bounds(split.minX, split.minY, split.width(), split.height());
-        if (a.capsule) return new Bounds(capMinX,capMinY,capMaxX-capMinX,capMaxY-capMinY);
-        if (a.rect) return new Bounds(TrioGeometry.RECT_INK_X,TrioGeometry.RECT_INK_Y,
-                TrioGeometry.RECT_INK_W,TrioGeometry.RECT_INK_H);
-        return new Bounds(TrioGeometry.INK_X,TrioGeometry.INK_Y,TrioGeometry.INK_W,TrioGeometry.INK_H);
+        if (split != null) return TrioRenderer.includeWifiStandardBounds(a,new Bounds(split.minX, split.minY, split.width(), split.height()));
+        if (a.capsule) return TrioRenderer.includeWifiStandardBounds(a,new Bounds(capMinX,capMinY,capMaxX-capMinX,capMaxY-capMinY));
+        if (a.rect) return TrioRenderer.includeWifiStandardBounds(a,new Bounds(TrioGeometry.RECT_INK_X,TrioGeometry.RECT_INK_Y,
+                TrioGeometry.RECT_INK_W,TrioGeometry.RECT_INK_H));
+        return TrioRenderer.includeWifiStandardBounds(a,new Bounds(TrioGeometry.INK_X,TrioGeometry.INK_Y,TrioGeometry.INK_W,TrioGeometry.INK_H));
     }
 
     public static final class Metrics {
