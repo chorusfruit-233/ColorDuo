@@ -231,7 +231,7 @@ public final class ColorOsRenderingTest {
             MarkerSample small=markerSample(layout,50,900,TrioZones.Zone.CENTRE.ordinal(),false);
             MarkerSample normal=markerSample(layout,100,900,TrioZones.Zone.CENTRE.ordinal(),false);
             MarkerSample large=markerSample(layout,250,900,TrioZones.Zone.CENTRE.ordinal(),false);
-            check(normal.height>small.height+1 && large.height>=normal.height-1,
+            check(normal.height>small.height+1 && large.height>normal.height+1,
                     "size control grows the badge until its available corner is full: layout="+layout
                             +" small="+small.height+" normal="+normal.height+" large="+large.height);
             MarkerSample digitSmall=markerSample(layout,50,900,TrioZones.Zone.CENTRE.ordinal(),false,100,"6");

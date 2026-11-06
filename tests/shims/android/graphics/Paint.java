@@ -39,6 +39,7 @@ public class Paint {
     private float strokeWidth = 1f;
     private float textSize = 12f;
     private String family = "SansSerif";
+    private float typefaceWidth = 1f;
     private int typefaceStyle = Font.PLAIN;
     private float letterSpacing = 0f;
     private boolean fakeBold = false;
@@ -76,6 +77,7 @@ public class Paint {
     public void setTypeface(Typeface t) {
         if (t != null) {
             family = t.family();
+            typefaceWidth = t.width();
             typefaceStyle = t.style();
         }
     }
@@ -97,7 +99,8 @@ public class Paint {
         // The synthetic flag wins over the typeface's own style, matching the
         // platform's behaviour of emboldening whatever face is installed.
         final int style = fakeBold ? (typefaceStyle | Font.BOLD) : typefaceStyle;
-        return new Font(family, style, 12).deriveFont(textSize);
+        return new Font(family, style, 12).deriveFont(textSize).deriveFont(
+                java.util.Map.of(java.awt.font.TextAttribute.WIDTH,typefaceWidth));
     }
 
     public BasicStroke stroke() {

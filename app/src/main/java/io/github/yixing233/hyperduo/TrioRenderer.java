@@ -33,7 +33,7 @@ public final class TrioRenderer {
     private static final Paint FILL = new Paint(Paint.ANTI_ALIAS_FLAG);
     private static final Paint TEXT = new Paint(Paint.ANTI_ALIAS_FLAG);
     private static final Paint WIFI_STANDARD_TEXT = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private static final Typeface WIFI_STANDARD_FACE = Typeface.create("sans-serif", Typeface.NORMAL);
+    private static final Typeface WIFI_STANDARD_FACE = Typeface.create("sans-serif-condensed", Typeface.NORMAL);
     private static final Rect WIFI_STANDARD_INK = new Rect();
     private static int wifiTypefaceWeight;
     private static final WifiBadge[] WIFI_BADGES = new WifiBadge[4];
@@ -2144,7 +2144,7 @@ public final class TrioRenderer {
     private static final class WifiBadge {
         final String standard,main;
         final int scale,weight;
-        final float stroke,radius,dy,right,bottom,size,x,baseline,suffixX;
+        final float stroke,radius,dy,right,bottom,size,x,baseline,suffixX,suffixOffset;
         final RectF mainInk,suffixInk;
 
         WifiBadge(TrioAppearance a,String standard,float radius,float dy,float right,float bottom,float size) {
@@ -2155,19 +2155,24 @@ public final class TrioRenderer {
             WIFI_STANDARD_TEXT.getTextBounds(main,0,main.length(),WIFI_STANDARD_INK);
             float pad=WIFI_STANDARD_TEXT.getStrokeWidth()/2f+0.65f;
             // Main ink starts to the right of the Wi-Fi dot. All text clears the middle arc.
-            x=8.5f-WIFI_STANDARD_INK.left+pad;
+            // Reclaim unused bearing/spacing, retaining one unit beyond the dot's true bounds.
+            RectF dotInk=new RectF();WIFI_DOT.computeBounds(dotInk,true);
+            float left=Math.min(8.5f,dotInk.right-TrioGeometry.W_CX+1f);
+            x=left-WIFI_STANDARD_INK.left+pad;
             mainInk=new RectF(x+WIFI_STANDARD_INK.left-pad,WIFI_STANDARD_INK.top-pad,
                     x+WIFI_STANDARD_INK.right+pad,WIFI_STANDARD_INK.bottom+pad);
-            suffixX=x+WIFI_STANDARD_TEXT.measureText(main)+size*0.035f;
             if(standard.equals("6E")) {
-                prepareWifiStandard(a,size*0.5f);
+                // A top-aligned small E uses its ink bearing, not the main glyph's advance.
+                prepareWifiStandard(a,size*0.4f);
                 WIFI_STANDARD_TEXT.getTextBounds("E",0,1,WIFI_STANDARD_INK);
                 pad=WIFI_STANDARD_TEXT.getStrokeWidth()/2f+0.65f;
+                suffixX=mainInk.right+0.4f-WIFI_STANDARD_INK.left+pad;
+                suffixOffset=mainInk.top-(WIFI_STANDARD_INK.top-pad);
                 suffixInk=new RectF(suffixX+WIFI_STANDARD_INK.left-pad,
-                        WIFI_STANDARD_INK.top-size*0.35f-pad,
+                        WIFI_STANDARD_INK.top+suffixOffset-pad,
                         suffixX+WIFI_STANDARD_INK.right+pad,
-                        WIFI_STANDARD_INK.bottom-size*0.35f+pad);
-            } else suffixInk=null;
+                        WIFI_STANDARD_INK.bottom+suffixOffset+pad);
+            } else {suffixX=0;suffixOffset=0;suffixInk=null;}
             float top=Math.min(mainInk.top,suffixInk==null?mainInk.top:suffixInk.top);
             baseline=65.25f+stroke/2f+1.5f-TrioGeometry.W_INK_CY-top;
             mainInk.top+=baseline;mainInk.bottom+=baseline;
@@ -2217,9 +2222,9 @@ public final class TrioRenderer {
         c.drawText(badge.main,TrioGeometry.W_CX+badge.x,
                 TrioGeometry.W_INK_CY+badge.baseline,WIFI_STANDARD_TEXT);
         if(badge.suffixInk!=null) {
-            prepareWifiStandard(a,badge.size*0.5f);
+            prepareWifiStandard(a,badge.size*0.4f);
             c.drawText("E",TrioGeometry.W_CX+badge.suffixX,
-                    TrioGeometry.W_INK_CY+badge.baseline-badge.size*0.35f,WIFI_STANDARD_TEXT);
+                    TrioGeometry.W_INK_CY+badge.baseline+badge.suffixOffset,WIFI_STANDARD_TEXT);
         }
     }
 
