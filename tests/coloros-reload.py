@@ -81,6 +81,7 @@ class ColorOsHooks {
  static void invalidateHosts(){repaints++;}
 @LIFECYCLE@
 }'''.replace('@LIFECYCLE@', lifecycle),
+'io/github/yixing233/hyperduo/ModernRuntime.java': 'package io.github.yixing233.hyperduo; class ModernRuntime {ModernRuntime(Object module){}}',
 'io/github/yixing233/hyperduo/TrioHooks.java': 'package io.github.yixing233.hyperduo; class TrioHooks {static void install(Object m,ClassLoader l){} }',
 'io/github/yixing233/hyperduo/ReloadTest.java': r'''
 package io.github.yixing233.hyperduo;
@@ -178,6 +179,7 @@ with tempfile.TemporaryDirectory(prefix='colorduo-reload-') as d:
     sources=[]
     for name,content in files.items():
         p=root/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(content,encoding='utf-8');sources.append(str(p))
-    sources += [str(SOURCE/n) for n in ['ColorOsPolicy.java','ColorOsNetworkType.java','ColorOsSignalFlows.java','ColorOsReload.java','HyperDuoModule.java','Refl.java','ColorOsCharger.java']]
+    sources += [str(SOURCE/n) for n in ['ColorOsPolicy.java','ColorOsNetworkType.java','ColorOsSignalFlows.java','ColorOsReload.java','Refl.java','ColorOsCharger.java']]
+    sources.append(str(ROOT/'app/src/modern/java/io/github/yixing233/hyperduo/HyperDuoModule.java'))
     subprocess.run(['javac','-encoding','UTF-8','-d',str(root),*sources],check=True)
     subprocess.run(['java','-cp',str(root),'io.github.yixing233.hyperduo.ReloadTest'],check=True)

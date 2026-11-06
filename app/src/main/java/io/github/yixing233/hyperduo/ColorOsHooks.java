@@ -42,9 +42,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import io.github.libxposed.api.XposedInterface;
-import io.github.libxposed.api.XposedModule;
-
 /** ColorOS 17 adapter, verified against OnePlus SystemUI 17.99.02 (API 37). */
 final class ColorOsHooks {
     static final String METER_CLASS =
@@ -357,7 +354,7 @@ final class ColorOsHooks {
                 chargerWorker, SystemClock::elapsedRealtime);
     }
 
-    static void install(XposedModule module, ClassLoader loader) {
+    static void install(HookRuntime module, ClassLoader loader) {
         meterClass = Refl.cls(METER_CLASS, loader);
         phoneBarClass = Refl.cls("com.android.systemui.statusbar.phone.PhoneStatusBarView", loader);
         statusIconsClass = Refl.cls("com.android.systemui.statusbar.phone.StatusIconContainer", loader);
@@ -380,27 +377,27 @@ final class ColorOsHooks {
         int count = 0;
         // OEM/R8 builds can inline binder helpers. Filter framework writes by our exact child
         // instances too, so an inlined style update cannot leave a stale restoration snapshot.
-        count += hook(module, Refl.method(ImageView.class, "setImageDrawable", Drawable.class), ColorOsHooks::writeDrawable);
-        count += hook(module, Refl.method(ImageView.class, "setScaleType", ImageView.ScaleType.class), ColorOsHooks::writeScaleType);
-        count += hook(module, Refl.method(View.class, "setVisibility", int.class), ColorOsHooks::writeVisibility);
-        count += hook(module, Refl.method(ImageView.class, "getDrawable"), ColorOsHooks::readDrawable);
-        count += hook(module, Refl.method(View.class, "getLayoutParams"), ColorOsHooks::readLayoutParams);
-        count += hook(module, Refl.method(View.class, "setLayoutParams", ViewGroup.LayoutParams.class), ColorOsHooks::writeLayoutParams);
-        count += hook(module, Refl.method(View.class, "setMinimumHeight", int.class), chain -> {
-            int requested=(Integer)chain.getArg(0);
-            int retained=ColorOsSizing.retainMinimumHeight((View)chain.getThisObject(),requested);
-            return retained==requested?chain.proceed():chain.proceed(new Object[]{retained});
+        count += around(module, Refl.method(ImageView.class, "setImageDrawable", Drawable.class), ColorOsHooks::writeDrawable, ColorOsHooks::afterDrawable);
+        count += before(module, Refl.method(ImageView.class, "setScaleType", ImageView.ScaleType.class), ColorOsHooks::writeScaleType);
+        count += before(module, Refl.method(View.class, "setVisibility", int.class), ColorOsHooks::writeVisibility);
+        count += before(module, Refl.method(ImageView.class, "getDrawable"), ColorOsHooks::readDrawable);
+        count += before(module, Refl.method(View.class, "getLayoutParams"), ColorOsHooks::readLayoutParams);
+        count += before(module, Refl.method(View.class, "setLayoutParams", ViewGroup.LayoutParams.class), ColorOsHooks::writeLayoutParams);
+        count += before(module, Refl.method(View.class, "setMinimumHeight", int.class), call -> {
+            int requested=(Integer)call.args[0];
+            int retained=ColorOsSizing.retainMinimumHeight((View)call.receiver,requested);
+            call.args[0]=retained;
         });
-        count += hook(module, Refl.method(Refl.cls("androidx.constraintlayout.widget.ConstraintLayout",loader),
-                "setMinHeight",int.class), chain -> {
-            int requested=(Integer)chain.getArg(0);
-            int retained=ColorOsSizing.retainWidgetMinimumHeight((View)chain.getThisObject(),requested);
-            return retained==requested?chain.proceed():chain.proceed(new Object[]{retained});
+        count += before(module, Refl.method(Refl.cls("androidx.constraintlayout.widget.ConstraintLayout",loader),
+                "setMinHeight",int.class), call -> {
+            int requested=(Integer)call.args[0];
+            int retained=ColorOsSizing.retainWidgetMinimumHeight((View)call.receiver,requested);
+            call.args[0]=retained;
         });
-        count += hook(module, Refl.method(View.class, "setClipBounds", android.graphics.Rect.class), chain -> {
-            android.graphics.Rect requested=(android.graphics.Rect)chain.getArg(0);
-            android.graphics.Rect retained=ColorOsSizing.retainClipBounds((View)chain.getThisObject(),requested);
-            return retained==requested?chain.proceed():chain.proceed(new Object[]{retained});
+        count += before(module, Refl.method(View.class, "setClipBounds", android.graphics.Rect.class), call -> {
+            android.graphics.Rect requested=(android.graphics.Rect)call.args[0];
+            android.graphics.Rect retained=ColorOsSizing.retainClipBounds((View)call.receiver,requested);
+            call.args[0]=retained;
         });
 
         Set<Method> sizingMeasures=new HashSet<>();
@@ -409,10 +406,10 @@ final class ColorOsHooks {
                 Refl.cls("com.oplus.systemui.qs.OplusQuickStatusBarHeader",loader)}) {
             Method measure=Refl.methodDeep(type,"onMeasure",int.class,int.class);
             if(measure==null || !sizingMeasures.add(measure)) continue;
-            count += hook(module,measure,chain -> {
-                int requested=(Integer)chain.getArg(1);
-                int retained=ColorOsSizing.retainMeasureSpec((View)chain.getThisObject(),requested);
-                return retained==requested?chain.proceed():chain.proceed(new Object[]{chain.getArg(0),retained});
+            count += before(module,measure,call -> {
+                int requested=(Integer)call.args[1];
+                int retained=ColorOsSizing.retainMeasureSpec((View)call.receiver,requested);
+                call.args[1]=retained;
             });
         }
 
@@ -424,18 +421,16 @@ final class ColorOsHooks {
             for(Method method:frameClass.getDeclaredMethods()) {
                 String methodName=method.getName();
                 if(methodName.equals("dispatchDraw") && method.getParameterCount()==1) {
-                    count += hook(module,method,ColorOsHooks::drawMirror);
+                    count += around(module,method,ColorOsHooks::drawMirror,ColorOsHooks::afterMirror);
                 } else if(methodName.equals("setFakeView") || methodName.equals("setMView")
                         || methodName.equals("bindRealView") || methodName.equals("resetLayoutParams")
                         || methodName.equals("clearFakeView")) {
-                    count += hook(module,method,chain -> {
-                        Object result=chain.proceed();
-                        ViewGroup frame=(ViewGroup)chain.getThisObject();
+                    count += after(module,method,call -> {
+                        ViewGroup frame=(ViewGroup)call.receiver;
                         Object source=Refl.callByName(frame,"getMView");
                         if(ColorOsSizing.trackMirror(frame,source instanceof View?(View)source:null))
                             frame.addOnAttachStateChangeListener(MIRROR_ATTACH);
                         refreshMirrorSizes();
-                        return result;
                     });
                 }
             }
@@ -447,14 +442,14 @@ final class ColorOsHooks {
                     || name.equals("bindViewModel") || name.equals("onDarkChanged")
                     || name.equals("onConfigurationChanged") || name.equals("disable")
                     || name.equals("onHiddenChanged") || name.equals("setHiddenIconListChanged")) {
-                count += hook(module, method, chain -> {
-                    ViewGroup meter = (ViewGroup) chain.getThisObject();
+                count += around(module, method, call -> {
+                    ViewGroup meter = (ViewGroup) call.receiver;
                     Host host = host(meter);
-                    if (chain.getExecutable().getName().equals("bindViewModel")) {
-                        host.viewModel = chain.getArg(0);
+                    if (call.executable.getName().equals("bindViewModel")) {
+                        host.viewModel = call.args[0];
                     }
-                    return nativeUpdate(host, chain);
-                });
+                    beginNative(host, call);
+                }, ColorOsHooks::finishNative);
             }
         }
 
@@ -463,16 +458,16 @@ final class ColorOsHooks {
         Class<?> binder = Refl.cls(BATTERY + "ui.binder.BatteryViewBinder", loader);
         if (binder != null) for (Method method : binder.getDeclaredMethods()) {
             if (!method.getName().startsWith("bind")) continue;
-            count += hook(module, method, chain -> {
+            count += around(module, method, call -> {
                 Host owner = null;
-                for (Object arg : chain.getArgs()) {
+                for (Object arg : call.args) {
                     if (arg instanceof View) {
                         owner = existingHost((View) arg);
                         if (owner != null) break;
                     }
                 }
-                return owner == null ? chain.proceed() : nativeUpdate(owner, chain);
-            });
+                if (owner != null) beginNative(owner, call);
+            }, ColorOsHooks::finishNative);
         }
 
         count += captureWifiFlow(module, loader, WIFI + "data.repository.WifiRepositorySwitcher");
@@ -482,16 +477,14 @@ final class ColorOsHooks {
         Class<?> wifiIcons = Refl.cls(WIFI + "ui.model.WifiIcon$Companion", loader);
         if (wifiIcons != null) for (Method method : wifiIcons.getDeclaredMethods()) {
             if (!method.getName().equals("fromModel") || method.getParameterCount() != 3) continue;
-            count += hook(module, method, chain -> {
-                Object result = chain.proceed();
-                WifiSample sample = wifiSample(chain.getArg(0));
+            count += after(module, method, call -> {
+                WifiSample sample = wifiSample(call.args[0]);
                 WifiSample previous = renderedWifi;
                 renderedWifi = sample;
                 if (!java.util.Objects.equals(previous.connected, sample.connected)
                         || previous.level != sample.level || previous.carrierMerged != sample.carrierMerged) {
                     invalidateHosts();
                 }
-                return result;
             });
         }
         count += captureMobileModels(module, loader, "OplusCellularIconViewModelImpl", false);
@@ -502,30 +495,27 @@ final class ColorOsHooks {
                 "com.oplus.systemui.statusbar.pipeline.mobile.ui.view.OplusStatusBarMobileViewBinder$Os17Binding", loader);
         Class<?> networkType = Refl.cls(
                 "com.android.systemui.statusbar.pipeline.mobile.domain.model.OplusNetworkTypeTextModel", loader);
-        if (networkType != null) count += hook(module,
-                Refl.method(mobileBinding, "bindNetworkTypeText", networkType), chain -> {
-                    Object result = chain.proceed();
-                    Object model = ColorOsPolicy.nativeMember(chain.getThisObject(),
+        if (networkType != null) count += after(module,
+                Refl.method(mobileBinding, "bindNetworkTypeText", networkType), call -> {
+                    Object model = ColorOsPolicy.nativeMember(call.receiver,
                             "oplusViewModel", "getOplusViewModel");
                     Mobile mobile = captureMobileModel(model, true);
                     if (mobile != null) {
-                        String text = ColorOsPolicy.networkType(chain.getArg(0));
+                        String text = ColorOsPolicy.networkType(call.args[0]);
                         if (!text.equals(mobile.renderedType)) {
                             mobile.renderedType = text;
                             invalidateHosts();
                         }
                     }
-                    return result;
                 });
         for (String name : new String[] {"getBatteryLevel", "getChargeState", "isSavingMode"}) {
             Method method = Refl.method(Refl.cls(BATTERY + "data.repository.BatteryRepositoryImpl", loader), name);
             if (method == null) continue;
-            count += hook(module, method, chain -> {
-                Object result = chain.proceed();
+            count += after(module, method, call -> {
+                Object result = call.result;
                 if (name.equals("getBatteryLevel")) batteryLevelFlow = result;
                 else if (name.equals("getChargeState")) chargeFlow = result;
                 else savingFlow = result;
-                return result;
             });
         }
 
@@ -534,12 +524,27 @@ final class ColorOsHooks {
                 + " SystemUI=" + METER_CLASS);
     }
 
-    private static int hook(XposedModule module, Executable method, XposedInterface.Hooker callback) {
+    private static int before(HookRuntime module, Executable method, HookRuntime.Step callback) {
+        return around(module, method, callback, null);
+    }
+
+    private static int after(HookRuntime module, Executable method, HookRuntime.Step callback) {
+        return around(module, method, null, call -> {
+            if (call.throwable == null) callback.run(call);
+        });
+    }
+
+    private static int around(HookRuntime module, Executable method,
+                              HookRuntime.Step before, HookRuntime.Step after) {
         if (method == null) return 0;
         try {
             method.setAccessible(true);
-            module.hook(method).setId("colorduo:" + method.toGenericString()).intercept(chain ->
-                    ColorOsReload.retiring ? chain.proceed() : callback.intercept(chain));
+            module.hook(method, "colorduo:" + method.toGenericString(), call -> {
+                call.entered = !ColorOsReload.retiring;
+                if (call.entered && before != null) before.run(call);
+            }, call -> {
+                if (call.entered && after != null) after.run(call);
+            });
             return 1;
         } catch (Throwable error) {
             TrioHooks.log(TrioHooks.LOG_WARN, "ColorOS skip " + method.getName() + ": " + error);
@@ -547,19 +552,18 @@ final class ColorOsHooks {
         }
     }
 
-    private static int captureMobileModels(XposedModule module, ClassLoader loader,
+    private static int captureMobileModels(HookRuntime module, ClassLoader loader,
                                           String name, boolean wrapper) {
         Class<?> type = Refl.cls(MOBILE + name, loader);
         if (type == null) return 0;
         int count = 0;
         for (Constructor<?> constructor : type.getDeclaredConstructors()) {
-            count += hook(module, constructor, chain -> {
-                Object result = chain.proceed();
-                Mobile mobile = captureMobileModel(chain.getThisObject(), wrapper);
+            count += after(module, constructor, call -> {
+                Mobile mobile = captureMobileModel(call.receiver, wrapper);
                 if (mobile != null) {
                     if (wrapper) mobile.renderedType = null;
                     // Kotlin/R8 constructor parameter order differs across firmware.
-                    for (Object interactor : chain.getArgs()) {
+                    for (Object interactor : call.args) {
                         Object group = ColorOsPolicy.nativeMember(interactor,
                                 "networkTypeIconGroup", "getNetworkTypeIconGroup");
                         if (group != null) {
@@ -571,14 +575,13 @@ final class ColorOsHooks {
                     }
                 }
                 invalidateHosts();
-                return result;
             });
         }
         // Keep getter observation for firmware variants that do not inline these calls.
         for (String getter : new String[] {"getIcon", "getNetworkTypeText"}) {
-            count += hook(module, Refl.method(type, getter), chain -> {
-                Object result = chain.proceed();
-                Mobile mobile = mobileFor(chain.getThisObject());
+            count += after(module, Refl.method(type, getter), call -> {
+                Object result = call.result;
+                Mobile mobile = mobileFor(call.receiver);
                 if (mobile != null) {
                     if (getter.equals("getIcon")) {
                         if (wrapper) mobile.icon = result;
@@ -588,7 +591,6 @@ final class ColorOsHooks {
                         else mobile.cellularType = result;
                     }
                 }
-                return result;
             });
         }
         return count;
@@ -614,122 +616,146 @@ final class ColorOsHooks {
         return id < 0 ? null : MOBILES.computeIfAbsent(id, ignored -> new Mobile());
     }
 
-    private static int captureWifiFlow(XposedModule module, ClassLoader loader, String className) {
+    private static int captureWifiFlow(HookRuntime module, ClassLoader loader, String className) {
         Method method = Refl.method(Refl.cls(className, loader), "getWifiNetwork");
         if (method == null) {
             TrioHooks.log(TrioHooks.LOG_WARN, "ColorOS missing " + className + ".getWifiNetwork");
             return 0;
         }
-        return hook(module, method, chain -> {
-            Object flow = chain.proceed();
+        return after(module, method, call -> {
+            Object flow = call.result;
             wifiFlow = flow;
-            return flow;
         });
     }
 
-    private static Object drawMirror(XposedInterface.Chain chain) throws Throwable {
-        ViewGroup frame=(ViewGroup)chain.getThisObject();
-        boolean trace=TrioConfig.debugLog();
-        ViewGroup previous=trace?ColorOsDiagnostics.enterMirror(frame):null;
-        try {
-            float offset=ColorOsSizing.mirrorOffset(frame);
-            if(offset==0) return chain.proceed();
-            Canvas canvas=(Canvas)chain.getArg(0);
-            int save=canvas.save();canvas.translate(0,offset);
-            try { return chain.proceed(); } finally { canvas.restoreToCount(save); }
-        } finally { if(trace) ColorOsDiagnostics.leaveMirror(previous); }
+    private static final class MirrorCall {
+        ViewGroup previous;
+        Canvas canvas;
+        int save;
+        boolean trace;
     }
 
-    private static Object writeDrawable(XposedInterface.Chain chain) throws Throwable {
-        Host owner = childOwner((View) chain.getThisObject());
-        if (owner == null || owner.image != chain.getThisObject()
-                || owner.moduleWriting) return chain.proceed();
-        Drawable drawable = (Drawable) chain.getArg(0);
-        if (drawable == owner.glyph) return chain.proceed();
+    private static void drawMirror(HookRuntime.Call call) {
+        ViewGroup frame = (ViewGroup) call.receiver;
+        MirrorCall state = new MirrorCall();
+        call.data = state;
+        state.trace = TrioConfig.debugLog();
+        if (state.trace) state.previous = ColorOsDiagnostics.enterMirror(frame);
+        float offset = ColorOsSizing.mirrorOffset(frame);
+        if (offset != 0) {
+            Canvas canvas = (Canvas) call.args[0];
+            state.save = canvas.save();
+            state.canvas = canvas;
+            canvas.translate(0, offset);
+        }
+    }
+
+    private static void afterMirror(HookRuntime.Call call) {
+        if (!(call.data instanceof MirrorCall)) return;
+        MirrorCall state = (MirrorCall) call.data;
+        try {
+            if (state.canvas != null) state.canvas.restoreToCount(state.save);
+        } finally { if (state.trace) ColorOsDiagnostics.leaveMirror(state.previous); }
+    }
+
+    private static void writeDrawable(HookRuntime.Call call) {
+        Host owner = childOwner((View) call.receiver);
+        if (owner == null || owner.image != call.receiver || owner.moduleWriting) return;
+        Drawable drawable = (Drawable) call.args[0];
+        if (drawable == owner.glyph) return;
         owner.nativeDrawable = drawable;
-        if (!owner.active) return chain.proceed();
+        if (!owner.active) return;
         ViewGroup.LayoutParams current = owner.image.getLayoutParams();
         if (current instanceof LinearLayout.LayoutParams
                 && (current.width != owner.ownedWidth || current.height != owner.ownedHeight)) {
             owner.nativeParams = new LinearLayout.LayoutParams((LinearLayout.LayoutParams) current);
         }
-        Object result = chain.proceed(new Object[] {owner.glyph});
-        owner.enforceImageSize();
-        return result;
+        call.args[0] = owner.glyph;
+        call.data = owner;
     }
 
-    private static Object writeScaleType(XposedInterface.Chain chain) throws Throwable {
-        Host owner = childOwner((View) chain.getThisObject());
-        if (owner == null || owner.image != chain.getThisObject()
-                || owner.moduleWriting) return chain.proceed();
-        owner.nativeScaleType = (ImageView.ScaleType) chain.getArg(0);
-        return owner.active ? chain.proceed(new Object[] {ImageView.ScaleType.FIT_XY}) : chain.proceed();
+    private static void afterDrawable(HookRuntime.Call call) {
+        if (call.throwable == null && call.data instanceof Host) ((Host) call.data).enforceImageSize();
     }
 
-    private static Object writeVisibility(XposedInterface.Chain chain) throws Throwable {
-        View view = (View) chain.getThisObject();
+    private static void writeScaleType(HookRuntime.Call call) {
+        Host owner = childOwner((View) call.receiver);
+        if (owner == null || owner.image != call.receiver || owner.moduleWriting) return;
+        owner.nativeScaleType = (ImageView.ScaleType) call.args[0];
+        if (owner.active) call.args[0] = ImageView.ScaleType.FIT_XY;
+    }
+
+    private static void writeVisibility(HookRuntime.Call call) {
+        View view = (View) call.receiver;
         Host owner = childOwner(view);
-        if (owner == null || owner.moduleWriting) return chain.proceed();
-        owner.nativeVisibility.put(view, (Integer) chain.getArg(0));
+        if (owner == null || owner.moduleWriting) return;
+        owner.nativeVisibility.put(view, (Integer) call.args[0]);
         Integer desired = owner.visibilityOverrides.get(view);
-        return owner.active && desired != null ? chain.proceed(new Object[] {desired}) : chain.proceed();
+        if (owner.active && desired != null) call.args[0] = desired;
     }
 
     /** Vendor binders may cast the native drawable; virtualize reads without displaying it. */
-    private static Object readDrawable(XposedInterface.Chain chain) throws Throwable {
-        Host owner=childOwner((View)chain.getThisObject());
-        if(owner!=null && owner.image==chain.getThisObject() && owner.active
-                && !owner.moduleWriting && owner.nativeDepth>0) return owner.nativeDrawable;
-        return chain.proceed();
+    private static void readDrawable(HookRuntime.Call call) {
+        Host owner = childOwner((View) call.receiver);
+        if (owner != null && owner.image == call.receiver && owner.active
+                && !owner.moduleWriting && owner.nativeDepth > 0) call.returnValue(owner.nativeDrawable);
     }
 
-    private static Object readLayoutParams(XposedInterface.Chain chain) throws Throwable {
-        Host owner=childOwner((View)chain.getThisObject());
-        if(owner!=null && owner.image==chain.getThisObject() && owner.active
-                && !owner.moduleWriting && owner.nativeDepth>0 && owner.nativeParams!=null)
-            return new LinearLayout.LayoutParams(owner.nativeParams);
-        return chain.proceed();
+    private static void readLayoutParams(HookRuntime.Call call) {
+        Host owner = childOwner((View) call.receiver);
+        if (owner != null && owner.image == call.receiver && owner.active
+                && !owner.moduleWriting && owner.nativeDepth > 0 && owner.nativeParams != null)
+            call.returnValue(new LinearLayout.LayoutParams(owner.nativeParams));
     }
 
-    private static Object writeLayoutParams(XposedInterface.Chain chain) throws Throwable {
-        View target=(View)chain.getThisObject();
-        if(target instanceof ViewGroup && chain.getArg(0) instanceof ViewGroup.LayoutParams) {
-            ColorOsSizing.retainLayoutParams(target,(ViewGroup.LayoutParams)chain.getArg(0));
-            return chain.proceed();
+    private static void writeLayoutParams(HookRuntime.Call call) {
+        View target = (View) call.receiver;
+        if (target instanceof ViewGroup && call.args[0] instanceof ViewGroup.LayoutParams) {
+            ColorOsSizing.retainLayoutParams(target, (ViewGroup.LayoutParams) call.args[0]);
+            return;
         }
-        Host owner=childOwner(target);
-        if(owner==null || owner.image!=chain.getThisObject() || owner.moduleWriting || !owner.active
-                || !(chain.getArg(0) instanceof LinearLayout.LayoutParams)) return chain.proceed();
-        LinearLayout.LayoutParams requested=(LinearLayout.LayoutParams)chain.getArg(0);
-        owner.nativeParams=new LinearLayout.LayoutParams(requested);
-        LinearLayout.LayoutParams visible=new LinearLayout.LayoutParams(requested);
-        visible.width=owner.ownedWidth;visible.height=owner.ownedHeight;
-        visible.gravity=android.view.Gravity.CENTER_VERTICAL;
-        return chain.proceed(new Object[]{visible});
+        Host owner = childOwner(target);
+        if (owner == null || owner.image != call.receiver || owner.moduleWriting || !owner.active
+                || !(call.args[0] instanceof LinearLayout.LayoutParams)) return;
+        LinearLayout.LayoutParams requested = (LinearLayout.LayoutParams) call.args[0];
+        owner.nativeParams = new LinearLayout.LayoutParams(requested);
+        LinearLayout.LayoutParams visible = new LinearLayout.LayoutParams(requested);
+        visible.width = owner.ownedWidth; visible.height = owner.ownedHeight;
+        visible.gravity = android.view.Gravity.CENTER_VERTICAL;
+        call.args[0] = visible;
     }
 
-    private static Object nativeUpdate(Host host, XposedInterface.Chain chain) throws Throwable {
-        boolean outer = host.nativeDepth++ == 0;
-        boolean retained=outer && host.active;
-        if(outer && !retained) host.restoreBattery();
-        try {
-            return chain.proceed();
-        } finally {
-            host.nativeDepth--;
-            if (outer) {
-                try {
-                    // Data/color updates keep the owned views continuously installed.
-                    // Only a genuine child replacement needs a new restoration snapshot.
-                    if(!retained || host.find("battery_icon_view")!=host.image) {
-                        if(retained) host.restoreBattery();
-                        host.image=null;host.nativeParams=null;
-                        host.capture();
-                    }
-                    host.apply();
-                } catch (Throwable error) {
-                    host.fail(error);
+    private static final class NativeCall {
+        final Host host;
+        final boolean outer;
+        final boolean retained;
+        NativeCall(Host host) {
+            this.host = host;
+            outer = host.nativeDepth++ == 0;
+            retained = outer && host.active;
+        }
+    }
+
+    private static void beginNative(Host host, HookRuntime.Call call) {
+        NativeCall state = new NativeCall(host);
+        call.data = state;
+        if (state.outer && !state.retained) host.restoreBattery();
+    }
+
+    private static void finishNative(HookRuntime.Call call) {
+        if (!(call.data instanceof NativeCall)) return;
+        NativeCall state = (NativeCall) call.data;
+        Host host = state.host;
+        host.nativeDepth--;
+        if (state.outer) {
+            try {
+                if (!state.retained || host.find("battery_icon_view") != host.image) {
+                    if (state.retained) host.restoreBattery();
+                    host.image = null; host.nativeParams = null;
+                    host.capture();
                 }
-            }
+                host.apply();
+            } catch (Throwable error) { host.fail(error); }
         }
     }
 

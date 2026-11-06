@@ -6,6 +6,7 @@ from pathlib import Path
 import runpy
 import sys
 import unittest
+import tempfile
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts/ci"))
@@ -118,6 +119,36 @@ class ModulePublicationTest(unittest.TestCase):
     def test_stable_release_flags_are_explicit(self):
         flags = module["channel_flags"]({"prerelease": False, "is_latest": True})
         self.assertEqual(flags, ["--prerelease=false", "--latest=true"])
+
+    def test_both_source_apks_are_verified_before_publication(self):
+        with tempfile.TemporaryDirectory() as directory:
+            files = [Path(directory) / f"ColorDuo-0.4.0-{flavor}.apk" for flavor in ("modern", "legacy")]
+            for apk in files:
+                apk.write_bytes(apk.name.encode())
+            hashes = {apk.name: hashlib.sha256(apk.read_bytes()).hexdigest() for apk in files}
+            checksums = "".join(f"{digest}  {name}\n" for name, digest in hashes.items())
+            source = {"assets": [{"name": name, "digest": "sha256:" + digest} for name, digest in hashes.items()]}
+            self.assertEqual(module["validate_source_assets"](files, checksums, source), hashes)
+            with self.assertRaisesRegex(ValueError, "duplicate"):
+                module["validate_source_assets"](files, checksums + checksums, source)
+            source["assets"][1]["digest"] = "sha256:wrong"
+            with self.assertRaisesRegex(ValueError, "published source asset"):
+                module["validate_source_assets"](files, checksums, source)
+
+    def test_uploads_modern_before_legacy_for_older_updaters(self):
+        with tempfile.TemporaryDirectory() as directory:
+            apks = [Path(directory) / f"ColorDuo-0.4.0-{flavor}.apk" for flavor in ("modern", "legacy")]
+            args = type("Args", (), {"version_code": "10052", "version": "0.4.0", "apks": apks})()
+            gh = mock.Mock()
+            source = {"body": "Dual API release", "prerelease": False, "is_latest": True}
+            with mock.patch.dict(state, {"optional": mock.Mock(return_value=None), "api": mock.Mock(return_value=[]), "gh": gh}):
+                module["publish_release"](args, source, {apk.name: "digest" for apk in apks}, {"default_branch": "main"})
+            uploads = [call.args for call in gh.call_args_list if call.args[:2] == ("release", "upload")]
+            self.assertEqual(len(uploads), 2)
+            self.assertIn(str(apks[0]), uploads[0])
+            self.assertNotIn(str(apks[1]), uploads[0])
+            self.assertIn(str(apks[1]), uploads[1])
+            self.assertEqual(gh.call_args.args[:2], ("release", "edit"))
 
     def test_historical_release_does_not_replace_latest(self):
         flags = module["channel_flags"]({"prerelease": False, "is_latest": False})

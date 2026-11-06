@@ -111,7 +111,7 @@ import io.github.yixing233.hyperduo.R
 import io.github.yixing233.hyperduo.TrioAppearance
 import io.github.yixing233.hyperduo.TrioPreviewView
 import io.github.yixing233.hyperduo.TrioSettings
-import io.github.libxposed.service.XposedService
+import io.github.yixing233.hyperduo.FrameworkService
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -320,7 +320,7 @@ fun SettingsScreen(repository: SettingsRepository) {
     // The framework service can bind or die at any moment; both the status row
     // and every remote write have to follow it.
     DisposableEffect(repository) {
-        val listener: (XposedService?) -> Unit = { service = it }
+        val listener: (FrameworkService?) -> Unit = { service = it }
         HyperDuoApp.addServiceListener(listener)
         onDispose { HyperDuoApp.removeServiceListener(listener) }
     }
@@ -1425,7 +1425,7 @@ private fun SliderSpec.firstHint(a: TrioAppearance): String? {
 /** About: activation state, the counters, module info, updates and the log switch. */
 private fun LazyListScope.aboutTab(
     settings: TrioSettings,
-    service: XposedService?,
+    service: FrameworkService?,
     updater: UpdateController,
     showMessage: (String) -> Unit,
     onRestart: () -> Unit,
@@ -1811,7 +1811,7 @@ private fun InfoRow(label: String, value: String, bottomPadding: Dp = 24.dp) {
  * the block keeps its proportions instead of looking squat on a tablet.
  */
 @Composable
-private fun ActivatedRow(settings: TrioSettings, service: XposedService?) {
+private fun ActivatedRow(settings: TrioSettings, service: FrameworkService?) {
     val context = LocalContext.current
     val module = remember(context) { readModuleInfo(context) }
 
@@ -1946,7 +1946,7 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
  * needs to report a bug, so they stay on rather than being dropped for symmetry.
  */
 @Composable
-private fun InfoCard(service: XposedService?) {
+private fun InfoCard(service: FrameworkService?) {
     val context = LocalContext.current
 
     // Every framework getter is a binder call into the daemon: bind them to the
@@ -2390,7 +2390,7 @@ private fun readModuleInfo(context: Context): ModuleInfo {
         .distinct()
         .joinToString(" · ")
     return ModuleInfo(
-        moduleVersion = "$versionName ($versionCode)",
+        moduleVersion = "$versionName ($versionCode) · ${io.github.yixing233.hyperduo.BuildConfig.FLAVOR}",
         systemVersion = systemVersion.ifBlank { "?" },
         androidVersion = "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})",
         deviceModel = readDeviceName(context),
@@ -2417,7 +2417,7 @@ private fun readDeviceName(context: Context): String {
  * shows an equivalent count, and it is the fastest way to spot a mis-scoped
  * install.
  */
-private fun scopeCount(service: XposedService?): Int {
+private fun scopeCount(service: FrameworkService?): Int {
     if (service == null) return 0
     return runCatching { service.scope.size }.getOrDefault(0)
 }
@@ -2454,17 +2454,14 @@ private fun enabledCount(settings: TrioSettings): Int {
  * wrapped: a service that died between binding and this call must degrade to
  * [unknown] rather than take the settings screen down with it.
  */
-private fun readFrameworkInfo(service: XposedService?, unknown: String): String {
+private fun readFrameworkInfo(service: FrameworkService?, unknown: String): String {
     if (service == null) return unknown
     return runCatching {
-        val name = service.frameworkName
-        val version = service.frameworkVersion
-        val code = service.frameworkVersionCode
-        "$name $version ($code) API ${service.apiVersion}"
+        service.description
     }.getOrDefault(unknown)
 }
 
-private fun readScope(service: XposedService?, unknown: String): String {
+private fun readScope(service: FrameworkService?, unknown: String): String {
     if (service == null) return unknown
     val packages = runCatching { service.scope }.getOrNull()
     if (packages.isNullOrEmpty()) return unknown

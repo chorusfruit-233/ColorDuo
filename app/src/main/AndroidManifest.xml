@@ -30,17 +30,11 @@
         android:theme="@style/AppTheme">
 
         <meta-data
-            android:name="xposedminversion"
-            android:value="93" />
-        <meta-data
             android:name="xposeddescription"
             android:value="@string/xposed_description" />
         <meta-data
             android:name="xposedscope"
             android:resource="@array/xposed_scope" />
-        <meta-data
-            android:name="libxposed"
-            android:value="true" />
 
         <!-- LSPosed / Vector manager entry point. -->
         <activity

@@ -13,8 +13,6 @@ package io.github.yixing233.hyperduo
 import android.app.Application
 import android.util.Log
 import io.github.yixing233.hyperduo.ui.SettingsRepository
-import io.github.libxposed.service.XposedService
-import io.github.libxposed.service.XposedServiceHelper
 import java.util.concurrent.CopyOnWriteArraySet
 
 /**
@@ -25,49 +23,35 @@ import java.util.concurrent.CopyOnWriteArraySet
  * likes) and can die at any moment, so everything that wants to write has to go
  * through {@link #xposedService} rather than capture a reference once.
  */
-class HyperDuoApp : Application(), XposedServiceHelper.OnServiceListener {
-
+class HyperDuoApp : Application() {
     override fun onCreate() {
         super.onCreate()
-        // Must happen in onCreate: the framework broadcasts its binder to
-        // whoever registered by the time the process starts.
-        runCatching { XposedServiceHelper.registerListener(this) }
-            .onFailure { Log.w(TAG, "cannot register service listener", it) }
-    }
-
-    override fun onServiceBind(service: XposedService) {
-        xposedService = service
-        // The app may have been configured while the framework was absent, so
-        // replay everything instead of relying on write-through alone.
-        runCatching { SettingsRepository(this).syncAllToFramework() }
-            .onFailure { Log.w(TAG, "cannot push settings to framework", it) }
-        listeners.forEach { it(service) }
-    }
-
-    override fun onServiceDied(service: XposedService) {
-        // Only clear if nobody rebound in the meantime.
-        if (xposedService === service) {
-            xposedService = null
-        }
-        listeners.forEach { it(null) }
+        runCatching {
+            FrameworkBridge.start(this) { service ->
+                xposedService = service
+                if (service != null && FrameworkBridge.hasRemotePreferences) runCatching { SettingsRepository(this).syncAllToFramework() }
+                    .onFailure { Log.w(TAG, "cannot push settings to framework", it) }
+                listeners.forEach { it(service) }
+            }
+        }.onFailure { Log.w(TAG, "cannot start framework connection", it) }
     }
 
     companion object {
         private const val TAG = "HyperDuo"
 
         @Volatile
-        var xposedService: XposedService? = null
+        var xposedService: FrameworkService? = null
             private set
 
         /** Notified with the current service (or null) whenever the binding changes. */
-        private val listeners = CopyOnWriteArraySet<(XposedService?) -> Unit>()
+        private val listeners = CopyOnWriteArraySet<(FrameworkService?) -> Unit>()
 
-        fun addServiceListener(listener: (XposedService?) -> Unit) {
+        fun addServiceListener(listener: (FrameworkService?) -> Unit) {
             listeners.add(listener)
             listener(xposedService)
         }
 
-        fun removeServiceListener(listener: (XposedService?) -> Unit) {
+        fun removeServiceListener(listener: (FrameworkService?) -> Unit) {
             listeners.remove(listener)
         }
     }

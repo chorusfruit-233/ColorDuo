@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 import zipfile
+import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[2]
 DEVELOPMENT_CERT = "b4e3a12d03957e441c3ccf2e4e2be55de0db35fc5eb9aa8ac49a0a9d7298c41f"
@@ -37,12 +38,37 @@ def github_prefix(owner):
     return "io.github." + owner.lower().replace("-", "_") + "."
 
 
-def module_metadata(apk):
+def module_metadata(apk, flavor="modern", manifest=None):
+    if flavor not in ("modern", "legacy"):
+        raise ValueError("Unknown Xposed API flavor")
+    metadata = {}
+    if manifest is not None:
+        ns = "{http://schemas.android.com/apk/res/android}"
+        root = ET.fromstring(manifest)
+        metadata = {item.get(ns + "name"): item.get(ns + "value", item.get(ns + "resource"))
+                    for item in root.findall("application/meta-data")}
     with zipfile.ZipFile(apk) as archive:
-        prop = archive.read("META-INF/xposed/module.prop").decode()
-        entries = archive.read("META-INF/xposed/java_init.list").decode().strip()
-        scope = archive.read("META-INF/xposed/scope.list").decode().strip()
-    values = dict(re.findall(r"^([^#=\s]+)\s*=\s*(.*?)\s*$", prop, re.M))
+        names = set(archive.namelist())
+        if flavor == "legacy":
+            if any(name.startswith("META-INF/xposed/") for name in names):
+                raise ValueError("Legacy APK must not contain modern module metadata")
+            if metadata.get("xposedmodule") != "true" or metadata.get("libxposed") is not None:
+                raise ValueError("Legacy APK must declare only the legacy framework entry")
+            if metadata.get("xposedminversion") != "82" or not re.fullmatch(
+                    r"@(?:array/xposed_scope|ref/0x[0-9a-fA-F]+)", metadata.get("xposedscope", "")):
+                raise ValueError("Unexpected legacy API minimum or scope declaration")
+            entries = archive.read("assets/xposed_init").decode().strip()
+            values = {"minApiVersion": "82", "targetApiVersion": "82", "autoHotReload": "false"}
+            scope = "com.android.systemui"
+        else:
+            if "assets/xposed_init" in names:
+                raise ValueError("Modern APK must not contain a legacy entry point")
+            if manifest is not None and (metadata.get("libxposed") != "true" or metadata.get("xposedmodule") is not None):
+                raise ValueError("Modern APK must declare only the modern framework entry")
+            prop = archive.read("META-INF/xposed/module.prop").decode()
+            entries = archive.read("META-INF/xposed/java_init.list").decode().strip()
+            scope = archive.read("META-INF/xposed/scope.list").decode().strip()
+            values = dict(re.findall(r"^([^#=\s]+)\s*=\s*(.*?)\s*$", prop, re.M))
     for field in ("minApiVersion", "targetApiVersion"):
         if not values.get(field, "").isdigit() or int(values[field]) <= 0:
             raise ValueError(f"Missing or invalid Xposed {field}")
@@ -52,10 +78,10 @@ def module_metadata(apk):
         raise ValueError("Missing or invalid Xposed Java entry point")
     if scope != "com.android.systemui":
         raise ValueError("Unexpected module scope")
-    return {"properties": values, "javaEntries": entries.splitlines(), "scope": scope}
+    return {"api": flavor, "properties": values, "javaEntries": entries.splitlines(), "scope": scope}
 
 
-def verify_apk(apk, variant, metadata, sdk):
+def verify_apk(apk, variant, metadata, sdk, flavor="modern"):
     tools = sdk / "build-tools/37.0.0"
     badging = subprocess.check_output([str(tools / "aapt2"), "dump", "badging", str(apk)], text=True)
     package = re.search(r"^package: (.+)$", badging, re.M)
@@ -77,55 +103,81 @@ def verify_apk(apk, variant, metadata, sdk):
             raise ValueError("Release APK must not be debuggable")
         if cert == DEVELOPMENT_CERT:
             raise ValueError("Release APK uses the publicly tracked development signing key")
-    return cert, module_metadata(apk)
+    analyzer = sdk / "cmdline-tools/latest/bin/apkanalyzer"
+    manifest = subprocess.check_output([str(analyzer), "manifest", "print", str(apk)], text=True)
+    xposed = module_metadata(apk, flavor, manifest)
+    if flavor == "legacy":
+        resources = subprocess.check_output([str(tools / "aapt2"), "dump", "resources", str(apk)], text=True)
+        scope = re.search(r"resource (0x[0-9a-fA-F]+) array/xposed_scope\n(.*?)(?=\n\s*resource |\Z)", resources, re.S)
+        ns = "{http://schemas.android.com/apk/res/android}"
+        declaration = next(item.get(ns + "resource") for item in ET.fromstring(manifest).findall("application/meta-data")
+                           if item.get(ns + "name") == "xposedscope")
+        if (not scope or not re.search(r"\(array\) size=1\b", scope[2])
+                or not re.search(r'^\s*\["com.android.systemui"\]\s*$', scope[2], re.M)
+                or declaration not in ("@array/xposed_scope", "@ref/" + scope[1])):
+            raise ValueError("Unexpected legacy module scope")
+    return cert, xposed
+
+
+def verify_build_set(builds):
+    """A dual release cannot mix commits, versions, package IDs or signing keys."""
+    if not builds or len({build["flavor"] for build in builds}) != len(builds):
+        raise ValueError("Missing or duplicate API variants")
+    for key in ("applicationId", "versionName", "versionCode", "commit", "signerSha256", "variant"):
+        if len({build[key] for build in builds}) != 1:
+            raise ValueError("API variants disagree on " + key)
 
 
 def package_apk(args):
-    directory = ROOT / "app/build/outputs/apk" / args.variant
-    output = json.loads((directory / "output-metadata.json").read_text())
-    if len(output["elements"]) != 1:
-        raise ValueError("Expected one universal APK")
-    item = output["elements"][0]
-    version, code = item["versionName"], item["versionCode"]
-    validate_version(version, code)
-    if args.version is not None and (args.version != version or args.version_code != str(code)):
-        raise ValueError("Built APK does not match the requested release version")
-    apk = directory / item["outputFile"]
-    metadata = {"applicationId": output["applicationId"], "versionName": version, "versionCode": code}
-    cert, xposed = verify_apk(apk, args.variant, metadata, args.sdk)
-    commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
-    owner = os.environ.get("GITHUB_REPOSITORY", "chorusfruit-233/ColorDuo").split("/")[0]
-    prefix = github_prefix(owner)
-    namespace_matches = metadata["applicationId"].lower().startswith(prefix)
-    if args.variant == "release" and not namespace_matches:
-        raise ValueError(f"Release application ID must start with {prefix}")
-    notes = release_notes(version) if args.variant == "release" else None
     out = args.output
     if out.exists() and any(out.iterdir()):
         raise ValueError("Artifact output directory must be empty")
     out.mkdir(parents=True, exist_ok=True)
-    suffix = f"-debug-{commit[:7]}" if args.variant == "debug" else ""
-    target = out / f"ColorDuo-{version}{suffix}.apk"
-    shutil.copy2(apk, target)
-    digest = hashlib.sha256(target.read_bytes()).hexdigest()
-    (out / "SHA256SUMS").write_text(f"{digest}  {target.name}\n")
-    info = {**metadata, "variant": args.variant, "commit": commit, "apkSha256": digest,
-            "signerSha256": cert, "xposed": xposed,
-            "submission": {"expectedPrefix": prefix,
-                           "namespaceMatches": namespace_matches}}
+    flavors = ("modern", "legacy") if args.flavor == "all" else (args.flavor,)
+    commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+    owner = os.environ.get("GITHUB_REPOSITORY", "chorusfruit-233/ColorDuo").split("/")[0]
+    prefix = github_prefix(owner)
+    builds = []
+    for flavor in flavors:
+        directory = ROOT / "app/build/outputs/apk" / flavor / args.variant
+        output = json.loads((directory / "output-metadata.json").read_text())
+        if len(output["elements"]) != 1:
+            raise ValueError("Expected one universal APK per API flavor")
+        item = output["elements"][0]
+        version, code = item["versionName"], item["versionCode"]
+        validate_version(version, code)
+        if args.version is not None and (args.version != version or args.version_code != str(code)):
+            raise ValueError("Built APK does not match the requested release version")
+        apk = directory / item["outputFile"]
+        metadata = {"applicationId": output["applicationId"], "versionName": version, "versionCode": code}
+        cert, xposed = verify_apk(apk, args.variant, metadata, args.sdk, flavor)
+        namespace_matches = metadata["applicationId"].lower().startswith(prefix)
+        if args.variant == "release" and not namespace_matches:
+            raise ValueError(f"Release application ID must start with {prefix}")
+        suffix = f"-debug-{commit[:7]}" if args.variant == "debug" else ""
+        target = out / f"ColorDuo-{version}-{flavor}{suffix}.apk"
+        shutil.copy2(apk, target)
+        digest = hashlib.sha256(target.read_bytes()).hexdigest()
+        builds.append({**metadata, "variant": args.variant, "flavor": flavor, "commit": commit,
+                       "apk": target.name, "apkSha256": digest, "signerSha256": cert, "xposed": xposed,
+                       "submission": {"expectedPrefix": prefix, "namespaceMatches": namespace_matches}})
+    verify_build_set(builds)
+    (out / "SHA256SUMS").write_text("".join(f"{build['apkSha256']}  {build['apk']}\n" for build in builds))
+    info = {"builds": builds}
     (out / "build-info.json").write_text(json.dumps(info, ensure_ascii=False, indent=2) + "\n")
-    if notes is not None:
-        (out / "CHANGELOG.md").write_text(notes)
+    version = builds[0]["versionName"]
+    if args.variant == "release":
+        (out / "CHANGELOG.md").write_text(release_notes(version))
         shutil.copy2(ROOT / "module-README.md", out / "README.md")
         shutil.copy2(ROOT / "module-SUMMARY", out / "SUMMARY")
-    artifact_name = f"ColorDuo-{version}-{args.variant}-{commit[:7]}"
+    artifact_name = f"ColorDuo-{version}-{args.flavor}-{args.variant}-{commit[:7]}"
     if os.environ.get("GITHUB_OUTPUT"):
         with open(os.environ["GITHUB_OUTPUT"], "a") as stream:
             stream.write(f"artifact_name={artifact_name}\n")
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as stream:
-            stream.write(f"APK: `{target.name}`\n\nVersion: `{version}` / `{code}`\n\n")
-            stream.write(f"Submission namespace matches `{prefix}*`: **{info['submission']['namespaceMatches']}**\n")
+            for build in builds:
+                stream.write(f"APK: `{build['apk']}` — {build['versionName']} / {build['versionCode']}\n\n")
     print(json.dumps(info, ensure_ascii=False, indent=2))
 
 
@@ -137,6 +189,7 @@ def main():
     plan.add_argument("--version-code", required=True)
     package = commands.add_parser("package", help="Verify and collect an existing Gradle APK")
     package.add_argument("--variant", choices=("debug", "release"), required=True)
+    package.add_argument("--flavor", choices=("modern", "legacy", "all"), default="all")
     package.add_argument("--version")
     package.add_argument("--version-code")
     package.add_argument("--output", type=Path, default=ROOT / "dist")

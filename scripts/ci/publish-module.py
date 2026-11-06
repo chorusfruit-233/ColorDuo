@@ -75,7 +75,7 @@ def ensure_repository(release_url):
                 "title": TITLE,
                 "body": f"Module: ColorDuo\nApplication ID: `{PACKAGE}`\n\n"
                         f"Source: https://github.com/{SOURCE}\nSigned release: {release_url}\n\n"
-                        "ColorOS 17 battery, Wi-Fi and mobile signal module using libxposed API 102. "
+                        "ColorOS 17 module with modern API 102 and legacy API 82 builds. "
                         "GPL-3.0-only fork of HyperDuo, maintained entirely by Codex. "
                         "Module README, SUMMARY and a verified signed APK are ready."})
         issue_url = issue["html_url"]
@@ -143,13 +143,16 @@ def channel_flags(source):
 
 
 def publish_release(args, source, digest, repo):
+    apks = getattr(args, "apks", None) or [args.apk]
+    digests = digest if isinstance(digest, dict) else {args.apk.name: digest}
     tag = f"{args.version_code}-{args.version}"
     existing = optional("repos/" + MODULE + "/releases/tags/" + tag)
     if existing and not existing["draft"]:
         with tempfile.TemporaryDirectory() as directory:
-            gh("release", "download", tag, "--repo", MODULE, "--pattern", args.apk.name, "--dir", directory)
-            if hashlib.sha256((Path(directory) / args.apk.name).read_bytes()).hexdigest() != digest:
-                raise ValueError("Published module APK differs; create a new version instead of replacing it")
+            for apk in apks:
+                gh("release", "download", tag, "--repo", MODULE, "--pattern", apk.name, "--dir", directory)
+                if hashlib.sha256((Path(directory) / apk.name).read_bytes()).hexdigest() != digests[apk.name]:
+                    raise ValueError("Published module APK differs; create a new version instead of replacing it")
         gh("release", "edit", tag, "--repo", MODULE, *channel_flags(source))
         return existing["html_url"]
     if existing is None:
@@ -157,24 +160,49 @@ def publish_release(args, source, digest, repo):
         existing = next((item for item in drafts if item["tag_name"] == tag), None)
         if existing and not existing["draft"]:
             raise RuntimeError("Release changed during publication; retry")
-    notes = args.apk.parent / "module-release-notes.md"
+    notes = apks[0].parent / "module-release-notes.md"
     notes.write_text(source["body"], encoding="utf-8")
     if existing is None:
         command = ["release", "create", tag, "--repo", MODULE, "--target", repo["default_branch"],
                    "--title", args.version, "--notes-file", str(notes), "--draft"]
         command.append(f"--prerelease={str(bool(source['prerelease'])).lower()}")
         gh(*command)
-    gh("release", "upload", tag, str(args.apk), str(args.apk.parent / "SHA256SUMS"),
+    # Keep modern first for clients predating explicit flavor selection.
+    gh("release", "upload", tag, str(apks[0]), str(apks[0].parent / "SHA256SUMS"),
        "--repo", MODULE, "--clobber")
+    for apk in apks[1:]:
+        gh("release", "upload", tag, str(apk), "--repo", MODULE, "--clobber")
     gh("release", "edit", tag, "--repo", MODULE, "--draft=false", *channel_flags(source))
     return "https://github.com/" + MODULE + "/releases/tag/" + tag
+
+
+def validate_source_assets(apks, checksum_text, source):
+    checksums = {}
+    for line in checksum_text.splitlines():
+        fields = line.split()
+        if len(fields) != 2 or fields[1] in checksums:
+            raise ValueError("Invalid or duplicate source checksum")
+        checksums[fields[1]] = fields[0]
+    assets = {asset["name"]: asset for asset in source.get("assets", [])}
+    digests = {}
+    for apk in apks:
+        digest = hashlib.sha256(apk.read_bytes()).hexdigest()
+        if checksums.get(apk.name) != digest:
+            raise ValueError("Source APK checksum differs from SHA256SUMS: " + apk.name)
+        asset = assets.get(apk.name)
+        if asset is None or asset.get("digest") != "sha256:" + digest:
+            raise ValueError("APK differs from the published source asset: " + apk.name)
+        digests[apk.name] = digest
+    return digests
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--version", required=True)
     parser.add_argument("--version-code", required=True)
-    parser.add_argument("--apk", type=Path, required=True)
+    inputs = parser.add_mutually_exclusive_group(required=True)
+    inputs.add_argument("--apk", type=Path, help="Historical single modern release")
+    inputs.add_argument("--directory", type=Path, help="Published modern and legacy APKs plus SHA256SUMS")
     args = parser.parse_args()
     validate_version(args.version, args.version_code)
     if api("user")["login"].lower() != OWNER:
@@ -187,11 +215,16 @@ def main():
     latest = optional(f"repos/{SOURCE}/releases/latest")
     source["is_latest"] = latest is not None and latest["id"] == source["id"]
     metadata = {"applicationId": PACKAGE, "versionName": args.version, "versionCode": int(args.version_code)}
-    verify_apk(args.apk, "release", metadata, Path(os.environ["ANDROID_HOME"]))
-    digest = hashlib.sha256(args.apk.read_bytes()).hexdigest()
-    checksum = (args.apk.parent / "SHA256SUMS").read_text().strip()
-    if checksum != f"{digest}  {args.apk.name}":
-        raise ValueError("Source APK checksum differs from SHA256SUMS")
+    args.apks = ([args.directory / f"ColorDuo-{args.version}-{flavor}.apk" for flavor in ("modern", "legacy")]
+                 if args.directory is not None else [args.apk])
+    certs = set()
+    for apk in args.apks:
+        flavor = "legacy" if apk.name.endswith("-legacy.apk") else "modern"
+        cert, _ = verify_apk(apk, "release", metadata, Path(os.environ["ANDROID_HOME"]), flavor)
+        certs.add(cert)
+    if len(certs) != 1:
+        raise ValueError("Modern and legacy APKs must use the same signing key")
+    digest = validate_source_assets(args.apks, (args.apks[0].parent / "SHA256SUMS").read_text(), source)
     repo, issue_url = ensure_repository(source["html_url"])
     settings_ok = update_settings(repo)
     update_file("README.md", (ROOT / "module-README.md").read_bytes())

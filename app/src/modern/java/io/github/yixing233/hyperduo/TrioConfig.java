@@ -21,7 +21,6 @@ import android.os.Bundle;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.github.libxposed.api.XposedInterface;
 
 /**
  * Hook-side snapshot of the user's settings.
@@ -83,7 +82,7 @@ public final class TrioConfig {
      * Binds to the framework's remote preferences. Safe to call repeatedly; only
      * the first successful call registers a listener.
      */
-    static void install(XposedInterface xposed) {
+    static void install(HookRuntime xposed) {
         if (sPrefs != null) {
             return;
         }

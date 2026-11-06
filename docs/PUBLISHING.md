@@ -4,14 +4,14 @@
 
 | 工作流 | 用途 |
 | --- | --- |
-| [Build ColorDuo](../.github/workflows/build.yml) | main 的代码推送、PR 和手动触发；检查通过后构建测试包 |
-| [Checks](../.github/workflows/checks.yml) | 两种构建共用的八组继承代码、行为回归及发布检查，不安装 Android SDK |
-| [Prepare release](../.github/workflows/release.yml) | 手动构建私有签名的 release APK，上传发布素材并创建本仓库 Release 草稿 |
-| [Publish to module repository](../.github/workflows/module.yml) | 复用公开签名 APK，申请模块仓、接受邀请、同步介绍并发布同一文件 |
+| [Build ColorDuo](../.github/workflows/build.yml) | main 的代码推送、PR 和手动触发；检查通过后分别构建 modern / legacy 测试包 |
+| [Checks](../.github/workflows/checks.yml) | 两种 API 共用的继承代码、行为回归及发布检查，不安装 Android SDK |
+| [Prepare release](../.github/workflows/release.yml) | 手动构建私有签名的 modern / legacy release APK，上传发布素材并创建本仓库 Release 草稿 |
+| [Publish to module repository](../.github/workflows/module.yml) | 复用公开签名 APK，申请模块仓、接受邀请、同步介绍并发布同一组文件 |
 
 文档修改跳过测试包构建；同一分支的新构建取消旧构建。Android 环境统一使用 JDK 21、SDK 37 和仓库内的 Gradle Wrapper，Gradle 缓存由公共安装步骤管理。
 
-测试包名称为 `ColorDuo-<version>-debug-<commit>.apk`，版本从 Gradle 产物读取。下载包还含 `SHA256SUMS` 和 `build-info.json`；后者记录实际包名、版本、签名指纹、Xposed 元数据和模块仓用户名匹配结果。
+测试包名称为 `ColorDuo-<version>-<modern或legacy>-debug-<commit>.apk`，版本从 Gradle 产物读取。下载包还含 `SHA256SUMS` 和 `build-info.json`；后者的 `builds` 数组按 modern、legacy 记录实际包名、版本、签名指纹、Xposed 元数据和模块仓用户名匹配结果。
 
 ## 发布签名与草稿
 
@@ -24,17 +24,17 @@
 | `COLORDUO_KEY_ALIAS` | 签名别名 |
 | `COLORDUO_KEY_PASSWORD` | 私钥密码 |
 
-在 `docs/CHANGELOG.md` 添加对应版本的 `## <version>` 条目，再手动运行 Prepare release，填写版本名和递增的 versionCode。流程校验 APK 版本、签名、release 的非调试标记、现代 Xposed 入口及作用域；公开开发签名会被拒绝。签名文件仅在 runner 临时目录使用，任务结束时清除。
+在 `docs/CHANGELOG.md` 添加对应版本的 `## <version>` 条目，再手动运行 Prepare release，填写版本名和递增的 versionCode。流程校验 APK 版本、签名、release 的非调试标记、对应 API 的入口及作用域，并要求两包的包名、版本、提交和签名一致；公开开发签名会被拒绝。签名文件仅在 runner 临时目录使用，任务结束时清除。
 
 开发测试包继续使用原签名以支持覆盖升级。没有私有签名环境时，本地 release 构建产出未签名 APK。换成新签名后，旧开发签名测试包不能直接覆盖安装。
 
-Prepare release 只创建源码仓库的 Release 草稿，并附 APK 和校验文件。带后缀的版本自动标记为预发布；应用内检查更新只查询稳定 Release，预发布包通过 Actions 或 Release 页面下载。模块仓素材位于 Actions 发布 bundle 的 `README.md`、`SUMMARY`、`CHANGELOG.md`，外部模块仓的申请和发布由独立工作流执行。
+Prepare release 只创建源码仓库的 Release 草稿，并附两个 APK 和统一的校验文件。带后缀的版本自动标记为预发布；应用内检查更新只查询稳定 Release，预发布包通过 Actions 或 Release 页面下载。模块仓素材位于 Actions 发布 bundle 的 `README.md`、`SUMMARY`、`CHANGELOG.md`，外部模块仓的申请和发布由独立工作流执行。
 
 ## 模块仓写入凭据
 
 模块仓位于外部组织，当前 GitHub 集成创建申请 Issue 会返回 403 `Resource not accessible by integration`。自动上架另需 `MODULE_REPO_TOKEN` Actions secret，使用账户 `chorusfruit-233` 的 GitHub classic PAT，授予 `public_repo` 和 `repo:invite`，供模块仓工作流使用；令牌值不写入源码或日志。
 
-先公开源码仓库的签名 Release，再手动运行 Publish to module repository，填写同一版本和 versionCode。流程重新检查 APK、签名与校验文件，只接受目标模块仓的邀请，上传 `README.md`、`SUMMARY`、`SOURCE_URL` 及同一 APK。正式版标记随源码仓同步，只有源码仓当前 Latest 版本会同步为模块仓 Latest。已公开版本的 APK 若不一致则拒绝覆盖，文件一致时允许校正 Release 状态。仓库资料优先通过 API 配置；若维护权限仍要求浏览器设置，先完成文件与 Release 发布，再明确报告需要手动填写的字段。
+先公开源码仓库的签名 Release，再手动运行 Publish to module repository，填写同一版本和 versionCode。流程重新检查 APK、签名与校验文件，只接受目标模块仓的邀请，上传 `README.md`、`SUMMARY`、`SOURCE_URL` 及相同的两个 APK。正式版标记随源码仓同步，只有源码仓当前 Latest 版本会同步为模块仓 Latest。已公开版本的 APK 若不一致则拒绝覆盖，文件一致时允许校正 Release 状态。仓库资料优先通过 API 配置；若维护权限仍要求浏览器设置，先完成文件与 Release 发布，再明确报告需要手动填写的字段。
 
 ## 模块仓条件核对
 
@@ -61,3 +61,7 @@ Prepare release 只创建源码仓库的 Release 草稿，并附 APK 和校验�
 5. 将同一签名 APK 发布到模块仓：Release 标题为版本名、正文为该版更新记录、tag 为 `<versionCode>-<versionName>`，例如 `10015-0.2.6`。首次发布时同时附上有效 APK。
 
 官方说明完整资料及 Release 更新后通常需要 5～60 分钟显示。最终是否收录以模块仓机器人及维护者处理结果为准。
+
+## 双 API 产物
+
+正式包固定命名为 `ColorDuo-<version>-modern.apk` 与 `ColorDuo-<version>-legacy.apk`。两包必须同时验证成功才创建 Release；上传顺序固定 modern 在先，兼容过去只选第一个 APK 的更新器。新版更新器按自身 flavor 选包，legacy 不回退到旧的无后缀 modern 包。模块仓发布会重新核对两个公开源文件的签名及 SHA-256。

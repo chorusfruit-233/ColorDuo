@@ -10,6 +10,9 @@
 
 package io.github.yixing233.hyperduo.ui
 
+import io.github.yixing233.hyperduo.BuildConfig
+import io.github.yixing233.hyperduo.ReleaseVariant
+
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -402,20 +405,22 @@ private fun parseRelease(json: JSONObject): UpdateInfo {
     val version = tag.trim().removePrefix("v").removePrefix("V")
     val assets = json.optJSONArray("assets")
     var apkUrl = ""
-    var apkName = "ColorDuo-$version.apk"
+    var apkName = "ColorDuo-$version-${BuildConfig.FLAVOR}.apk"
     var apkSize = 0L
     var assetId = 0L
+    var bestScore = 0
     if (assets != null) {
         for (i in 0 until assets.length()) {
             val asset = assets.optJSONObject(i) ?: continue
             val name = asset.optString("name")
-            if (!name.startsWith("ColorDuo-", ignoreCase = true)
-                || !name.endsWith(".apk", ignoreCase = true)) continue
+            val score = ReleaseVariant.score(name, version, BuildConfig.FLAVOR)
+            if (score <= bestScore) continue
+            if (asset.optString("browser_download_url").isBlank() && asset.optLong("id") <= 0L) continue
+            bestScore = score
             apkUrl = asset.optString("browser_download_url")
             apkName = name
             apkSize = asset.optLong("size")
             assetId = asset.optLong("id")
-            break
         }
     }
     if (apkUrl.isBlank() && assetId <= 0L) throw IllegalStateException("no apk asset")

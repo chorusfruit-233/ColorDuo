@@ -40,10 +40,10 @@ public final class HyperDuoModule extends XposedModule {
         }
         try {
             if (Refl.cls(ColorOsHooks.METER_CLASS, param.getClassLoader()) != null) {
-                ColorOsHooks.install(this, param.getClassLoader());
+                ColorOsHooks.install(new ModernRuntime(this), param.getClassLoader());
                 targetLoader = param.getClassLoader();
             } else {
-                TrioHooks.install(this, param.getClassLoader());
+                TrioHooks.install(new ModernRuntime(this), param.getClassLoader());
             }
         } catch (Throwable t) {
             log(LOG_WARN, "install failed: " + t);
@@ -93,7 +93,7 @@ public final class HyperDuoModule extends XposedModule {
         targetLoader = (ClassLoader) saved.get("loader");
         try {
             ColorOsReload.onMain(() -> {
-                ColorOsHooks.install(this, targetLoader);
+                ColorOsHooks.install(new ModernRuntime(this), targetLoader);
                 ColorOsHooks.resume(saved);
                 return null;
             });
