@@ -38,6 +38,7 @@ public final class TrioRenderer {
     private static final WifiBadge[] WIFI_BADGES = new WifiBadge[4];
     private static int nextWifiBadge;
     private static final float WIFI_BADGE_RIGHT = 34f;
+    private static final float WIFI_STANDARD_MAX_OUTLINE = 0.08f;
     static {
         WIFI_STANDARD_TEXT.setTextAlign(Paint.Align.LEFT);
         WIFI_STANDARD_TEXT.setTypeface(WIFI_STANDARD_FACE);
@@ -2000,7 +2001,7 @@ public final class TrioRenderer {
         WIFI_STANDARD_TEXT.setTextScaleX(widthScale);
         // ROM font aliases can return the same face for every numeric weight. Keep one
         // base outline and apply a visible, continuous stroke over the entire slider range.
-        float embolden=size*0.10f*(a.wifiStandardWeight-Prefs.MIN_WIFI_STANDARD_WEIGHT)
+        float embolden=size*WIFI_STANDARD_MAX_OUTLINE*(a.wifiStandardWeight-Prefs.MIN_WIFI_STANDARD_WEIGHT)
                 /(Prefs.MAX_WIFI_STANDARD_WEIGHT-Prefs.MIN_WIFI_STANDARD_WEIGHT);
         WIFI_STANDARD_TEXT.setStrokeWidth(embolden);
         WIFI_STANDARD_TEXT.setStyle(embolden>0?Paint.Style.FILL_AND_STROKE:Paint.Style.FILL);
@@ -2019,8 +2020,11 @@ public final class TrioRenderer {
             offsetX=a.wifiStandardDx;offsetY=a.wifiStandardDy;
             this.radius=radius;this.dy=dy;this.right=right;this.bottom=bottom;this.size=size;this.widthScale=widthScale;
             prepareWifiStandard(a,size,widthScale);
+            // Measure the same native outline at every weight, and reserve the heaviest
+            // stroke once. Changing weight must not squeeze or resize the glyph again.
+            WIFI_STANDARD_TEXT.setStyle(Paint.Style.FILL);WIFI_STANDARD_TEXT.setStrokeWidth(0);
             WIFI_STANDARD_TEXT.getTextBounds(main,0,main.length(),WIFI_STANDARD_INK);
-            float pad=WIFI_STANDARD_TEXT.getStrokeWidth()/2f+0.65f;
+            float pad=size*WIFI_STANDARD_MAX_OUTLINE/2f+0.65f;
             // Main ink starts to the right of the Wi-Fi dot. All text clears the middle arc.
             // Reclaim unused bearing/spacing, retaining one unit beyond the dot's true bounds.
             RectF dotInk=new RectF();WIFI_DOT.computeBounds(dotInk,true);
@@ -2031,8 +2035,9 @@ public final class TrioRenderer {
             if(standard.equals("6E")) {
                 // A top-aligned small E uses its ink bearing, not the main glyph's advance.
                 prepareWifiStandard(a,size*0.3f,widthScale);
+                WIFI_STANDARD_TEXT.setStyle(Paint.Style.FILL);WIFI_STANDARD_TEXT.setStrokeWidth(0);
                 WIFI_STANDARD_TEXT.getTextBounds("E",0,1,WIFI_STANDARD_INK);
-                pad=WIFI_STANDARD_TEXT.getStrokeWidth()/2f+0.65f;
+                pad=size*0.3f*WIFI_STANDARD_MAX_OUTLINE/2f+0.65f;
                 suffixX=mainInk.right+0.4f-WIFI_STANDARD_INK.left+pad;
                 suffixOffset=mainInk.top-(WIFI_STANDARD_INK.top-pad);
                 suffixInk=new RectF(suffixX+WIFI_STANDARD_INK.left-pad,
@@ -2068,24 +2073,13 @@ public final class TrioRenderer {
         float requested=24f*a.wifiStandardScale/100f;
         WifiBadge badge=new WifiBadge(a,text,radius,dy,right,bottom,requested,0.85f);
         if(!badge.fits()) {
-            // First trade a little width for height; never flatten below this readable limit.
-            badge=new WifiBadge(a,text,radius,dy,right,bottom,requested,0.7f);
-            if(badge.fits()) {
-                float low=0.7f,high=0.85f;
-                for(int i=0;i<10;i++) {
-                    float width=(low+high)/2f;
-                    WifiBadge candidate=new WifiBadge(a,text,radius,dy,right,bottom,requested,width);
-                    if(candidate.fits()){low=width;badge=candidate;}else high=width;
-                }
-            } else {
-                float low=0.25f,high=requested;
-                badge=new WifiBadge(a,text,radius,dy,right,bottom,low,0.7f);
-                if(!badge.fits())return null;
-                for(int i=0;i<12;i++) {
-                    float size=(low+high)/2f;
-                    WifiBadge candidate=new WifiBadge(a,text,radius,dy,right,bottom,size,0.7f);
-                    if(candidate.fits()){low=size;badge=candidate;}else high=size;
-                }
+            float low=0.25f,high=requested;
+            badge=new WifiBadge(a,text,radius,dy,right,bottom,low,0.85f);
+            if(!badge.fits())return null;
+            for(int i=0;i<12;i++) {
+                float size=(low+high)/2f;
+                WifiBadge candidate=new WifiBadge(a,text,radius,dy,right,bottom,size,0.85f);
+                if(candidate.fits()){low=size;badge=candidate;}else high=size;
             }
         }
         WIFI_BADGES[nextWifiBadge]=badge;

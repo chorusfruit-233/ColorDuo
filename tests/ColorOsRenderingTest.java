@@ -258,10 +258,10 @@ public final class ColorOsRenderingTest {
             check(normal.height>small.height+1 && large.height>=normal.height-0.01,
                     "bold marker sizes grow or retain their fitted height at the available boundary: layout="+layout
                             +" small="+small.height+" normal="+normal.height+" large="+large.height);
-            MarkerSample lightNormal=markerSample(layout,100,100,1,false);
-            MarkerSample lightLarge=markerSample(layout,250,100,1,false);
-            check(lightLarge.height>lightNormal.height+1,
-                    "size above 100 percent grows when the thinner marker has spare space");
+            MarkerSample roomNormal=markerSample(layout,100,900,1,false,100,"6E",-5,-5);
+            MarkerSample roomLarge=markerSample(layout,250,900,1,false,100,"6E",-5,-5);
+            check(roomLarge.height>roomNormal.height+1,
+                    "size above 100 percent grows when the chosen anchor has spare space");
             check(Math.abs(large.x-normal.x)<1&&Math.abs(large.top-normal.top)<1,
                     "changing size never automatically relocates the chosen default anchor");
             MarkerSample digitSmall=markerSample(layout,50,900,TrioZones.Zone.CENTRE.ordinal(),false,100,"6");
@@ -289,8 +289,12 @@ public final class ColorOsRenderingTest {
                 for(int weight:new int[]{100,400,700,1000}) {
                     MarkerSample sample=markerSample(layout,50,weight,1,false,100,standard);
                     if(light==null)light=sample;
-                    if(previous!=null)check(sample.coverage>previous.coverage*1.08,
-                            "each weight step adds visibly more ink even with one native font face: "+layout+"/"+standard+"/"+weight);
+                    if(previous!=null) {
+                        check(Math.abs(sample.height-previous.height)<0.01,
+                                "weight adjustment preserves the fitted glyph height");
+                        check(sample.coverage>previous.coverage*1.08,
+                                "each weight step adds visibly more ink even with one native font face: "+layout+"/"+standard+"/"+weight);
+                    }
                     previous=sample;
                 }
                 check(previous.coverage>light.coverage*1.5,
