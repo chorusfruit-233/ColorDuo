@@ -13,16 +13,19 @@ public class ChargeFlowTest {
  static void check(boolean ok,String message){checks++;if(!ok)throw new AssertionError(message);}
  static final int GREEN=0xff34c759;
  static final class Frame extends Canvas {
-  final BufferedImage image;double angles,weight;
+  final BufferedImage image;double angles,weight;boolean forceButt;
   Frame(){this(new BufferedImage(640,480,BufferedImage.TYPE_INT_ARGB));}
   Frame(BufferedImage image){super(image.createGraphics());this.image=image;translate(120,40);scale(2,2);}
-  @Override public void drawArc(RectF r,float start,float sweep,boolean center,Paint p){angles+=(start+sweep/2)*Math.abs(sweep);weight+=Math.abs(sweep);super.drawArc(r,start,sweep,center,p);}
+  @Override public void drawArc(RectF r,float start,float sweep,boolean center,Paint p){angles+=(start+sweep/2)*Math.abs(sweep);weight+=Math.abs(sweep);Paint.Cap cap=p.getStrokeCap();if(forceButt)p.setStrokeCap(Paint.Cap.BUTT);try{super.drawArc(r,start,sweep,center,p);}finally{p.setStrokeCap(cap);}}
+  @Override public void drawLine(float x1,float y1,float x2,float y2,Paint p){Paint.Cap cap=p.getStrokeCap();if(forceButt)p.setStrokeCap(Paint.Cap.BUTT);try{super.drawLine(x1,y1,x2,y2,p);}finally{p.setStrokeCap(cap);}}
+  @Override public void drawPath(android.graphics.Path path,Paint p){Paint.Cap cap=p.getStrokeCap();if(forceButt)p.setStrokeCap(Paint.Cap.BUTT);try{super.drawPath(path,p);}finally{p.setStrokeCap(cap);}}
   double position(){return angles/weight;}
  }
  static Frame flow(TrioSettings s,int level,float phase){Frame f=new Frame();TrioRenderer.drawChargeFlow(f,level,GREEN,TrioAppearance.of(s),phase,s.trioStyle==Prefs.STYLE_CAPSULE?8:0,s.trioStyle==Prefs.STYLE_CAPSULE?8:0,360,90);return f;}
- static Frame mask(TrioSettings s,int level)throws Exception {
-  Frame f=new Frame();TrioAppearance a=TrioAppearance.of(s);
-  Field field=TrioRenderer.class.getDeclaredField("STROKE");field.setAccessible(true);Paint p=(Paint)field.get(null);p.setColor(GREEN);p.setStrokeCap(Paint.Cap.BUTT);p.setStrokeWidth(a.capsule?a.ringStroke*TrioGeometry.CAP_STROKE_RATIO:a.ringStroke);
+ static Frame mask(TrioSettings s,int level)throws Exception {return mask(s,level,false);}
+ static Frame mask(TrioSettings s,int level,boolean flat)throws Exception {
+  Frame f=new Frame();f.forceButt=flat;TrioAppearance a=TrioAppearance.of(s);
+  Field field=TrioRenderer.class.getDeclaredField("STROKE");field.setAccessible(true);Paint p=(Paint)field.get(null);p.setColor(GREEN);p.setStrokeCap(Paint.Cap.ROUND);p.setStrokeWidth(a.capsule?a.ringStroke*TrioGeometry.CAP_STROKE_RATIO:a.ringStroke);
   if(a.capsule){Method m=TrioRenderer.class.getDeclaredMethod("drawCapsuleFill",Canvas.class,float.class,float.class,float.class,float.class);m.setAccessible(true);m.invoke(null,f,a.ringStroke*TrioGeometry.CAP_STROKE_RATIO,Math.min(1,level/100f),8f,8f);}
   else {Method m=TrioRenderer.class.getDeclaredMethod("drawBattery",Canvas.class,int.class,int.class,int.class,TrioAppearance.class,float.class,float.class,float.class,float.class);m.setAccessible(true);m.invoke(null,f,level,GREEN,0,a,0f,0f,360f,90f);}
   return f;
@@ -34,7 +37,26 @@ public class ChargeFlowTest {
    check(found,"scan escaped charged outline at "+x+","+y);
   }
  }
+ static void roundedCapCoverage()throws Exception {
+  for(int shape=0;shape<3;shape++)for(int stroke:new int[]{6,18})for(int level:new int[]{1,50,66,100}) {
+   TrioSettings s=TrioSettings.defaults();s.enabled=true;s.chargeFlow=true;s.trackAlpha=0;
+   s.ringStroke=stroke;s.chargeFlowWidth=100;s.chargeFlowGradient=0;
+   s.trioStyle=shape==2?Prefs.STYLE_CAPSULE:Prefs.STYLE_RING;s.splitMode=shape==1?1:0;s.splitCap=1;
+   Frame round=mask(s,level),flat=mask(s,level,true);
+   for(int direction=0;direction<2;direction++) {
+    s.chargeFlowDirection=direction;Frame moving=flow(s,level,.5f);int caps=0;
+    for(int y=0;y<480;y++)for(int x=0;x<640;x++) {
+     if((round.image.getRGB(x,y)>>>24)<220 || (flat.image.getRGB(x,y)>>>24)>16)continue;
+     caps++;check((moving.image.getRGB(x,y)>>>24)>128,"rounded endpoint missing highlight: shape="+shape+" direction="+direction+" level="+level+" at "+x+","+y);
+    }
+    if(shape!=0 || level!=100)check(caps>0,"fixture exposes the real round-only endpoint pixels");
+    confined(moving,round);
+   }
+   if(shape==1){s.splitCap=0;confined(flow(s,level,.5f),mask(s,level));}
+  }
+ }
  public static void main(String[] args)throws Exception {
+  roundedCapCoverage();
   TrioSettings s=TrioSettings.defaults();s.enabled=true;s.trackAlpha=0;s.chargeFlow=true;s.pausedGrayAll=false;
   check(!TrioSettings.defaults().chargeFlow,"existing users keep a static outline by default");
   check(TrioRenderer.chargeFlowActive(s,66,true,false),"charging schedules frames");
