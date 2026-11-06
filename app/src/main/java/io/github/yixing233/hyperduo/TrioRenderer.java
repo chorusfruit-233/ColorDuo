@@ -2161,7 +2161,7 @@ public final class TrioRenderer {
             // Reclaim unused bearing/spacing, retaining one unit beyond the dot's true bounds.
             RectF dotInk=new RectF();WIFI_DOT.computeBounds(dotInk,true);
             float left=Math.min(8.5f,dotInk.right-TrioGeometry.W_CX+1f);
-            x=left-WIFI_STANDARD_INK.left+pad;
+            x=left-WIFI_STANDARD_INK.left+pad+offsetX;
             mainInk=new RectF(x+WIFI_STANDARD_INK.left-pad,WIFI_STANDARD_INK.top-pad,
                     x+WIFI_STANDARD_INK.right+pad,WIFI_STANDARD_INK.bottom+pad);
             if(standard.equals("6E")) {
@@ -2177,13 +2177,9 @@ public final class TrioRenderer {
                         WIFI_STANDARD_INK.bottom+suffixOffset+pad);
             } else {suffixX=0;suffixOffset=0;suffixInk=null;}
             float top=Math.min(mainInk.top,suffixInk==null?mainInk.top:suffixInk.top);
-            baseline=65.25f+stroke/2f+1.5f-TrioGeometry.W_INK_CY-top;
+            baseline=65.25f+stroke/2f+1.5f-TrioGeometry.W_INK_CY-top+offsetY;
             mainInk.top+=baseline;mainInk.bottom+=baseline;
             if(suffixInk!=null){suffixInk.top+=baseline;suffixInk.bottom+=baseline;}
-            // A user-selected anchor is fixed for every size; fitting only changes the font.
-            x+=offsetX;suffixX+=offsetX;baseline+=offsetY;
-            mainInk.offset(offsetX,offsetY);
-            if(suffixInk!=null)suffixInk.offset(offsetX,offsetY);
         }
 
         boolean matches(TrioAppearance a,String text,float r,float y,float w,float h) {
