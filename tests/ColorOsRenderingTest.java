@@ -98,6 +98,7 @@ public final class ColorOsRenderingTest {
         automaticWifiUsesTypePosition();
         wifiStandardBadges();
         wifiStandardReadabilityControls();
+        wifiStandardWeightFallback();
         wifiStandardManualOffsets();
         fullCapsule();
         clockHandoff();
@@ -273,6 +274,25 @@ public final class ColorOsRenderingTest {
             markerSample(2,size,weight,TrioZones.Zone.LEFT.ordinal(),true);
         wifiArcAnchorsStayFixed();
         wifiStandardStaysInsideGlyph();
+    }
+
+    private static void wifiStandardWeightFallback() {
+        // Model a ROM whose numeric-weight lookup always resolves to the same native face.
+        android.graphics.Typeface.ignoreNumericWeights=true;
+        try {
+            for(int layout=0;layout<3;layout++)for(String standard:new String[]{"6","6E"}) {
+                MarkerSample previous=null,light=null;
+                for(int weight:new int[]{100,400,700,1000}) {
+                    MarkerSample sample=markerSample(layout,50,weight,1,false,100,standard);
+                    if(light==null)light=sample;
+                    if(previous!=null)check(sample.coverage>previous.coverage*1.08,
+                            "each weight step adds visibly more ink even with one native font face: "+layout+"/"+standard+"/"+weight);
+                    previous=sample;
+                }
+                check(previous.coverage>light.coverage*1.5,
+                        "the full weight range remains visibly adjustable on a fixed-weight ROM");
+            }
+        } finally {android.graphics.Typeface.ignoreNumericWeights=false;}
     }
 
     private static void wifiStandardManualOffsets() {

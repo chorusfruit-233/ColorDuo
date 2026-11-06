@@ -16,6 +16,7 @@ public class Typeface {
     public static final int NORMAL = 0;
     public static final int BOLD = 1;
     public static final int ITALIC = 2;
+    public static boolean ignoreNumericWeights;
 
     public static final Typeface DEFAULT = new Typeface("SansSerif", NORMAL);
     public static final Typeface DEFAULT_BOLD = new Typeface("SansSerif", BOLD);
@@ -53,7 +54,7 @@ public class Typeface {
      * text is bolder and therefore measured wider.
      */
     public static Typeface create(Typeface base, int weight, boolean italic) {
-        int style = weight >= 600 ? BOLD : NORMAL;
+        int style = !ignoreNumericWeights && weight >= 600 ? BOLD : NORMAL;
         if (italic) {
             style |= ITALIC;
         }

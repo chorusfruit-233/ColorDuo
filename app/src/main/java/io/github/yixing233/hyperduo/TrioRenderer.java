@@ -35,11 +35,14 @@ public final class TrioRenderer {
     private static final Paint WIFI_STANDARD_TEXT = new Paint(Paint.ANTI_ALIAS_FLAG);
     private static final Typeface WIFI_STANDARD_FACE = Typeface.create("sans-serif-condensed", Typeface.NORMAL);
     private static final Rect WIFI_STANDARD_INK = new Rect();
-    private static int wifiTypefaceWeight;
     private static final WifiBadge[] WIFI_BADGES = new WifiBadge[4];
     private static int nextWifiBadge;
     private static final float WIFI_BADGE_RIGHT = 34f;
-    static { WIFI_STANDARD_TEXT.setTextAlign(Paint.Align.LEFT); }
+    static {
+        WIFI_STANDARD_TEXT.setTextAlign(Paint.Align.LEFT);
+        WIFI_STANDARD_TEXT.setTypeface(WIFI_STANDARD_FACE);
+        WIFI_STANDARD_TEXT.setStrokeJoin(Paint.Join.ROUND);
+    }
     private static final Path BOLT = buildBolt();
     private static final RectF BOLT_BOUNDS = new RectF();
     static { BOLT.computeBounds(BOLT_BOUNDS, true); }
@@ -1992,14 +1995,13 @@ public final class TrioRenderer {
 
 
     private static void prepareWifiStandard(TrioAppearance a,float size,float widthScale) {
-        if(wifiTypefaceWeight!=a.wifiStandardWeight) {
-            WIFI_STANDARD_TEXT.setTypeface(Typeface.create(WIFI_STANDARD_FACE,a.wifiStandardWeight,false));
-            wifiTypefaceWeight=a.wifiStandardWeight;
-        }
         WIFI_STANDARD_TEXT.setTextSize(size);
         // Preserve the ink height while using the spare vertical room in this narrow corner.
         WIFI_STANDARD_TEXT.setTextScaleX(widthScale);
-        float embolden=size*Math.max(0,a.wifiStandardWeight-700)/12000f;
+        // ROM font aliases can return the same face for every numeric weight. Keep one
+        // base outline and apply a visible, continuous stroke over the entire slider range.
+        float embolden=size*0.10f*(a.wifiStandardWeight-Prefs.MIN_WIFI_STANDARD_WEIGHT)
+                /(Prefs.MAX_WIFI_STANDARD_WEIGHT-Prefs.MIN_WIFI_STANDARD_WEIGHT);
         WIFI_STANDARD_TEXT.setStrokeWidth(embolden);
         WIFI_STANDARD_TEXT.setStyle(embolden>0?Paint.Style.FILL_AND_STROKE:Paint.Style.FILL);
     }
