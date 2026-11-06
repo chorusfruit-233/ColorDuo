@@ -39,15 +39,21 @@ public class Paint {
     private float strokeWidth = 1f;
     private float textSize = 12f;
     private String family = "SansSerif";
+    private float typefaceWidth = 1f;
+    private float textScaleX = 1f;
     private int typefaceStyle = Font.PLAIN;
     private float letterSpacing = 0f;
     private boolean fakeBold = false;
+    private boolean filterBitmap = false;
 
     public Paint() {
     }
 
     public Paint(int flags) {
     }
+
+    public void setFilterBitmap(boolean filter) {filterBitmap=filter;}
+    public boolean isFilterBitmap() {return filterBitmap;}
 
     public void setStyle(Style s) { style = s; }
     public Style getStyle() { return style; }
@@ -70,12 +76,16 @@ public class Paint {
     public void setTextSize(float s) { textSize = s; }
     public float getTextSize() { return textSize; }
 
+    public void setTextScaleX(float scale) { textScaleX=scale; }
+    public float getTextScaleX() { return textScaleX; }
+
     public void setLetterSpacing(float s) { letterSpacing = s; }
     public float getLetterSpacing() { return letterSpacing; }
 
     public void setTypeface(Typeface t) {
         if (t != null) {
             family = t.family();
+            typefaceWidth = t.width();
             typefaceStyle = t.style();
         }
     }
@@ -97,7 +107,8 @@ public class Paint {
         // The synthetic flag wins over the typeface's own style, matching the
         // platform's behaviour of emboldening whatever face is installed.
         final int style = fakeBold ? (typefaceStyle | Font.BOLD) : typefaceStyle;
-        return new Font(family, style, 12).deriveFont(textSize);
+        return new Font(family, style, 12).deriveFont(textSize).deriveFont(
+                java.util.Map.of(java.awt.font.TextAttribute.WIDTH,typefaceWidth*textScaleX));
     }
 
     public BasicStroke stroke() {
@@ -160,8 +171,8 @@ public class Paint {
         // way it does rather than truncating toward zero.
         out.left = (int) Math.floor(bounds.getX());
         out.top = (int) Math.floor(bounds.getY());
-        out.right = out.left + (int) Math.ceil(measureText(slice));
-        out.bottom = out.top + (int) Math.ceil(bounds.getHeight());
+        out.right = (int) Math.ceil(bounds.getMaxX());
+        out.bottom = (int) Math.ceil(bounds.getMaxY());
     }
 
     public FontMetrics getFontMetrics() {        java.awt.Canvas probe = new java.awt.Canvas();

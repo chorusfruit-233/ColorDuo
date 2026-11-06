@@ -300,6 +300,8 @@ class SettingsRepository(context: Context) {
     fun setShowWifiStandard(value: Boolean) = writeBoolean(Prefs.KEY_SHOW_WIFI_STANDARD, value)
     fun setWifiStandardScale(value: Int) = writeInt(Prefs.KEY_WIFI_STANDARD_SCALE, value)
     fun setWifiStandardWeight(value: Int) = writeInt(Prefs.KEY_WIFI_STANDARD_WEIGHT, value)
+    fun setWifiStandardDx(value: Int) = writeInt(Prefs.KEY_WIFI_STANDARD_DX, value)
+    fun setWifiStandardDy(value: Int) = writeInt(Prefs.KEY_WIFI_STANDARD_DY, value)
     /** Drop the network type while Wi-Fi is up; see [Prefs.KEY_TYPE_HIDE_ON_WIFI]. */
     fun setTypeHideOnWifi(value: Boolean) =
         writeBoolean(Prefs.KEY_TYPE_HIDE_ON_WIFI, value)

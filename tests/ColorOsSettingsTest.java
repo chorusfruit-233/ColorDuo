@@ -10,6 +10,7 @@ import java.util.Arrays;
 public final class ColorOsSettingsTest {
     public static void main(String[] args) {
         wifiStandardSettings();
+        wifiStandardOffsetSettings();
         hdVisibilitySettings();
         adjustableGeometry();
         signalIconScaleSettings();
@@ -451,6 +452,27 @@ public final class ColorOsSettingsTest {
         Bundle invalid=new Bundle();invalid.putInt(Prefs.KEY_WIFI_STANDARD_SCALE,9999);invalid.putInt(Prefs.KEY_WIFI_STANDARD_WEIGHT,-1);
         loaded=TrioSettings.fromBundle(invalid);
         check(loaded.wifiStandardScale==250 && loaded.wifiStandardWeight==100,"remote out-of-range inputs use the editor limits");
+    }
+
+    private static void wifiStandardOffsetSettings() {
+        TrioSettings defaults=TrioSettings.defaults();
+        check(defaults.wifiStandardDx==0&&defaults.wifiStandardDy==0,"manual anchors default to zero without migration");
+        TrioSettings changed=defaults.copy();changed.wifiStandardDx=9;changed.wifiStandardDy=-10;
+        check(!changed.equals(defaults),"both manual offsets trigger settings change detection");
+        TrioSettings restored=TrioSettings.fromBundle(changed.copy().toBundle());
+        check(restored.wifiStandardDx==9&&restored.wifiStandardDy==-10,"manual anchor survives snapshot and full reload");
+        check(defaults.applyKeyFrom(changed,Prefs.KEY_WIFI_STANDARD_DX)&&defaults.wifiStandardDx==9,
+                "horizontal offset supports single-key hot reload");
+        check(defaults.applyKeyFrom(changed,Prefs.KEY_WIFI_STANDARD_DY)&&defaults.wifiStandardDy==-10,
+                "vertical offset supports single-key hot reload");
+        Bundle partial=new Bundle();partial.putBoolean(Prefs.KEY_DEBUG_LOG,true);
+        restored=TrioSettings.fromBundle(partial,changed);
+        check(restored.wifiStandardDx==9&&restored.wifiStandardDy==-10,"unrelated partial reload preserves both offsets");
+        Bundle invalid=new Bundle();invalid.putInt(Prefs.KEY_WIFI_STANDARD_DX,1000);invalid.putInt(Prefs.KEY_WIFI_STANDARD_DY,-1000);
+        restored=TrioSettings.fromBundle(invalid);
+        check(restored.wifiStandardDx==40&&restored.wifiStandardDy==-40,"offset transports share the editor bounds");
+        restored=TrioSettings.fromBundle(new Bundle());
+        check(restored.wifiStandardDx==0&&restored.wifiStandardDy==0,"old saved configurations keep the fixed default anchor");
     }
 
     private static void hdVisibilitySettings() {

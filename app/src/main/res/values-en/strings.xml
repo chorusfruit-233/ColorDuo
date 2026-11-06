@@ -424,7 +424,11 @@
     <string name="wifi_standard_title">Show Wi-Fi standard</string>
     <string name="wifi_standard_summary">Show 4, 5, 6, 6E or 7 on the module Wi-Fi icon, including Wi-Fi 4/5 normally omitted by the system.</string>
     <string name="wifi_standard_scale_title">Standard marker size</string>
-    <string name="wifi_standard_scale_summary">Default %1$d%%; range %2$d%%–%3$d%%. Only the marker shrinks when space is limited.</string>
+    <string name="wifi_standard_scale_summary">Default %1$d%%; range %2$d%%–%3$d%%. At maximum the numeral is nearly as tall as Wi-Fi. Use offsets to position it.</string>
     <string name="wifi_standard_weight_title">Standard marker weight</string>
     <string name="wifi_standard_weight_summary">Default %1$d; range %2$d–%3$d.</string>
+    <string name="wifi_standard_dx_title">Standard marker horizontal offset</string>
+    <string name="wifi_standard_dx_summary">Default 0. Positive moves right, negative left. The number and E suffix move together.</string>
+    <string name="wifi_standard_dy_title">Standard marker vertical offset</string>
+    <string name="wifi_standard_dy_summary">Default 0. Positive moves down, negative up. The number and E suffix move together.</string>
 </resources>
