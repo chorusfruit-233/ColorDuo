@@ -13,13 +13,23 @@ public class ChargeFlowTest {
  static void check(boolean ok,String message){checks++;if(!ok)throw new AssertionError(message);}
  static final int GREEN=0xff34c759;
  static final class Frame extends Canvas {
-  final BufferedImage image;double angles,weight;boolean forceButt;
+  final BufferedImage image;double angles,weight;boolean forceButt;int bitmapCalls;
   Frame(){this(new BufferedImage(640,480,BufferedImage.TYPE_INT_ARGB));}
   Frame(BufferedImage image){super(image.createGraphics());this.image=image;translate(120,40);scale(2,2);}
   @Override public void drawArc(RectF r,float start,float sweep,boolean center,Paint p){angles+=(start+sweep/2)*Math.abs(sweep);weight+=Math.abs(sweep);Paint.Cap cap=p.getStrokeCap();if(forceButt)p.setStrokeCap(Paint.Cap.BUTT);try{super.drawArc(r,start,sweep,center,p);}finally{p.setStrokeCap(cap);}}
   @Override public void drawLine(float x1,float y1,float x2,float y2,Paint p){Paint.Cap cap=p.getStrokeCap();if(forceButt)p.setStrokeCap(Paint.Cap.BUTT);try{super.drawLine(x1,y1,x2,y2,p);}finally{p.setStrokeCap(cap);}}
   @Override public void drawPath(android.graphics.Path path,Paint p){Paint.Cap cap=p.getStrokeCap();if(forceButt)p.setStrokeCap(Paint.Cap.BUTT);try{super.drawPath(path,p);}finally{p.setStrokeCap(cap);}}
-  double position(){return angles/weight;}
+  @Override public void drawBitmap(android.graphics.Bitmap b,android.graphics.Rect source,RectF destination,Paint p){bitmapCalls++;super.drawBitmap(b,source,destination,p);}
+  double position(){
+   double sum=0,total=0;
+   for(int y=0;y<480;y++)for(int x=0;x<640;x++) {
+    int pixel=image.getRGB(x,y),red=(pixel>>16)&255;if((pixel>>>24)<128||red<=60)continue;
+    double angle=Math.toDegrees(Math.atan2(y-40-2*TrioGeometry.B_CY,x-120-2*TrioGeometry.B_CX))-90;
+    if(angle<0)angle+=360;
+    double glow=red-52;sum+=angle*glow;total+=glow;
+   }
+   return sum/total;
+  }
  }
  static Frame flow(TrioSettings s,int level,float phase){Frame f=new Frame();TrioRenderer.drawChargeFlow(f,level,GREEN,TrioAppearance.of(s),phase,s.trioStyle==Prefs.STYLE_CAPSULE?8:0,s.trioStyle==Prefs.STYLE_CAPSULE?8:0,360,90);return f;}
  static Frame mask(TrioSettings s,int level)throws Exception {return mask(s,level,false);}
@@ -30,6 +40,7 @@ public class ChargeFlowTest {
   else {Method m=TrioRenderer.class.getDeclaredMethod("drawBattery",Canvas.class,int.class,int.class,int.class,TrioAppearance.class,float.class,float.class,float.class,float.class);m.setAccessible(true);m.invoke(null,f,level,GREEN,0,a,0f,0f,360f,90f);}
   return f;
  }
+ static int brightInk(Frame f){int n=0;for(int y=0;y<480;y++)for(int x=0;x<640;x++){int pixel=f.image.getRGB(x,y);if((pixel>>>24)>128&&((pixel>>16)&255)>65)n++;}return n;}
  static int ink(Frame f){int n=0;for(int y=0;y<480;y++)for(int x=0;x<640;x++)if((f.image.getRGB(x,y)>>>24)>16)n++;return n;}
  static void confined(Frame moving,Frame reference){
   for(int y=0;y<480;y++)for(int x=0;x<640;x++)if((moving.image.getRGB(x,y)>>>24)>32){
@@ -55,8 +66,47 @@ public class ChargeFlowTest {
    if(shape==1){s.splitCap=0;confined(flow(s,level,.5f),mask(s,level));}
   }
  }
+ static int redAt(Frame f,float x,float y){return (f.image.getRGB(Math.round(120+2*x),Math.round(40+2*y))>>16)&255;}
+ static void continuousCapsAndJoins()throws Exception {
+  TrioSettings s=TrioSettings.defaults();s.chargeFlow=true;s.ringStroke=18;s.trackAlpha=0;
+  s.chargeFlowWidth=20;s.chargeFlowGradient=50;s.trioStyle=Prefs.STYLE_RING;s.splitMode=0;
+  float charged=.66f,total=2*(float)Math.PI*TrioGeometry.B_R,cap=s.ringStroke/(2*total);
+  float span=charged+2*cap,band=.2f*span/charged;
+  float phase=(band+cap/2)/(span+band);
+  Frame moving=flow(s,66,phase);
+  int capColour=redAt(moving,TrioGeometry.B_CX+s.ringStroke*.3f,TrioGeometry.B_CY+TrioGeometry.B_R);
+  int seamColour=redAt(moving,TrioGeometry.B_CX,TrioGeometry.B_CY+TrioGeometry.B_R);
+  int bodyColour=redAt(moving,TrioGeometry.B_CX-s.ringStroke*.3f,TrioGeometry.B_CY+TrioGeometry.B_R);
+  check(capColour+3<seamColour&&seamColour+3<bodyColour,
+          "cap and body share one continuous gradient rather than a flat cap patch: "+capColour+","+seamColour+","+bodyColour);
+  check(moving.bitmapCalls==1,"a frame composites the complete charged outline in one draw");
+  s.trioStyle=Prefs.STYLE_CAPSULE;s.chargeFlowWidth=100;
+  moving=flow(s,66,.5f);
+  float radius=TrioGeometry.CAP_RADIUS,cx=(TrioGeometry.CAP_LEFT+TrioGeometry.capRight())/2;
+  float distance=Math.abs(cx-8-TrioGeometry.CAP_LEFT-radius);
+  float length=4*distance+2*(float)Math.PI*radius,advance=(s.ringStroke*TrioGeometry.CAP_STROKE_RATIO)/(2*length);
+  for(float delta:new float[]{-3,0,3}) {
+   float x,y;
+   if(delta<=0){x=TrioGeometry.CAP_LEFT+radius-delta;y=TrioGeometry.CAP_BOTTOM;}
+   else {x=TrioGeometry.CAP_LEFT+radius-radius*(float)Math.sin(delta/radius);y=(TrioGeometry.CAP_TOP+TrioGeometry.CAP_BOTTOM)/2+radius*(float)Math.cos(delta/radius);}
+   float progress=(distance+delta)/length;
+   int expected=52+Math.round(203*TrioRenderer.chargeFlowGlow((progress+advance)/(.66f+2*advance),50));
+   check(Math.abs(redAt(moving,x,y)-expected)<=5,
+           "straight/curved tangent joins retain the same arc-length colour field");
+  }
+  s.trioStyle=Prefs.STYLE_RING;s.chargeFlowWidth=40;
+  Frame closed=flow(s,100,.01f);
+  int left=redAt(closed,TrioGeometry.B_CX-.5f,TrioGeometry.B_CY+TrioGeometry.B_R);
+  int right=redAt(closed,TrioGeometry.B_CX+.5f,TrioGeometry.B_CY+TrioGeometry.B_R);
+  check(Math.abs(left-right)<10,"a closed full ring wraps its gradient without a colour seam");
+  java.lang.reflect.Field cache=ChargeFlowRenderer.class.getDeclaredField("CACHE");cache.setAccessible(true);
+  Object[] before=((Object[])cache.get(null)).clone();flow(s,100,.3f);flow(s,66,.4f);
+  Object[] after=(Object[])cache.get(null);
+  check(java.util.Arrays.equals(before,after),"phase and battery level reuse the geometry field");
+ }
  public static void main(String[] args)throws Exception {
   roundedCapCoverage();
+  continuousCapsAndJoins();
   TrioSettings s=TrioSettings.defaults();s.enabled=true;s.trackAlpha=0;s.chargeFlow=true;s.pausedGrayAll=false;
   check(!TrioSettings.defaults().chargeFlow,"existing users keep a static outline by default");
   check(TrioRenderer.chargeFlowActive(s,66,true,false),"charging schedules frames");
@@ -92,8 +142,8 @@ public class ChargeFlowTest {
   check(TrioRenderer.chargeFlowGlow(.3f,25)>.95f,"short gradients leave a solid core");
   check(TrioRenderer.chargeFlowGlow(.3f,50)<.8f,"full gradients keep feathering into the band");
   check(Math.abs(TrioRenderer.chargeFlowGlow(.2f,40)-TrioRenderer.chargeFlowGlow(.8f,40))<.00001,"both ends have equal fade width");
-  s.chargeFlowWidth=5;int narrow=ink(flow(s,66,.5f));s.chargeFlowWidth=30;
-  check(ink(flow(s,66,.5f))>narrow*2,"total width changes real painted length");s.chargeFlowWidth=18;
+  s.chargeFlowWidth=5;int narrow=brightInk(flow(s,66,.5f));s.chargeFlowWidth=30;
+  check(brightInk(flow(s,66,.5f))>narrow*2,"total width changes real painted length");s.chargeFlowWidth=18;
   Path output=Paths.get("build/flow-reference");Files.createDirectories(output);
   for(int shape=0;shape<3;shape++){
    s.trioStyle=shape==2?Prefs.STYLE_CAPSULE:Prefs.STYLE_RING;s.splitMode=shape==1?1:0;

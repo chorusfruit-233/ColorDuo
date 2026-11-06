@@ -563,7 +563,7 @@ public final class TrioRenderer {
         final float sweep = 360f-bottomOpening;
         final float gapStart = topOpening<=0f?0f:0.5f-topOpening/(2f*sweep);
         final float gapEnd = topOpening<=0f?0f:0.5f+topOpening/(2f*sweep);
-        drawBattery(c,level,role,fg,a,gapStart,gapEnd,sweep,270f-sweep/2f);
+        drawBattery(c,flowPhase>=0?0:level,role,fg,a,gapStart,gapEnd,sweep,270f-sweep/2f);
         drawChargeFlow(c,level,role,a,flowPhase,gapStart,gapEnd,sweep,270f-sweep/2f);
         for (int z = 0; z < 3; z++) {
             final int part = r.parts[z];
@@ -995,7 +995,7 @@ public final class TrioRenderer {
         STROKE.setColor(withAlpha(fg, a.trackAlpha));
         canvas.drawPath(CAPSULE, STROKE);
 
-        if (level > 0) {
+        if (level > 0 && flowPhase < 0) {
             STROKE.setColor(role);
             if (level >= 100) canvas.drawPath(CAPSULE, STROKE);
             else drawCapsuleFill(canvas, stroke, level / 100f, topReach, bottomReach);
@@ -1864,159 +1864,21 @@ public final class TrioRenderer {
         return value*value*.96f;
     }
 
-    /** Draw only inside the charged run. Gaps carry neither ink nor progress distance. */
-    static void drawChargeFlow(Canvas c, int level, int role, TrioAppearance a, float phase,
-                               float p0, float p1, float sweep, float start) {
-        if (phase < 0 || level <= 0) return;
-        float charged = Math.min(1f,level/100f), width = Math.min(a.chargeFlowWidth/100f,charged);
-        float head = phase*(charged+width)-width;
-        TrioGeometry.SplitRing split = a.ring && a.splitMode == 1 ? new TrioGeometry.SplitRing(a) : null;
-        float[] lengths = a.capsule ? capsuleFlowLengths(p0,p1) : null;
-        STROKE.setStrokeWidth(a.capsule ? a.ringStroke*TrioGeometry.CAP_STROKE_RATIO : a.ringStroke);
-        STROKE.setStrokeCap(Paint.Cap.BUTT);
-        float[] caps = chargeFlowCaps(a, charged, p0, p1, sweep, start, split, lengths);
-        int samples=Math.max(24,Math.round(width*120));
-        try {
-            for(int n=0;n<samples;n++) {
-                // Keep gradients smooth when users widen the band, with fewer calls for narrow bands.
-                float overlap=width/(samples*3f);
-                float from=head+width*n/samples-overlap, to=head+width*(n+1)/samples+overlap;
-                if(a.chargeFlowDirection==1) { float next=charged-from;from=charged-to;to=next; }
-                from=Math.max(0,from);to=Math.min(charged,to);
-                if(to<=from)continue;
-                float glow=chargeFlowGlow((n+.5f)/samples,a.chargeFlowGradient);
-                int red=(role>>16)&255,green=(role>>8)&255,blue=role&255;
-                STROKE.setColor((role&0xff000000)|((red+Math.round((255-red)*glow))<<16)
-                        |((green+Math.round((255-green)*glow))<<8)|(blue+Math.round((255-blue)*glow)));
-                // Only true contour endpoints have round caps. Keep internal samples flat
-                // so the highlight does not grow wider or bleed into the uncharged track.
-                for(int i=0;i<caps.length;i+=3) if(from<=caps[i] && to>=caps[i]) {
-                    FILL.setColor(STROKE.getColor());
-                    c.drawCircle(caps[i+1],caps[i+2],STROKE.getStrokeWidth()/2f,FILL);
-                }
-                if(a.capsule) capsuleFlowRange(c,from,to,p0,p1,lengths);
-                else if(split!=null) splitFlowRange(c,split,from,to);
-                else batteryRing(c,from,to,p0,p1,sweep,start);
-            }
-        } finally { STROKE.setStrokeCap(Paint.Cap.ROUND); }
+    /** Paint the entire charged run from one continuous arc-length colour field. */
+    static void drawChargeFlow(Canvas c,int level,int role,TrioAppearance a,float phase,
+                               float p0,float p1,float sweep,float start) {
+        ChargeFlowRenderer.draw(c,level,role,a,phase,p0,p1,sweep,start);
     }
 
-    /** Endpoint progress and centre coordinates from the same pieces as the static fill. */
-    private static float[] chargeFlowCaps(TrioAppearance a, float charged, float p0, float p1,
-            float sweep, float start, TrioGeometry.SplitRing split, float[] lengths) {
-        FlowCaps points = new FlowCaps();
-        if (split != null) {
-            if (a.splitCap != 1) return new float[0];
-            for (int side=0;side<2;side++) {
-                int first=side*(TrioGeometry.SplitRing.STEPS+1);
-                float from=split.distance[first]/split.length;
-                float to=Math.min(charged,split.distance[first+TrioGeometry.SplitRing.STEPS]/split.length);
-                if(to<=from) continue;
-                TrioGeometry.EllipseSide e=split.sides[side];
-                addFlowCap(points,from,e.x(0),e.y(0));
-                float t=splitFlowT(split,side,to*split.length);
-                addFlowCap(points,to,e.x(t),e.y(t));
-            }
-        } else if (a.capsule) {
-            float left=TrioGeometry.CAP_LEFT,right=TrioGeometry.capRight(),radius=TrioGeometry.CAP_RADIUS;
-            float top=TrioGeometry.CAP_TOP,bottom=TrioGeometry.CAP_BOTTOM,cx=(left+right)/2,cy=(top+bottom)/2;
-            float total=0;for(float length:lengths)total+=length;
-            float offset=0;
-            for(int piece=0;piece<6;piece++) {
-                float length=lengths[piece],from=offset/total,to=Math.min(charged,(offset+length)/total);
-                offset+=length;
-                if(length<=0 || to<=from) continue;
-                float fraction=(to-from)*total/length;
-                if(piece==1 || piece==4) {
-                    float x=piece==1?left+radius:right-radius,angle=piece==1?90:270;
-                    addFlowArcCaps(points,from,to,x,cy,radius,angle,180*fraction);
-                } else {
-                    float x1=piece==0?cx-p1:piece==2?left+radius:piece==3?cx+p0:right-radius;
-                    float x2=piece==0?left+radius:piece==2?cx-p0:piece==3?right-radius:cx+p1;
-                    float y=piece==0 || piece==5?bottom:top;
-                    addFlowCap(points,from,x1,y);
-                    addFlowCap(points,to,x1+(x2-x1)*fraction,y);
-                }
-            }
-        } else {
-            float mouthStart=clamp01(p0),mouthEnd=clamp01(p1),drawn=mouthStart+1-mouthEnd;
-            if(drawn<=0) return new float[0];
-            float join=mouthStart/drawn,firstEnd=Math.min(charged,join);
-            if(firstEnd>0) addFlowArcCaps(points,0,firstEnd,TrioGeometry.B_CX,TrioGeometry.B_CY,
-                    TrioGeometry.B_R,start,sweep*firstEnd*drawn);
-            if(charged>join) addFlowArcCaps(points,join,charged,TrioGeometry.B_CX,TrioGeometry.B_CY,
-                    TrioGeometry.B_R,start+sweep*mouthEnd,sweep*(charged-join)*drawn);
-        }
-        return java.util.Arrays.copyOf(points.values, points.size);
-    }
-
-    private static final class FlowCaps {
-        final float[] values = new float[36];
-        int size;
-        void add(float value) { values[size++] = value; }
-    }
-
-    private static void addFlowCap(FlowCaps caps,float progress,float x,float y) {
-        caps.add(progress);caps.add(x);caps.add(y);
-    }
-
-    private static void addFlowArcCaps(FlowCaps caps,float from,float to,
-            float cx,float cy,float radius,float start,float sweep) {
-        double first=Math.toRadians(start),last=Math.toRadians(start+sweep);
-        addFlowCap(caps,from,cx+radius*(float)Math.cos(first),cy+radius*(float)Math.sin(first));
-        addFlowCap(caps,to,cx+radius*(float)Math.cos(last),cy+radius*(float)Math.sin(last));
-    }
-
-    private static float splitFlowT(TrioGeometry.SplitRing shape,int side,float distance) {
-        int first=side*(TrioGeometry.SplitRing.STEPS+1);
-        if(distance<=shape.distance[first])return 0;
-        for(int n=1;n<=TrioGeometry.SplitRing.STEPS;n++) {
-            int i=first+n;
-            if(distance<shape.distance[i])return (n-1+(distance-shape.distance[i-1])
-                    /(shape.distance[i]-shape.distance[i-1]))/TrioGeometry.SplitRing.STEPS;
-        }
-        return 1;
-    }
-
-    private static void splitFlowRange(Canvas c,TrioGeometry.SplitRing shape,float from,float to) {
-        for(int side=0;side<2;side++) {
-            float first=splitFlowT(shape,side,from*shape.length),last=splitFlowT(shape,side,to*shape.length);
-            if(last<=first)continue;
-            TrioGeometry.EllipseSide e=shape.sides[side];
-            if(e.rx==0)c.drawLine(e.x(first),e.y(first),e.x(last),e.y(last),STROKE);
-            else {
-                ARC.set(e.cx-e.rx,e.cy-e.ry,e.cx+e.rx,e.cy+e.ry);
-                c.drawArc(ARC,(float)Math.toDegrees(e.start+e.sweep*first),
-                        (float)Math.toDegrees(e.sweep*(last-first)),false,STROKE);
-            }
-        }
-    }
-
-    private static float[] capsuleFlowLengths(float topReach,float bottomReach) {
-        float left=TrioGeometry.CAP_LEFT,right=TrioGeometry.capRight(),r=TrioGeometry.CAP_RADIUS,cx=(left+right)/2;
-        return new float[]{Math.abs(cx-bottomReach-left-r),(float)Math.PI*r,Math.abs(cx-topReach-left-r),
-                Math.abs(right-r-cx-topReach),(float)Math.PI*r,Math.abs(right-r-cx-bottomReach)};
-    }
-
-    private static void capsuleFlowRange(Canvas c,float from,float to,float topReach,float bottomReach,float[] lengths) {
-        float left=TrioGeometry.CAP_LEFT,right=TrioGeometry.capRight(),r=TrioGeometry.CAP_RADIUS;
-        float top=TrioGeometry.CAP_TOP,bottom=TrioGeometry.CAP_BOTTOM,cx=(left+right)/2,cy=(top+bottom)/2;
-        float total=0;for(float v:lengths)total+=v;float offset=0;
-        for(int piece=0;piece<6;piece++) {
-            float length=lengths[piece];
-            float first=Math.max(0,from*total-offset),last=Math.min(length,to*total-offset);offset+=length;
-            if(last<=first || length<=0)continue;
-            float f=first/length,t=last/length;
-            if(piece==1 || piece==4) {
-                float x=piece==1?left+r:right-r,angle=piece==1?90:270;
-                ARC.set(x-r,cy-r,x+r,cy+r);c.drawArc(ARC,angle+180*f,180*(t-f),false,STROKE);
-            } else {
-                float x1=piece==0?cx-bottomReach:piece==2?left+r:piece==3?cx+topReach:right-r;
-                float x2=piece==0?left+r:piece==2?cx-topReach:piece==3?right-r:cx+bottomReach;
-                float y=piece==0 || piece==5?bottom:top;
-                c.drawLine(x1+(x2-x1)*f,y,x1+(x2-x1)*t,y,STROKE);
-            }
-        }
+    /** The exact static charged silhouette is also the animated fill's coverage mask. */
+    static void drawChargeFlowMask(Canvas c,int level,TrioAppearance a,float p0,float p1,float sweep,float start) {
+        STROKE.setStyle(Paint.Style.STROKE);STROKE.setStrokeCap(Paint.Cap.ROUND);
+        if(a.capsule) {
+            STROKE.setStrokeWidth(a.ringStroke*TrioGeometry.CAP_STROKE_RATIO);STROKE.setColor(Color.WHITE);
+            if(level>=100) {
+                buildCapsuleOutline(CAPSULE,p0,p1);c.drawPath(CAPSULE,STROKE);
+            } else drawCapsuleFill(c,STROKE.getStrokeWidth(),level/100f,p0,p1);
+        } else drawBattery(c,level,Color.WHITE,0,a,p0,p1,sweep,start);
     }
 
     // ----------------------------------------------------------------- battery

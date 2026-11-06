@@ -44,12 +44,16 @@ public class Paint {
     private int typefaceStyle = Font.PLAIN;
     private float letterSpacing = 0f;
     private boolean fakeBold = false;
+    private boolean filterBitmap = false;
 
     public Paint() {
     }
 
     public Paint(int flags) {
     }
+
+    public void setFilterBitmap(boolean filter) {filterBitmap=filter;}
+    public boolean isFilterBitmap() {return filterBitmap;}
 
     public void setStyle(Style s) { style = s; }
     public Style getStyle() { return style; }
