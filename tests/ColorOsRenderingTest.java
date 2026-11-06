@@ -28,6 +28,7 @@ public final class ColorOsRenderingTest {
         final List<String> texts = new ArrayList<>();
         final List<java.awt.geom.Rectangle2D> textBounds = new ArrayList<>();
         final List<java.awt.geom.Rectangle2D> wifiArcBounds = new ArrayList<>();
+        final List<java.awt.Shape> wifiArcInk = new ArrayList<>();
         final List<java.awt.geom.Rectangle2D> wifiDotBounds = new ArrayList<>();
         final List<java.awt.geom.Rectangle2D> outlineBounds = new ArrayList<>();
         final List<Float> textStrokes = new ArrayList<>();
@@ -48,12 +49,13 @@ public final class ColorOsRenderingTest {
             arcColors.add(paint.getColor());
             java.awt.Shape shape = new java.awt.geom.Arc2D.Float(oval.left,oval.top,
                     oval.width(),oval.height(),-start,-sweep,java.awt.geom.Arc2D.OPEN);
-            java.awt.geom.Rectangle2D ink = graphics.getTransform().createTransformedShape(
-                    paint.stroke().createStrokedShape(shape)).getBounds2D();
+            java.awt.Shape strokeInk=graphics.getTransform().createTransformedShape(
+                    paint.stroke().createStrokedShape(shape));
+            java.awt.geom.Rectangle2D ink=strokeInk.getBounds2D();
             if (Math.abs(((oval.left+oval.right)/2f)-TrioGeometry.W_CX)<0.01f
                     && (Math.abs(((oval.top+oval.bottom)/2f)-TrioGeometry.W1_CY)<0.01f
                         || Math.abs(((oval.top+oval.bottom)/2f)-TrioGeometry.W2_CY)<0.01f)) {
-                wifiArcBounds.add(ink);
+                wifiArcBounds.add(ink);wifiArcInk.add(strokeInk);
             } else outlineBounds.add(ink);
             super.drawArc(oval, start, sweep, center, paint);
         }
@@ -113,8 +115,8 @@ public final class ColorOsRenderingTest {
 
 
     private static final class MarkerSample {
-        final double height,coverage;
-        MarkerSample(double h,double c){height=h;coverage=c;}
+        final double height,coverage,x,top;
+        MarkerSample(double h,double c,double x,double top){height=h;coverage=c;this.x=x;this.top=top;}
     }
 
     private static MarkerSample markerSample(int layout,int size,int weight,int zone,boolean paired) {
@@ -150,9 +152,7 @@ public final class ColorOsRenderingTest {
                 check(r.getMinX()-pad>=-1 && r.getMinY()-pad>=-1
                         && r.getMaxX()+pad<=m.width+1 && r.getMaxY()+pad<=m.height+1,
                         "largest and heaviest standard markers fit the real measured host");
-                for(java.awt.geom.Rectangle2D arc:frame.wifiArcBounds)
-                    check(r.getMinY()-pad>arc.getMaxY(),
-                            "lower-right standard clears the Wi-Fi arcs");
+                assertWifiArcClearance(frame,r,pad);
                 for(java.awt.geom.Rectangle2D dot:frame.wifiDotBounds)
                     check(r.getMinX()-pad>dot.getMaxX(),
                             "standard stays to the right of the Wi-Fi dot");
@@ -169,7 +169,17 @@ public final class ColorOsRenderingTest {
             int left=Math.max(0,(int)Math.floor(main.getMinX())-2),right=Math.min(image.getWidth(),(int)Math.ceil(main.getMaxX())+2);
             int top=Math.max(0,(int)Math.floor(main.getMinY())-2),bottom=Math.min(image.getHeight(),(int)Math.ceil(main.getMaxY())+2);
             for(int y=top;y<bottom;y++)for(int x=left;x<right;x++)coverage+=(image.getRGB(x,y)>>>24)/255.0;
-            return new MarkerSample(main.getHeight(),coverage);
+            return new MarkerSample(main.getHeight(),coverage,main.getMinX(),main.getMinY());
+        }
+    }
+
+    private static void assertWifiArcClearance(Frame frame,java.awt.geom.Rectangle2D r,float pad) {
+        java.awt.geom.Rectangle2D box=new java.awt.geom.Rectangle2D.Double(r.getMinX()-pad,r.getMinY()-pad,
+                r.getWidth()+2*pad,r.getHeight()+2*pad);
+        for(java.awt.Shape arc:frame.wifiArcInk) {
+            java.awt.geom.Area intersection=new java.awt.geom.Area(arc);
+            intersection.intersect(new java.awt.geom.Area(box));
+            check(intersection.isEmpty(),"shifted standard clears the actual stroked Wi-Fi arcs");
         }
     }
 
@@ -236,6 +246,12 @@ public final class ColorOsRenderingTest {
             check(normal.height>small.height+1 && large.height>normal.height+1,
                     "size control grows the badge until its available corner is full: layout="+layout
                             +" small="+small.height+" normal="+normal.height+" large="+large.height);
+            if(layout<2) {
+                check(large.x>normal.x+1&&large.top<normal.top-1,
+                        "large standard moves right and up after its fixed anchor fills");
+                check(large.height>normal.height*1.2,
+                        "relocation provides more height than the previous fixed-anchor ceiling");
+            }
             MarkerSample digitSmall=markerSample(layout,50,900,TrioZones.Zone.CENTRE.ordinal(),false,100,"6");
             MarkerSample digitNormal=markerSample(layout,100,900,TrioZones.Zone.CENTRE.ordinal(),false,100,"6");
             check(digitNormal.height>digitSmall.height*1.4,
@@ -287,6 +303,9 @@ public final class ColorOsRenderingTest {
                         TrioRenderer.drawSizedState(f,after.width,after.height,state,cfg,after.scale,false);
                         int at=f.texts.indexOf(standard.equals("6E")?"6":standard);
                         check(at>=0,"all standards remain visible while fitted inside");
+                        for(int i=at;i<=at+(standard.equals("6E")?1:0);i++)
+                            assertWifiArcClearance(f,f.textBounds.get(i),f.textStrokes.get(i)/2f);
+
                         if(layout==0)for(int i=at;i<=at+(standard.equals("6E")?1:0);i++)
                             assertMarkerInsideRing(f.textBounds.get(i),f.textStrokes.get(i)/2f,cfg,after);
                     }

@@ -32,6 +32,10 @@ public class RectF {
         bottom = b;
     }
 
+    public void offset(float dx,float dy) {
+        left+=dx;right+=dx;top+=dy;bottom+=dy;
+    }
+
     public float width() { return right - left; }
 
     public float height() { return bottom - top; }

@@ -39,6 +39,7 @@ public final class TrioRenderer {
     private static final WifiBadge[] WIFI_BADGES = new WifiBadge[4];
     private static int nextWifiBadge;
     private static final float WIFI_BADGE_RIGHT = 34f;
+    private static final float[] WIFI_BADGE_ARCS = wifiBadgeArcSamples();
     static { WIFI_STANDARD_TEXT.setTextAlign(Paint.Align.LEFT); }
     private static final Path BOLT = buildBolt();
     private static final RectF BOLT_BOUNDS = new RectF();
@@ -2146,7 +2147,9 @@ public final class TrioRenderer {
     private static final class WifiBadge {
         final String standard,main;
         final int scale,weight;
-        final float stroke,radius,dy,right,bottom,size,x,baseline,suffixX,suffixOffset,widthScale;
+        final float stroke,radius,dy,right,bottom,size,suffixOffset,widthScale;
+        float x,baseline,suffixX;
+        boolean relocated;
         final RectF mainInk,suffixInk;
 
         WifiBadge(TrioAppearance a,String standard,float radius,float dy,float right,float bottom,float size,float widthScale) {
@@ -2181,13 +2184,46 @@ public final class TrioRenderer {
             if(suffixInk!=null){suffixInk.top+=baseline;suffixInk.bottom+=baseline;}
         }
 
+        /** Keep the measured glyph intact; only its anchor may move after the old fit is full. */
+        boolean relocate() {
+            float edge=Float.isFinite(radius)?right:Math.min(WIFI_BADGE_RIGHT,right);
+            float width=Math.max(mainInk.right,suffixInk==null?mainInk.right:suffixInk.right);
+            float maximum=Math.min(32f,edge-width);
+            for(float moveX=0;moveX<=maximum;moveX+=0.5f) {
+                float low=0,high=40f;
+                for(int i=0;i<(suffixInk==null?1:2);i++) {
+                    RectF ink=i==0?mainInk:suffixInk;
+                    float inkRight=ink.right+moveX;
+                    low=Math.max(low,ink.bottom-Math.min(33f,bottom));
+                    high=Math.min(high,ink.top-wifiBadgeClearTop(ink.left+moveX,inkRight,stroke));
+                    if(Float.isFinite(radius)) {
+                        float square=radius*radius-inkRight*inkRight;
+                        if(square<0){high=-1;break;}
+                        float halfHeight=(float)Math.sqrt(square);
+                        low=Math.max(low,ink.bottom+dy-halfHeight);
+                        high=Math.min(high,ink.top+dy+halfHeight);
+                    }
+                }
+                if(low>high)continue;
+                // The first feasible x is the smallest rightward move. At that x, low is
+                // the smallest upward move that clears both the lower edge and the ring.
+                x+=moveX;suffixX+=moveX;baseline-=low;
+                mainInk.offset(moveX,-low);
+                if(suffixInk!=null)suffixInk.offset(moveX,-low);
+                relocated=true;
+                return true;
+            }
+            return false;
+        }
+
         boolean matches(TrioAppearance a,String text,float r,float y,float w,float h) {
             return standard.equals(text)&&scale==a.wifiStandardScale&&weight==a.wifiStandardWeight
                     &&stroke==a.arcStroke&&radius==r&&dy==y&&right==w&&bottom==h;
         }
         boolean fits() {return fits(mainInk)&&(suffixInk==null||fits(suffixInk));}
         private boolean fits(RectF ink) {
-            if(ink.right>Math.min(WIFI_BADGE_RIGHT,right)||ink.bottom>Math.min(33f,bottom))return false;
+            float edge=relocated&&Float.isFinite(radius)?right:Math.min(WIFI_BADGE_RIGHT,right);
+            if(ink.right>edge||ink.bottom>Math.min(33f,bottom))return false;
             if(!Float.isFinite(radius))return true;
             float y=Math.max(Math.abs(ink.top+dy),Math.abs(ink.bottom+dy));
             return ink.right*ink.right+y*y<=radius*radius;
@@ -2198,6 +2234,38 @@ public final class TrioRenderer {
         for(WifiBadge cached:WIFI_BADGES)
             if(cached!=null&&cached.matches(a,text,radius,dy,right,bottom))return cached;
         float requested=24f*a.wifiStandardScale/100f;
+        WifiBadge badge=fixedWifiBadge(a,text,radius,dy,right,bottom,requested);
+        if(badge!=null&&a.wifiStandardScale>100&&badge.size<requested-0.05f) {
+            WifiBadge moved=new WifiBadge(a,text,radius,dy,right,bottom,requested,0.85f);
+            if(moved.relocate())badge=moved;
+            else {
+                moved=new WifiBadge(a,text,radius,dy,right,bottom,requested,0.7f);
+                if(moved.relocate()) {
+                    badge=moved;
+                    float low=0.7f,high=0.85f;
+                    for(int i=0;i<10;i++) {
+                        float width=(low+high)/2f;
+                        WifiBadge candidate=new WifiBadge(a,text,radius,dy,right,bottom,requested,width);
+                        if(candidate.relocate()){low=width;badge=candidate;}else high=width;
+                    }
+                } else {
+                    float low=badge.size,high=requested;
+                    for(int i=0;i<12;i++) {
+                        float size=(low+high)/2f;
+                        WifiBadge candidate=new WifiBadge(a,text,radius,dy,right,bottom,size,0.7f);
+                        if(candidate.relocate()){low=size;badge=candidate;}else high=size;
+                    }
+                }
+            }
+        }
+        WIFI_BADGES[nextWifiBadge]=badge;
+        nextWifiBadge=(nextWifiBadge+1)%WIFI_BADGES.length;
+        return badge;
+    }
+
+    /** The original fixed-anchor fit is retained for normal sizes and as a safe fallback. */
+    private static WifiBadge fixedWifiBadge(TrioAppearance a,String text,float radius,float dy,
+                                            float right,float bottom,float requested) {
         WifiBadge badge=new WifiBadge(a,text,radius,dy,right,bottom,requested,0.85f);
         if(!badge.fits()) {
             // First trade a little width for height; never flatten below this readable limit.
@@ -2220,9 +2288,38 @@ public final class TrioRenderer {
                 }
             }
         }
-        WIFI_BADGES[nextWifiBadge]=badge;
-        nextWifiBadge=(nextWifiBadge+1)%WIFI_BADGES.length;
         return badge;
+    }
+
+    /** One-degree samples bound the arc's curve with at most 0.28 units of sampling error. */
+    private static float[] wifiBadgeArcSamples() {
+        float[] points=new float[2*2*87];
+        for(int arc=0;arc<2;arc++)for(int i=0;i<87;i++) {
+            float cy=arc==0?TrioGeometry.W1_CY:TrioGeometry.W2_CY;
+            float radius=arc==0?TrioGeometry.W1_R:TrioGeometry.W2_R;
+            float start=arc==0?TrioGeometry.W1_START:TrioGeometry.W2_START;
+            float sweep=arc==0?TrioGeometry.W1_SWEEP:TrioGeometry.W2_SWEEP;
+            double angle=Math.toRadians(start+sweep*i/86f);
+            int at=(arc*87+i)*2;
+            points[at]=(float)(TrioGeometry.W_CX+radius*Math.cos(angle));
+            points[at+1]=(float)(cy+radius*Math.sin(angle));
+        }
+        return points;
+    }
+
+    /** Lowest legal top edge at this x range, below the actual stroked arc contours. */
+    private static float wifiBadgeClearTop(float left,float right,float stroke) {
+        left+=TrioGeometry.W_CX;right+=TrioGeometry.W_CX;
+        float top=TrioGeometry.W_TOP-stroke/2f;
+        // 0.3 covers the sampling error; 0.8 is visible separation from the arc ink.
+        float clearance=stroke/2f+1.1f,square=clearance*clearance;
+        for(int i=0;i<WIFI_BADGE_ARCS.length;i+=2) {
+            float x=WIFI_BADGE_ARCS[i];
+            float distance=Math.max(0,Math.max(left-x,x-right));
+            if(distance<=clearance)
+                top=Math.max(top,WIFI_BADGE_ARCS[i+1]+(float)Math.sqrt(square-distance*distance));
+        }
+        return top-TrioGeometry.W_INK_CY;
     }
 
     private static void drawWifiArcs(Canvas c,int level,int fg,TrioAppearance a,String standard,
