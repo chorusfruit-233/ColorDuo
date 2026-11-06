@@ -255,9 +255,13 @@ public final class ColorOsRenderingTest {
             MarkerSample large=markerSample(layout,250,900,TrioZones.Zone.CENTRE.ordinal(),false);
             System.out.println("Wi-Fi 6E ink height: layout="+layout+" 50%="+small.height
                     +" 100%="+normal.height+" 250%="+large.height);
-            check(normal.height>small.height+1 && large.height>normal.height+1,
-                    "size control grows the badge until its available corner is full: layout="+layout
+            check(normal.height>small.height+1 && large.height>=normal.height-0.01,
+                    "bold marker sizes grow or retain their fitted height at the available boundary: layout="+layout
                             +" small="+small.height+" normal="+normal.height+" large="+large.height);
+            MarkerSample lightNormal=markerSample(layout,100,100,1,false);
+            MarkerSample lightLarge=markerSample(layout,250,100,1,false);
+            check(lightLarge.height>lightNormal.height+1,
+                    "size above 100 percent grows when the thinner marker has spare space");
             check(Math.abs(large.x-normal.x)<1&&Math.abs(large.top-normal.top)<1,
                     "changing size never automatically relocates the chosen default anchor");
             MarkerSample digitSmall=markerSample(layout,50,900,TrioZones.Zone.CENTRE.ordinal(),false,100,"6");
