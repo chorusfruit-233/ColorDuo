@@ -167,8 +167,8 @@ public class Paint {
         // way it does rather than truncating toward zero.
         out.left = (int) Math.floor(bounds.getX());
         out.top = (int) Math.floor(bounds.getY());
-        out.right = out.left + (int) Math.ceil(measureText(slice));
-        out.bottom = out.top + (int) Math.ceil(bounds.getHeight());
+        out.right = (int) Math.ceil(bounds.getMaxX());
+        out.bottom = (int) Math.ceil(bounds.getMaxY());
     }
 
     public FontMetrics getFontMetrics() {        java.awt.Canvas probe = new java.awt.Canvas();
