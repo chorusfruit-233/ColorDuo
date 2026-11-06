@@ -44,16 +44,17 @@ jobs:
           fi
           test "$(gh api user --jq .login)" = 'chorusfruit-233'
       - uses: ./.github/actions/android
-      - name: Download the published source APK
+      - name: Download both published source APKs
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release download "v$VERSION_NAME" --repo "$GITHUB_REPOSITORY" \
-            --pattern "ColorDuo-$VERSION_NAME.apk" --pattern SHA256SUMS --dir dist
+            --pattern "ColorDuo-$VERSION_NAME-modern.apk" --pattern "ColorDuoLegacy-$VERSION_NAME.apk" \
+            --pattern SHA256SUMS --dir dist
       - name: Apply, accept invitation and publish
         env:
           GH_TOKEN: ${{ secrets.MODULE_REPO_TOKEN }}
         run: >-
           python3 scripts/ci/publish-module.py
           --version "$VERSION_NAME" --version-code "$VERSION_CODE"
-          --apk "dist/ColorDuo-$VERSION_NAME.apk"
+          --directory dist

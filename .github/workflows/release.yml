@@ -24,7 +24,7 @@ jobs:
     uses: ./.github/workflows/checks.yml
 
   release:
-    name: Signed APK and release draft
+    name: Signed modern and legacy APKs
     needs: checks
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -43,7 +43,7 @@ jobs:
           --version "$VERSION_NAME" --version-code "$VERSION_CODE"
       - uses: ./.github/actions/android
       - name: Signal subscriptions and layout controls
-        run: ./gradlew --no-daemon :app:testDebugUnitTest
+        run: ./gradlew --no-daemon :app:testModernDebugUnitTest :app:testLegacyDebugUnitTest
       - name: Restore signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.COLORDUO_KEYSTORE_BASE64 }}
@@ -66,19 +66,19 @@ jobs:
           with open(os.environ['GITHUB_ENV'], 'a') as out:
               out.write(f'COLORDUO_KEYSTORE_PATH={key}\n')
           PY
-      - name: Build signed release
+      - name: Build both signed releases
         env:
           COLORDUO_KEYSTORE_PASSWORD: ${{ secrets.COLORDUO_KEYSTORE_PASSWORD }}
           COLORDUO_KEY_ALIAS: ${{ secrets.COLORDUO_KEY_ALIAS }}
           COLORDUO_KEY_PASSWORD: ${{ secrets.COLORDUO_KEY_PASSWORD }}
         run: >-
-          ./gradlew --no-daemon :app:assembleRelease
+          ./gradlew --no-daemon :app:assembleModernRelease :app:assembleLegacyRelease
           "-PcolorduoVersionName=$VERSION_NAME"
           "-PcolorduoVersionCode=$VERSION_CODE"
       - name: Verify and package
         id: package
         run: >-
-          python3 scripts/ci/artifacts.py package --variant release
+          python3 scripts/ci/artifacts.py package --variant release --flavor all
           --version "$VERSION_NAME" --version-code "$VERSION_CODE"
       - name: Render layout reference
         run: python3 scripts/ci/preview_layouts.py --output dist/layout-preview.png --mirror-output dist/mirror-preview.png --size-output dist/size-preview.png
@@ -100,10 +100,12 @@ jobs:
           if [[ "$VERSION_NAME" == *-* ]]; then
             flags=(--prerelease=true)
           fi
-          gh release create "v$VERSION_NAME" dist/*.apk dist/SHA256SUMS \
+          gh release create "v$VERSION_NAME" \
+            "dist/ColorDuo-$VERSION_NAME-modern.apk" dist/SHA256SUMS \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
             --title "$VERSION_NAME" --notes-file dist/CHANGELOG.md \
             --draft "${flags[@]}"
+          gh release upload "v$VERSION_NAME" "dist/ColorDuoLegacy-$VERSION_NAME.apk" --repo "$GITHUB_REPOSITORY"
       - name: Remove signing key
         if: always()
         run: |

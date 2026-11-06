@@ -18,7 +18,7 @@ import androidx.core.content.edit
 import io.github.yixing233.hyperduo.HyperDuoApp
 import io.github.yixing233.hyperduo.Prefs
 import io.github.yixing233.hyperduo.TrioSettings
-import io.github.libxposed.service.XposedService
+import io.github.yixing233.hyperduo.FrameworkService
 
 /**
  * Reads and writes every setting, and mirrors each write to the Xposed
@@ -41,14 +41,14 @@ import io.github.libxposed.service.XposedService
 class SettingsRepository(context: Context) {
 
     private val appContext = context.applicationContext
-    private val service: XposedService? get() = HyperDuoApp.xposedService
+    private val service: FrameworkService? get() = HyperDuoApp.xposedService
 
     /** The display density, needed to migrate the retired raw-pixel size key. */
     private val density: Float
         get() = appContext.resources.displayMetrics.density
 
     private fun preferences() =
-        appContext.getSharedPreferences(Prefs.NAME, Context.MODE_PRIVATE)
+        io.github.yixing233.hyperduo.SettingsStore.preferences(appContext)
 
     init {
         if (!TrioSettings.migrateSignalTrackAlpha(preferences())) {
@@ -532,6 +532,7 @@ class SettingsRepository(context: Context) {
 
     /** Applies [block] to the framework's remote preferences, if connected. */
     private fun push(block: (SharedPreferences.Editor) -> Unit) {
+        if (!io.github.yixing233.hyperduo.FrameworkBridge.hasRemotePreferences) return
         val bound = service
         if (bound == null) {
             // Not fatal: onServiceBind replays every value through

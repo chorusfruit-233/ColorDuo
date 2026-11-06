@@ -7,17 +7,44 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 hooks = (ROOT / 'app/src/main/java/io/github/yixing233/hyperduo/ColorOsHooks.java').read_text()
-names = ['writeDrawable', 'readDrawable', 'writeScaleType', 'writeVisibility',
-         'writeLayoutParams', 'readLayoutParams', 'drawMirror', 'nativeUpdate']
+names = ['writeDrawable', 'afterDrawable', 'readDrawable', 'writeScaleType', 'writeVisibility',
+         'writeLayoutParams', 'readLayoutParams', 'drawMirror', 'afterMirror', 'beginNative', 'finishNative']
 methods = []
 for name in names:
-    match = re.search(r'    private static Object ' + name + r'\(.*?^    \}', hooks, re.M | re.S)
+    match = re.search(r'    private static void ' + name + r'\(.*?^    \}', hooks, re.M | re.S)
+    assert match, name
+    methods.append(re.sub(r'(private static void \w+\([^)]*\)) \{', r'\1 throws Throwable {', match.group()))
+    if name != 'beginNative':
+        assert 'ColorOsHooks::' + name in hooks, 'Production callback must be registered'
+for name in ['NativeCall', 'MirrorCall']:
+    match = re.search(r'    private static final class ' + name + r' \{.*?^    \}', hooks, re.M | re.S)
     assert match, name
     methods.append(match.group())
-    if name != 'nativeUpdate':
-        assert 'ColorOsHooks::' + name in hooks, 'Production interceptor must be registered'
+# Keep the existing observable transaction scenes, dispatching the production before/after methods.
+methods.append("""
+    static Object invoke(XposedInterface.Chain chain, HookRuntime.Step before, HookRuntime.Step after) throws Throwable {
+        HookRuntime.Call call = new HookRuntime.Call(null, chain.object, chain.args);
+        if (before != null) before.run(call);
+        if (!call.returnEarly) {
+            try { call.result = chain.action.run(call.args); }
+            catch (Throwable error) { call.throwable = error; }
+        }
+        if (after != null) after.run(call);
+        if (call.throwable != null) throw call.throwable;
+        return call.result;
+    }
+    static Object nativeUpdate(Host host, XposedInterface.Chain chain) throws Throwable {
+        return invoke(chain, call -> beginNative(host, call), BindingTest::finishNative);
+    }
+""")
+for name in ['writeDrawable', 'readDrawable', 'writeScaleType', 'writeVisibility',
+             'writeLayoutParams', 'readLayoutParams', 'drawMirror']:
+    after = 'BindingTest::afterDrawable' if name == 'writeDrawable' else ('BindingTest::afterMirror' if name == 'drawMirror' else 'null')
+    methods.append(f"static Object {name}(XposedInterface.Chain chain) throws Throwable {{"
+                   f"return invoke(chain, BindingTest::{name}, {after});}}")
 
 harness = r'''
+package io.github.yixing233.hyperduo;
 import java.util.*;
 class BindingTest {
     static int checks;
@@ -201,5 +228,5 @@ class BindingTest {
 with tempfile.TemporaryDirectory(prefix='colorduo-binding-') as tmp:
     source = Path(tmp) / 'BindingTest.java'
     source.write_text(harness, encoding='utf-8')
-    subprocess.run(['javac', '-encoding', 'UTF-8', '-d', str(source.parent), str(ROOT/'tests/shims/android/view/Gravity.java'), str(source)], check=True)
-    subprocess.run(['java', '-cp', str(source.parent), source.stem], check=True)
+    subprocess.run(['javac', '-encoding', 'UTF-8', '-d', str(source.parent), str(ROOT/'tests/shims/android/view/Gravity.java'), str(ROOT/'tests/shims/android/content/SharedPreferences.java'), str(ROOT/'app/src/main/java/io/github/yixing233/hyperduo/HookRuntime.java'), str(source)], check=True)
+    subprocess.run(['java', '-cp', str(source.parent), 'io.github.yixing233.hyperduo.'+source.stem], check=True)

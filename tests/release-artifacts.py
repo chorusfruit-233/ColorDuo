@@ -8,6 +8,7 @@ import tempfile
 import unittest
 from unittest import mock
 import zipfile
+import copy
 
 api = runpy.run_path(str(Path(__file__).resolve().parents[1] / "scripts/ci/artifacts.py"))
 
@@ -62,6 +63,16 @@ class PublicationTest(unittest.TestCase):
                 archive.writestr("META-INF/xposed/scope.list", scope)
             return api["module_metadata"](apk)
 
+    def test_old_updater_never_selects_legacy_in_any_asset_order(self):
+        modern = api["apk_filename"]("0.4.0", "modern")
+        legacy = api["apk_filename"]("0.4.0", "legacy")
+        self.assertEqual(modern, "ColorDuo-0.4.0-modern.apk")
+        self.assertEqual(legacy, "ColorDuoLegacy-0.4.0.apk")
+        for names in ([legacy, modern], [modern, legacy], sorted([legacy, modern])):
+            selected = next(name for name in names
+                            if name.lower().startswith("colorduo-") and name.lower().endswith(".apk"))
+            self.assertEqual(selected, modern)
+
     def test_modern_xposed_metadata(self):
         self.assertEqual(self.check_module()["properties"]["minApiVersion"], "102")
 
@@ -76,6 +87,42 @@ class PublicationTest(unittest.TestCase):
             self.check_module(entry="")
         with self.assertRaises(ValueError):
             self.check_module(scope="android\n")
+
+    def test_legacy_metadata_and_mutually_exclusive_entries(self):
+        manifest = '''<manifest xmlns:android="http://schemas.android.com/apk/res/android"><application>
+          <meta-data android:name="xposedmodule" android:value="true" />
+          <meta-data android:name="xposedminversion" android:value="82" />
+          <meta-data android:name="xposedscope" android:resource="@array/xposed_scope" />
+        </application></manifest>'''
+        with tempfile.TemporaryDirectory() as directory:
+            apk = Path(directory) / "legacy.apk"
+            with zipfile.ZipFile(apk, "w") as archive:
+                archive.writestr("assets/xposed_init", "io.github.yixing233.hyperduo.HyperDuoModule\n")
+            result = api["module_metadata"](apk, "legacy", manifest)
+            self.assertEqual(result["properties"]["minApiVersion"], "82")
+            self.assertEqual(result["properties"]["autoHotReload"], "false")
+            for bad in (manifest.replace('value="82"', 'value="102"'), manifest.replace('value="true"', 'value="false"')):
+                with self.assertRaises(ValueError):
+                    api["module_metadata"](apk, "legacy", bad)
+            with self.assertRaisesRegex(ValueError, "legacy entry point"):
+                api["module_metadata"](apk, "modern")
+            with zipfile.ZipFile(apk, "a") as archive:
+                archive.writestr("META-INF/xposed/module.prop", "minApiVersion=102\n")
+            with self.assertRaisesRegex(ValueError, "modern module metadata"):
+                api["module_metadata"](apk, "legacy", manifest)
+
+    def test_dual_artifacts_share_identity_version_commit_and_signer(self):
+        modern = dict(applicationId="io.github.chorusfruit_233.colorduo", versionName="0.4.0",
+                      versionCode=10052, commit="source", signerSha256="certificate", variant="release", flavor="modern")
+        legacy = {**modern, "flavor": "legacy"}
+        api["verify_build_set"]([modern, legacy])
+        for key in ("applicationId", "versionName", "versionCode", "commit", "signerSha256", "variant"):
+            altered = copy.copy(legacy)
+            altered[key] = "different"
+            with self.subTest(key=key), self.assertRaisesRegex(ValueError, key):
+                api["verify_build_set"]([modern, altered])
+        with self.assertRaises(ValueError):
+            api["verify_build_set"]([modern, modern])
 
     def verify(self, badging, signature):
         metadata = {"applicationId": "io.github.chorusfruit_233.colorduo",

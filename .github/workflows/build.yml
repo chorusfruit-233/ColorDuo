@@ -20,7 +20,15 @@ jobs:
     uses: ./.github/workflows/checks.yml
 
   apk:
-    name: Test APK
+    name: Test APK (${{ matrix.flavor }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - flavor: modern
+            variant: Modern
+          - flavor: legacy
+            variant: Legacy
     needs: checks
     runs-on: ubuntu-24.04
     timeout-minutes: 25
@@ -30,10 +38,10 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/android
       - name: Build
-        run: ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug
+        run: ./gradlew --no-daemon :app:test${{ matrix.variant }}DebugUnitTest :app:assemble${{ matrix.variant }}Debug
       - name: Verify and package
         id: package
-        run: python3 scripts/ci/artifacts.py package --variant debug
+        run: python3 scripts/ci/artifacts.py package --variant debug --flavor "${{ matrix.flavor }}"
       - name: Upload test APK
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

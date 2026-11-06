@@ -20,8 +20,14 @@ android {
         applicationId = "io.github.chorusfruit_233.colorduo"
         minSdk = 29
         targetSdk = 36
-        versionCode = tagVersionCode ?: 10058
-        versionName = tagVersionName ?: "0.3.27-api102"
+        versionCode = tagVersionCode ?: 10059
+        versionName = tagVersionName ?: "0.4.0"
+    }
+
+    flavorDimensions += "xposedApi"
+    productFlavors {
+        create("modern") { dimension = "xposedApi" }
+        create("legacy") { dimension = "xposedApi" }
     }
 
     signingConfigs {
@@ -96,9 +102,10 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("androidx.constraintlayout:constraintlayout-core:1.1.2")
     // Provided by the Xposed framework at runtime, never bundled.
-    compileOnly("io.github.libxposed:api:102.0.0")
+    "modernCompileOnly"("io.github.libxposed:api:102.0.0")
+    "legacyCompileOnly"("de.robv.android.xposed:api:82")
     // Needed by the settings app to talk to the framework service.
-    implementation("io.github.libxposed:service:102.0.0")
+    "modernImplementation"("io.github.libxposed:service:102.0.0")
 
     implementation("androidx.core:core-ktx:1.19.0")
     implementation("androidx.activity:activity-compose:1.13.0")

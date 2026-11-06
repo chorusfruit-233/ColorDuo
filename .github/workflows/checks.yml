@@ -44,6 +44,10 @@ jobs:
         run: python3 tests/coloros-binding.py
       - name: Settings summary formatting
         run: python3 tests/settings-format.py
+      - name: Modern and legacy hook adapters
+        run: python3 tests/hook-runtimes.py
+      - name: Legacy persisted settings and caller isolation
+        run: python3 tests/legacy-settings.py
       - name: Publication metadata
         run: python3 tests/release-artifacts.py
       - name: Module repository publication

@@ -4,6 +4,15 @@
 
 离线检查与构建结果、参考固件数据和真机反馈分别记录，具体边界见 [适配与验证记录](COLOROS17.md)。
 
+## 0.4.0
+
+- 同一分支同时构建 **modern（libxposed API 102）** 与 **legacy（传统 Xposed API 82 起）**，共享 ColorOS 功能、布局和设置。
+- 两版同包名、同签名，覆盖切换保留配置；legacy 使用持久化设置读取，支持重启后的配置恢复及实时修改。
+- 应用内更新只下载当前 API 版本；Actions、源码 Release 和模块仓库同时提供两个 APK。
+- modern 保留热重载；legacy 更新及两版互切后需要重启 SystemUI。
+
+legacy 适配参考 [jahn2007 的分支](https://github.com/jahn2007/ColorDuo/tree/legacy)。两版构建和自动回归检查已覆盖，legacy 的设备兼容性仍需真机反馈。
+
 ## 0.3.18
 
 - 新增“组件 → 移动信号点 → 信号底纹浓度”，独立调节未点亮的信号格，电池底纹不再联动影响信号。

@@ -14,13 +14,16 @@
 
 ## 使用
 
-需要 root 和支持 libxposed API 102 的 LSPosed。目前以一加 13 的 ColorOS 17 为参考适配。
+需要 root 和 LSPosed。目前以一加 13 的 ColorOS 17 为参考适配。
+
+- **modern**：支持 libxposed API 102 的框架。
+- **legacy**：使用传统 Xposed API 的框架（API 82 起）。
 
 1. 从 Releases 下载并安装 APK。
 2. 在 LSPosed 中启用 **ColorDuo**，作用域勾选 **系统界面（com.android.systemui）**。
 3. 重启 SystemUI 或手机，在绘图页添加所需组件。
 
-首次升级需重启 SystemUI；后续支持框架热重载，更新未生效时重启。同签名覆盖安装保留配置。
+两个版本功能相同，同包名、同签名，可覆盖切换并保留配置。modern 支持框架热重载；legacy 更新或切换版本后需重启 SystemUI。
 
 ## 文档
 

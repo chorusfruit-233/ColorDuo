@@ -10,9 +10,9 @@
 | 仓库 | `chorusfruit-233/ColorDuo` |
 | 应用 ID | `io.github.chorusfruit_233.colorduo` |
 | 源码 namespace | `io.github.yixing233.hyperduo`，沿用共享源码的命名 |
-| 当前版本 | `0.2.6` / `10015` |
+| 当前版本 | `0.4.0` / `10052` |
 | compileSdk / targetSdk / minSdk | 37 / 36 / 29 |
-| 框架 API | libxposed 102 |
+| 框架 API | modern：libxposed 102；legacy：传统 API 82 |
 | 作用域 | `com.android.systemui` |
 
 源码 namespace 和保留的 MIUI Hook 属于继承代码；本项目的适配目标与测试范围为 ColorOS 17。SDK 构建参数不代表对其他 Android 或系统版本已经完成验证。
@@ -22,12 +22,12 @@
 准备完整 JDK 21、Android SDK Platform `37.0`、Build Tools `37.0.0`，并通过 `ANDROID_HOME` 或本机 `local.properties` 指定 SDK。仓库已提供 Gradle Wrapper 9.8.0。
 
 ```sh
-./gradlew --no-daemon :app:assembleDebug
+./gradlew --no-daemon :app:testModernDebugUnitTest :app:testLegacyDebugUnitTest :app:assembleModernDebug :app:assembleLegacyDebug
 ```
 
-Windows 可使用 `gradlew.bat --no-daemon :app:assembleDebug`。首次构建需要联网下载依赖，`.tools/maven` 中保留了 libxposed 依赖。
+Windows 可使用 `gradlew.bat --no-daemon :app:assembleDebug`。首次构建需要联网下载依赖，`.tools/maven` 中保留了 libxposed 102 和传统 Xposed API 82 的编译依赖。
 
-产物路径为 `app/build/outputs/apk/debug/app-debug.apk`。debug 沿用开发签名；release 通过 `COLORDUO_KEYSTORE_PATH`、`COLORDUO_KEYSTORE_PASSWORD`、`COLORDUO_KEY_ALIAS`、`COLORDUO_KEY_PASSWORD` 环境变量接入私有签名，缺少签名配置时产出未签名 APK。发布配置见 [构建与模块仓发布](PUBLISHING.md)。
+产物路径为 `app/build/outputs/apk/<modern或legacy>/debug/app-<modern或legacy>-debug.apk`。debug 沿用开发签名；release 通过 `COLORDUO_KEYSTORE_PATH`、`COLORDUO_KEYSTORE_PASSWORD`、`COLORDUO_KEY_ALIAS`、`COLORDUO_KEY_PASSWORD` 环境变量接入私有签名，缺少签名配置时产出未签名 APK。发布配置见 [构建与模块仓发布](PUBLISHING.md)。
 
 版本可通过 `-PcolorduoVersionName=...` 和 `-PcolorduoVersionCode=...` 注入；旧的 `hyperduoVersionName/Code` 参数作为兼容别名保留。
 
@@ -37,7 +37,9 @@ Windows 可使用 `gradlew.bat --no-daemon :app:assembleDebug`。首次构建需
 
 | 文件 | 职责 |
 | --- | --- |
-| `HyperDuoModule.java` | 框架入口，选择系统适配器 |
+| `src/modern/` / `src/legacy/` | 框架入口、设置传输和各自的模块元数据 |
+| `HookRuntime.java` | 两种 API 共用的前后回调边界，不绕过其他模块 |
+| `SettingsStore.java` | 共用的设备加密区配置及旧配置迁移 |
 | `ColorOsHooks.java` | ColorOS 视图接管、原生更新跟踪、状态流捕获与恢复 |
 | `ColorOsPolicy.java` | 模型解析、信号换算、参考固件电流单位及 slot 所有权规则 |
 | `ColorOsBattery.java` | 只读检测 Oplus 串联电芯数量、选择整包电压并归一化功率输入 |
@@ -69,10 +71,12 @@ python3 tests/coloros-power.py
 python3 tests/coloros-hosts.py
 python3 tests/release-artifacts.py
 python3 tests/module-publish.py
-./gradlew --no-daemon :app:assembleDebug
+python3 tests/hook-runtimes.py
+python3 tests/legacy-settings.py
+./gradlew --no-daemon :app:testModernDebugUnitTest :app:testLegacyDebugUnitTest :app:assembleModernDebug :app:assembleLegacyDebug
 ```
 
-八组离线检查覆盖未演进的继承源码、Duo 状态与电话服务采样、原生模型与图标交接、配置和实际绘图、整包功率、多页面宿主恢复，以及两组发布检查。警告布局检查执行生产空间分配和可见性方法，覆盖窄宽度、零宽度、重排序及恢复。跨页面检查执行生产 Host 接管、恢复与读数挂载；不模拟真实 GPU、SystemUI 动画或 ROM 生命周期。Python 检查需要 Python 3，Java 检查使用 JDK 21。
+离线检查覆盖未演进的继承源码、Duo 状态与电话服务采样、原生模型与图标交接、配置和实际绘图、整包功率、多页面宿主恢复，以及两组发布检查。警告布局检查执行生产空间分配和可见性方法，覆盖窄宽度、零宽度、重排序及恢复。跨页面检查执行生产 Host 接管、恢复与读数挂载；不模拟真实 GPU、SystemUI 动画或 ROM 生命周期。Python 检查需要 Python 3，Java 检查使用 JDK 21。
 
 来源基线为 HyperDuo `e9dffbcc8f65a5f3dc379c0b25ccdc0462a8a28d`。`upstream-parity.py` 保护 19 个未演进文件，8 个 Duo 行为文件在明确列出的范围内自主维护，并由行为和绘图回归覆盖；默认值、旧配置迁移及共享功率公式继续保留。对齐依据和设备验证边界见 [适配记录](COLOROS17.md#020duo-状态语义)。
 
@@ -92,7 +96,7 @@ adb logcat -v time -s LSPosedFramework | rg 'ColorDuo|io\.github\.chorusfruit233
 
 ## 构建产物与分发
 
-[Build ColorDuo](../.github/workflows/build.yml) 在 main 代码推送、PR 和手动触发时运行共用检查，再构建测试 APK，上传 `ColorDuo-<version>-debug-<commit>` artifact；文档修改不触发构建。产物打包步骤读取 APK 的实际版本，校验签名、现代 Xposed 入口及作用域，并附校验文件和构建信息。
+[Build ColorDuo](../.github/workflows/build.yml) 在 main 代码推送、PR 和手动触发时运行共用检查，再构建测试 APK，分别上传 `ColorDuo-<version>-<flavor>-debug-<commit>` artifact；文档修改不触发构建。产物打包步骤读取 APK 的实际版本，校验签名、对应 API 的 Xposed 入口及作用域，并附校验文件和构建信息。
 
 [Prepare release](../.github/workflows/release.yml) 手动构建私有签名的 release APK，通过版本、更新记录、签名和模块结构校验后创建 Release 草稿。具体 secrets、模块仓素材及申请状态见 [构建与模块仓发布](PUBLISHING.md)。
 
@@ -105,3 +109,9 @@ adb logcat -v time -s LSPosedFramework | rg 'ColorDuo|io\.github\.chorusfruit233
 用户配置见 [CONFIGURATION.md](CONFIGURATION.md)，本项目版本记录见 [CHANGELOG.md](CHANGELOG.md)。继承的 [HyperDuo 开发文档](DEVELOPMENT.md)、旧截图、发布说明和验证清单作为历史资料保留，其环境与结论需要与 ColorDuo 当前验证范围区分。
 
 共享代码保留 yixing233 与 HyperDuo 贡献者署名，ColorOS 17 适配完全由 Codex 维护，许可证为 [GPL-3.0-only](../LICENSE)。
+
+## 双 API 构建
+
+`main` 保存共享功能代码，`modern` 和 `legacy` 是 Gradle product flavors，不需要维护两条功能分支。modern 使用框架远程配置和热重载；legacy 使用只允许本应用及 SystemUI 读取的配置 Provider，广播仅作为重新读取的通知。两者读取相同私有配置，旧的凭据加密区镜像在解锁后迁移。
+
+legacy 的回调与配置传输参考 jahn2007 的 [legacy 分支](https://github.com/jahn2007/ColorDuo/tree/c34be3b25847797dfc28f968dd804ce307bf0e88)。框架差异应留在这两个 source set 中，不能复制渲染器和设置页。传统 API 编译依赖来源与校验值见 [.tools/maven/de/robv/android/xposed/api/82/SOURCE.md](../.tools/maven/de/robv/android/xposed/api/82/SOURCE.md)。
