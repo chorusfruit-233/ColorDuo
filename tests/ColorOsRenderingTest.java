@@ -233,19 +233,6 @@ public final class ColorOsRenderingTest {
             MarkerSample large=markerSample(layout,250,900,TrioZones.Zone.CENTRE.ordinal(),false);
             System.out.println("Wi-Fi 6E ink height: layout="+layout+" 50%="+small.height
                     +" 100%="+normal.height+" 250%="+large.height);
-            if(layout==2) try {
-                java.lang.reflect.Field cache=TrioRenderer.class.getDeclaredField("WIFI_BADGES");cache.setAccessible(true);
-                for(Object badge:(Object[])cache.get(null)) {
-                    if(badge==null)continue;
-                    StringBuilder details=new StringBuilder("Badge metrics: ");
-                    for(java.lang.reflect.Field f:badge.getClass().getDeclaredFields()) {
-                        f.setAccessible(true);Object value=f.get(badge);
-                        if(value instanceof RectF) {RectF r=(RectF)value;value=r.left+","+r.top+","+r.right+","+r.bottom;}
-                        details.append(f.getName()).append("=").append(value).append(" ");
-                    }
-                    System.out.println(details);
-                }
-            } catch(ReflectiveOperationException e) {throw new AssertionError(e);}
             check(normal.height>small.height+1 && large.height>normal.height+1,
                     "size control grows the badge until its available corner is full: layout="+layout
                             +" small="+small.height+" normal="+normal.height+" large="+large.height);
