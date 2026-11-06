@@ -1638,8 +1638,8 @@ public final class Prefs {
     public static final int MIN_WIFI_STANDARD_WEIGHT = 100;
     public static final int MAX_WIFI_STANDARD_WEIGHT = 1000;
     public static final int DEF_WIFI_STANDARD_OFFSET = 0;
-    public static final int MIN_WIFI_STANDARD_OFFSET = -20;
-    public static final int MAX_WIFI_STANDARD_OFFSET = 20;
+    public static final int MIN_WIFI_STANDARD_OFFSET = -40;
+    public static final int MAX_WIFI_STANDARD_OFFSET = 40;
     /**
      * 100%: a bead whose diameter is exactly the ring's thickness, which is what
      * {@code TrioGeometry.arcRowDotR} derives, so an install that never touches this key

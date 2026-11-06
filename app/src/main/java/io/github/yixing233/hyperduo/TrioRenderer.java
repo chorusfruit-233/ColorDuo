@@ -2064,11 +2064,13 @@ public final class TrioRenderer {
         }
         boolean fits() {return fits(mainInk)&&(suffixInk==null||fits(suffixInk));}
         private boolean fits(RectF ink) {
-            float edge=(offsetX!=0||offsetY!=0)&&Float.isFinite(radius)?right:Math.min(WIFI_BADGE_RIGHT,right);
-            if(ink.right>edge||ink.bottom>Math.min(33f,bottom))return false;
+            // The small-size baseline is fitted at its original anchor. User offsets
+            // move the result without changing its size or causing it to disappear.
+            float edge=Math.min(WIFI_BADGE_RIGHT,right);
+            if(ink.right-offsetX>edge||ink.bottom-offsetY>Math.min(33f,bottom))return false;
             if(!Float.isFinite(radius))return true;
-            float y=Math.max(Math.abs(ink.top+dy),Math.abs(ink.bottom+dy));
-            float x=Math.max(Math.abs(ink.left),Math.abs(ink.right));
+            float y=Math.max(Math.abs(ink.top-offsetY+dy),Math.abs(ink.bottom-offsetY+dy));
+            float x=Math.max(Math.abs(ink.left-offsetX),Math.abs(ink.right-offsetX));
             return x*x+y*y<=radius*radius;
         }
     }
@@ -2126,7 +2128,8 @@ public final class TrioRenderer {
 
     /** Reserve the actual enlarged marker in the host instead of clipping it or shrinking its font. */
     static TrioSizing.Bounds includeWifiStandardBounds(TrioAppearance a,TrioSizing.Bounds original) {
-        if(!a.showWifiStandard||a.wifiStandardScale<=100||!a.ownsWifi())return original;
+        if(!a.showWifiStandard||!a.ownsWifi()
+                ||a.wifiStandardScale<=100&&a.wifiStandardDx==0&&a.wifiStandardDy==0)return original;
         float[] box={original.x,original.y,original.x+original.width,original.y+original.height};
         if(a.ring) {
             int[] parts=a.ring(100,false,3,"5G",2,true).parts;

@@ -470,7 +470,7 @@ public final class ColorOsSettingsTest {
         check(restored.wifiStandardDx==9&&restored.wifiStandardDy==-10,"unrelated partial reload preserves both offsets");
         Bundle invalid=new Bundle();invalid.putInt(Prefs.KEY_WIFI_STANDARD_DX,1000);invalid.putInt(Prefs.KEY_WIFI_STANDARD_DY,-1000);
         restored=TrioSettings.fromBundle(invalid);
-        check(restored.wifiStandardDx==20&&restored.wifiStandardDy==-20,"offset transports share the editor bounds");
+        check(restored.wifiStandardDx==40&&restored.wifiStandardDy==-40,"offset transports share the editor bounds");
         restored=TrioSettings.fromBundle(new Bundle());
         check(restored.wifiStandardDx==0&&restored.wifiStandardDy==0,"old saved configurations keep the fixed default anchor");
     }
