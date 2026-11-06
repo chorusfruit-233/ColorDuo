@@ -1125,6 +1125,8 @@ public final class Prefs {
     public static final String KEY_SHOW_WIFI_STANDARD = "show_wifi_standard";
     public static final String KEY_WIFI_STANDARD_SCALE = "wifi_standard_scale";
     public static final String KEY_WIFI_STANDARD_WEIGHT = "wifi_standard_weight";
+    public static final String KEY_WIFI_STANDARD_DX = "wifi_standard_dx";
+    public static final String KEY_WIFI_STANDARD_DY = "wifi_standard_dy";
 
     /**
      * Drops the network type while Wi-Fi is connected, for issue 48.
@@ -1635,6 +1637,9 @@ public final class Prefs {
     public static final int DEF_WIFI_STANDARD_WEIGHT = 900;
     public static final int MIN_WIFI_STANDARD_WEIGHT = 100;
     public static final int MAX_WIFI_STANDARD_WEIGHT = 1000;
+    public static final int DEF_WIFI_STANDARD_OFFSET = 0;
+    public static final int MIN_WIFI_STANDARD_OFFSET = -20;
+    public static final int MAX_WIFI_STANDARD_OFFSET = 20;
     /**
      * 100%: a bead whose diameter is exactly the ring's thickness, which is what
      * {@code TrioGeometry.arcRowDotR} derives, so an install that never touches this key
