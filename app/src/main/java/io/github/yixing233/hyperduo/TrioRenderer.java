@@ -2135,6 +2135,8 @@ public final class TrioRenderer {
             wifiTypefaceWeight=a.wifiStandardWeight;
         }
         WIFI_STANDARD_TEXT.setTextSize(size);
+        // Preserve the ink height while using the spare vertical room in this narrow corner.
+        WIFI_STANDARD_TEXT.setTextScaleX(0.85f);
         float embolden=size*Math.max(0,a.wifiStandardWeight-700)/12000f;
         WIFI_STANDARD_TEXT.setStrokeWidth(embolden);
         WIFI_STANDARD_TEXT.setStyle(embolden>0?Paint.Style.FILL_AND_STROKE:Paint.Style.FILL);
@@ -2163,7 +2165,7 @@ public final class TrioRenderer {
                     x+WIFI_STANDARD_INK.right+pad,WIFI_STANDARD_INK.bottom+pad);
             if(standard.equals("6E")) {
                 // A top-aligned small E uses its ink bearing, not the main glyph's advance.
-                prepareWifiStandard(a,size*0.4f);
+                prepareWifiStandard(a,size*0.3f);
                 WIFI_STANDARD_TEXT.getTextBounds("E",0,1,WIFI_STANDARD_INK);
                 pad=WIFI_STANDARD_TEXT.getStrokeWidth()/2f+0.65f;
                 suffixX=mainInk.right+0.4f-WIFI_STANDARD_INK.left+pad;
@@ -2222,7 +2224,7 @@ public final class TrioRenderer {
         c.drawText(badge.main,TrioGeometry.W_CX+badge.x,
                 TrioGeometry.W_INK_CY+badge.baseline,WIFI_STANDARD_TEXT);
         if(badge.suffixInk!=null) {
-            prepareWifiStandard(a,badge.size*0.4f);
+            prepareWifiStandard(a,badge.size*0.3f);
             c.drawText("E",TrioGeometry.W_CX+badge.suffixX,
                     TrioGeometry.W_INK_CY+badge.baseline+badge.suffixOffset,WIFI_STANDARD_TEXT);
         }

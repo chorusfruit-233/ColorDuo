@@ -40,6 +40,7 @@ public class Paint {
     private float textSize = 12f;
     private String family = "SansSerif";
     private float typefaceWidth = 1f;
+    private float textScaleX = 1f;
     private int typefaceStyle = Font.PLAIN;
     private float letterSpacing = 0f;
     private boolean fakeBold = false;
@@ -71,6 +72,9 @@ public class Paint {
     public void setTextSize(float s) { textSize = s; }
     public float getTextSize() { return textSize; }
 
+    public void setTextScaleX(float scale) { textScaleX=scale; }
+    public float getTextScaleX() { return textScaleX; }
+
     public void setLetterSpacing(float s) { letterSpacing = s; }
     public float getLetterSpacing() { return letterSpacing; }
 
@@ -100,7 +104,7 @@ public class Paint {
         // platform's behaviour of emboldening whatever face is installed.
         final int style = fakeBold ? (typefaceStyle | Font.BOLD) : typefaceStyle;
         return new Font(family, style, 12).deriveFont(textSize).deriveFont(
-                java.util.Map.of(java.awt.font.TextAttribute.WIDTH,typefaceWidth));
+                java.util.Map.of(java.awt.font.TextAttribute.WIDTH,typefaceWidth*textScaleX));
     }
 
     public BasicStroke stroke() {
