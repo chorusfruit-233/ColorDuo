@@ -113,6 +113,9 @@ public class ChargeFlowTest {
     Frame reference=mask(chargedOnly,level);
     for(int track:new int[]{0,128,255})for(int direction=0;direction<2;direction++) {
      s.trackAlpha=track;s.chargeFlowDirection=direction;
+     // Each opacity must build a fresh mask; a cached zero-opacity mask hid this regression.
+     Field cache=ChargeFlowRenderer.class.getDeclaredField("CACHE");cache.setAccessible(true);
+     java.util.Arrays.fill((Object[])cache.get(null),null);
      Frame moving=flow(s,level,.5f);
      confined(moving,reference);
      check(ink(moving)>0,"charged fill remains visible regardless of track opacity");
