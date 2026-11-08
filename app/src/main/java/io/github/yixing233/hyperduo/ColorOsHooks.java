@@ -82,6 +82,7 @@ final class ColorOsHooks {
     private static Class<?> phoneBarClass;
     private static Class<?> statusIconsClass;
     private static Context context;
+    private static ColorOsDoze doze;
     private static String lastBatterySample;
     private static String lastBatterySource;
     private static Handler batteryWorker;
@@ -368,6 +369,7 @@ final class ColorOsHooks {
             throw new IllegalStateException("ColorOS battery/status bar classes unavailable");
         }
         TrioHooks.useLogger(module);
+        doze = new ColorOsDoze(loader);
         chargerLoader = loader;
         startChargerWorker(loader);
         installed = true;
@@ -375,6 +377,7 @@ final class ColorOsHooks {
         TrioConfig.addListener(ColorOsHooks::invalidateHosts);
 
         int count = 0;
+        count += doze.install(module, ColorOsHooks::invalidateHosts);
         // OEM/R8 builds can inline binder helpers. Filter framework writes by our exact child
         // instances too, so an inlined style update cannot leave a stale restoration snapshot.
         count += around(module, Refl.method(ImageView.class, "setImageDrawable", Drawable.class), ColorOsHooks::writeDrawable, ColorOsHooks::afterDrawable);
@@ -841,6 +844,7 @@ final class ColorOsHooks {
             context = app == null ? supplied : app;
             TrioConfig.installReceiver(context);
             TrioState.attachContext(context);
+            doze.watch(context, ColorOsHooks::invalidateHosts);
         }
         if (tickerStarted) return;
         tickerStarted = true;
@@ -1431,6 +1435,7 @@ final class ColorOsHooks {
         @Override public void draw(Canvas canvas) {
             if (!host.active || host.failed || getBounds().isEmpty()) return;
             host.traceDraw(canvas,getBounds());
+            boolean animate = doze != null && doze.allowsAnimation(host.image);
             // The shared renderer clears its canvas. A clipped layer confines that clear to the
             // battery drawable, keeping neighbouring SystemUI icons on the parent canvas intact.
             int save = canvas.save();
@@ -1440,8 +1445,8 @@ final class ColorOsHooks {
                 canvas.translate(getBounds().left, getBounds().top);
                 canvas.clipRect(0, 0, getBounds().width(), getBounds().height());
                 TrioRenderer.drawSizedState(canvas, getBounds().width(), getBounds().height(),
-                        host.state, TrioConfig.get(), host.ownedScale, true);
-                if (TrioRenderer.chargeFlowActive(TrioConfig.get(), host.state.level,
+                        host.state, TrioConfig.get(), host.ownedScale, true, animate);
+                if (animate && TrioRenderer.chargeFlowActive(TrioConfig.get(), host.state.level,
                         host.state.charging, host.state.chargingPaused)
                         && host.image.isShown() && host.meter.getWindowVisibility() == View.VISIBLE) {
                     host.image.postInvalidateOnAnimation();

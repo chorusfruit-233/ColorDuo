@@ -34,6 +34,8 @@ jobs:
         run: sh tests/coloros-settings.sh
       - name: Release layout references
         run: python3 scripts/ci/preview_layouts.py --output build/layout-preview.png --mirror-output build/mirror-preview.png --size-output build/size-preview.png
+      - name: AOD animation and wake transitions
+        run: python3 tests/coloros-doze.py
       - name: Battery units and power rendering
         run: python3 tests/coloros-power.py
       - name: Main, keyguard and shade hosts

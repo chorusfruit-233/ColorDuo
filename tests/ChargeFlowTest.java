@@ -123,7 +123,27 @@ public class ChargeFlowTest {
    }
   }
  }
+ static void sleepingSurfaceUsesStaticCharge() {
+  for(int shape=0;shape<3;shape++)for(int level:new int[]{1,66,100}) {
+   TrioSettings cfg=TrioSettings.defaults();cfg.chargeFlow=true;
+   cfg.trioStyle=shape==2?Prefs.STYLE_CAPSULE:Prefs.STYLE_RING;cfg.splitMode=shape==1?1:0;
+   TrioState state=new TrioState();state.level=level;state.charging=true;
+   state.chargingSpeed=ChargeSpeed.SUPER;state.wifiLevel=3;state.wifiPresent=true;
+   Frame asleep=new Frame(),reference=new Frame(),awake=new Frame();
+   TrioRenderer.drawSizedState(asleep,160,120,state,cfg,1f,false,false);
+   TrioSettings still=cfg.copy();still.chargeFlow=false;
+   TrioRenderer.drawSizedState(reference,160,120,state,still,1f,false);
+   check(java.util.Arrays.equals(asleep.image.getRGB(0,0,640,480,null,0,640),
+           reference.image.getRGB(0,0,640,480,null,0,640)),
+           "AOD keeps the normal static charging colours and layout without a frozen highlight");
+   check(asleep.bitmapCalls==0&&ink(asleep)>0,"sleeping surface does not evaluate the animated bitmap");
+   check(cfg.chargeFlow&&state.charging,"AOD suppression never changes the saved setting or charging state");
+   TrioRenderer.drawSizedState(awake,160,120,state,cfg,1f,false,true);
+   check(awake.bitmapCalls==1,"waking resumes the existing enabled charging animation");
+  }
+ }
  public static void main(String[] args)throws Exception {
+  sleepingSurfaceUsesStaticCharge();
   trackDoesNotEnterFlowMask();
   roundedCapCoverage();
   continuousCapsAndJoins();

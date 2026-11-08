@@ -347,11 +347,17 @@ public final class TrioRenderer {
     /** Draw a frame using the exact scale already measured for its SystemUI host. */
     static void drawSizedState(Canvas canvas,int w,int h,TrioState s,TrioSettings cfg,
                                float scale,boolean clear) {
+        drawSizedState(canvas,w,h,s,cfg,scale,clear,true);
+    }
+
+    /** AOD draws the normal charged outline without evaluating or scheduling a flow frame. */
+    static void drawSizedState(Canvas canvas,int w,int h,TrioState s,TrioSettings cfg,
+                               float scale,boolean clear,boolean allowChargeFlow) {
         if(w<=0 || h<=0 || s==null || cfg==null || scale<=0) return;
         drawInto(canvas,w,h,s.level,s.charging,s.quickCharging,s.powerSave,s.low,
                 s.wifiPresent?s.wifiLevel:-1,s.mobileLevel,s.slotLevels,s.mobileType,
                 s.foreground(),cfg,clear,s.wifiPresent,s.dataSlot,s.chargingPaused,
-                s.mobileService==DuoPolicy.Radio.REGISTERING,scale,s.chargingSpeed,s.wifiStandard);
+                s.mobileService==DuoPolicy.Radio.REGISTERING,scale,s.chargingSpeed,s.wifiStandard,allowChargeFlow);
     }
 
     /**
@@ -454,6 +460,18 @@ public final class TrioRenderer {
                                  int fg, TrioSettings cfg, boolean clearWhenDone,
                                  boolean wifiConnected, int dataSlot, boolean chargingPaused, boolean radioMuted,
                                  float physicalScale, ChargeSpeed chargingSpeed, String wifiStandard) {
+        drawInto(canvas,w,h,level,charging,quickCharging,powerSave,low,wifiLevel,mobileLevel,
+                slotLevels,mobileType,fg,cfg,clearWhenDone,wifiConnected,dataSlot,chargingPaused,
+                radioMuted,physicalScale,chargingSpeed,wifiStandard,true);
+    }
+
+    private static void drawInto(Canvas canvas, int w, int h, int level, boolean charging,
+                                 boolean quickCharging, boolean powerSave, boolean low,
+                                 int wifiLevel, int mobileLevel, int[] slotLevels, String mobileType,
+                                 int fg, TrioSettings cfg, boolean clearWhenDone,
+                                 boolean wifiConnected, int dataSlot, boolean chargingPaused, boolean radioMuted,
+                                 float physicalScale, ChargeSpeed chargingSpeed, String wifiStandard,
+                                 boolean allowChargeFlow) {
         if (w <= 0 || h <= 0 || cfg == null) {
             return;
         }
@@ -511,7 +529,7 @@ public final class TrioRenderer {
         final int role = chargingPaused ? DuoPolicy.pausedColor(fg)
                 : roleColor(appearance, level, charging, powerSave, low, fg, chargingSpeed);
         final int boltColor = boltColor(appearance, chargingSpeed, fg, chargingPaused);
-        final float flowPhase = chargeFlowActive(cfg, level, charging, chargingPaused)
+        final float flowPhase = allowChargeFlow && chargeFlowActive(cfg, level, charging, chargingPaused)
                 ? chargeFlowPhase(System.nanoTime(), appearance.chargeFlowSpeed) : -1f;
 
         // A slot with no reading counts as absent, so a single-SIM device - or a
