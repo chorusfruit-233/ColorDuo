@@ -100,6 +100,7 @@ public final class ColorOsRenderingTest {
         wifiStandardReadabilityControls();
         wifiStandardWeightFallback();
         wifiStandardManualOffsets();
+        wifiStandardFallbackBounds();
         fullCapsule();
         clockHandoff();
         readableDefaults();
@@ -341,6 +342,38 @@ public final class ColorOsRenderingTest {
             MarkerSample chosen=markerSample(layout,250,900,1,false,100,"6E",9,-10);
             check(Math.abs(chosen.height/chosen.unit-fixed.height/fixed.unit)<0.01,
                     "manual offsets do not change the requested maximum glyph size");
+        }
+    }
+
+    private static void wifiStandardFallbackBounds() {
+        for(int layout=0;layout<3;layout++)for(int blocker:new int[]{Prefs.PART_TYPE,Prefs.PART_VALUE}) {
+            for(int zone=0;zone<(layout==2?4:3);zone++) {
+                TrioSettings cfg=TrioSettings.defaults();
+                cfg.trioStyle=layout==2?Prefs.STYLE_CAPSULE:Prefs.STYLE_RING;
+                cfg.splitMode=layout==1?1:0;cfg.glyphScale=300;
+                cfg.showWifiStandard=true;cfg.typeHideOnWifi=false;
+                cfg.mobileTypeMode=Prefs.MOBILE_TYPE_IN_RING;
+                cfg.wifiStandardScale=250;cfg.wifiStandardDx=40;cfg.wifiStandardDy=40;
+                cfg.ringZones=new int[Prefs.ZONE_COUNT][];
+                for(int z=0;z<cfg.ringZones.length;z++)cfg.ringZones[z]=new int[0];
+                cfg.ringZones[zone]=new int[]{blocker,Prefs.PART_WIFI};
+                TrioState state=new TrioState();state.level=blocker==Prefs.PART_VALUE?-1:66;
+                state.wifiLevel=3;state.wifiPresent=true;state.wifiStandard="6E";
+                state.mobileType="";state.mobileService=DuoPolicy.Radio.AVAILABLE;
+                TrioSizing.Metrics m=TrioSizing.measure(TrioAppearance.of(cfg),4f,600,1000);
+                try(Frame frame=new Frame()) {
+                    TrioRenderer.drawSizedState(frame,m.width,m.height,state,cfg,m.scale,false);
+                    int at=frame.texts.indexOf("6");
+                    check(at>=0,"Wi-Fi fallback draws when a higher-priority reading is unavailable");
+                    for(int i=at;i<=at+1;i++) {
+                        java.awt.geom.Rectangle2D ink=frame.textBounds.get(i);
+                        float pad=frame.textStrokes.get(i)/2f;
+                        check(ink.getMinX()-pad>=-1&&ink.getMinY()-pad>=-1
+                                        &&ink.getMaxX()+pad<=m.width+1&&ink.getMaxY()+pad<=m.height+1,
+                                "fallback marker stays inside the host: layout="+layout+" zone="+zone+" blocker="+blocker);
+                    }
+                }
+            }
         }
     }
 

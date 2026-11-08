@@ -2143,7 +2143,10 @@ public final class TrioRenderer {
                 ||a.wifiStandardScale<=100&&a.wifiStandardDx==0&&a.wifiStandardDy==0)return original;
         float[] box={original.x,original.y,original.x+original.width,original.y+original.height};
         if(a.ring) {
-            int[] parts=a.ring(100,false,3,"5G",2,true).parts;
+            // Reveal fallback Wi-Fi slots too: a type/percentage ahead of Wi-Fi can
+            // disappear while the measured host remains mounted. Charging can only
+            // hide Wi-Fi, so an unplugged frame with missing readings covers both.
+            int[] parts=a.ring(-1,false,3,"",0,true).parts;
             for(int z=0;z<3;z++)if(parts[z]==Prefs.PART_WIFI) {
                 float extra=Math.max(0,a.arcStroke-TrioGeometry.W_STROKE),width=78f-a.ringStroke;
                 float height=z==0?TrioGeometry.DOT_BOX_TOP:z==1?TrioGeometry.DOT_BOX_CENTRE:TrioGeometry.DOT_BOX_BOTTOM;
@@ -2158,7 +2161,7 @@ public final class TrioRenderer {
             }
         } else if(a.capsule) {
             float stroke=a.ringStroke*TrioGeometry.CAP_STROKE_RATIO;
-            int[] parts=a.capsule(100,false,3,"5G",2,true).parts;
+            int[] parts=a.capsule(-1,false,3,"",0,true).parts;
             float scale=TrioGeometry.capWifiScale(stroke)*a.wifiScaleFactor();
             if(scale>0)for(int z=0;z<parts.length;z++)if(parts[z]==Prefs.PART_WIFI) {
                 boolean opening=z==0||z==2;
