@@ -224,6 +224,8 @@ public final class TrioSettings {
     public boolean showWifiStandard;
     public int wifiStandardScale;
     public int wifiStandardWeight;
+    public int wifiStandardDx;
+    public int wifiStandardDy;
     /** Drop the network type while Wi-Fi is up; see {@link Prefs#KEY_TYPE_HIDE_ON_WIFI}. */
     public boolean typeHideOnWifi;
     /** While charging the ring centre shows the percentage; see {@link Prefs#KEY_CHARGING_SHOWS_VALUE}. */
@@ -424,6 +426,8 @@ public final class TrioSettings {
         s.showWifiStandard = Prefs.DEF_SHOW_WIFI_STANDARD;
         s.wifiStandardScale = Prefs.DEF_WIFI_STANDARD_SCALE;
         s.wifiStandardWeight = Prefs.DEF_WIFI_STANDARD_WEIGHT;
+        s.wifiStandardDx = Prefs.DEF_WIFI_STANDARD_OFFSET;
+        s.wifiStandardDy = Prefs.DEF_WIFI_STANDARD_OFFSET;
         s.typeHideOnWifi = Prefs.DEF_TYPE_HIDE_ON_WIFI;
         s.chargingShowsValue = Prefs.DEF_CHARGING_SHOWS_VALUE;
         s.pausedGrayAll = Prefs.DEF_PAUSED_GRAY_ALL;
@@ -656,6 +660,8 @@ public final class TrioSettings {
         s.showWifiStandard = p.getBoolean(Prefs.KEY_SHOW_WIFI_STANDARD, Prefs.DEF_SHOW_WIFI_STANDARD);
         s.wifiStandardScale = Prefs.clamp(p.getInt(Prefs.KEY_WIFI_STANDARD_SCALE, Prefs.DEF_WIFI_STANDARD_SCALE), Prefs.MIN_WIFI_STANDARD_SCALE, Prefs.MAX_WIFI_STANDARD_SCALE);
         s.wifiStandardWeight = Prefs.clamp(p.getInt(Prefs.KEY_WIFI_STANDARD_WEIGHT, Prefs.DEF_WIFI_STANDARD_WEIGHT), Prefs.MIN_WIFI_STANDARD_WEIGHT, Prefs.MAX_WIFI_STANDARD_WEIGHT);
+        s.wifiStandardDx = Prefs.clamp(p.getInt(Prefs.KEY_WIFI_STANDARD_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        s.wifiStandardDy = Prefs.clamp(p.getInt(Prefs.KEY_WIFI_STANDARD_DY, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
         s.typeHideOnWifi = p.getBoolean(Prefs.KEY_TYPE_HIDE_ON_WIFI,
                 Prefs.DEF_TYPE_HIDE_ON_WIFI);
         s.pausedGrayAll = p.getBoolean(Prefs.KEY_PAUSED_GRAY_ALL, Prefs.DEF_PAUSED_GRAY_ALL);
@@ -1054,6 +1060,8 @@ public final class TrioSettings {
         s.showWifiStandard = showWifiStandard;
         s.wifiStandardScale = wifiStandardScale;
         s.wifiStandardWeight = wifiStandardWeight;
+        s.wifiStandardDx = wifiStandardDx;
+        s.wifiStandardDy = wifiStandardDy;
         s.typeHideOnWifi = typeHideOnWifi;
         s.chargingShowsValue = chargingShowsValue;
         s.pausedGrayAll = pausedGrayAll;
@@ -1192,6 +1200,8 @@ public final class TrioSettings {
             case Prefs.KEY_SHOW_WIFI_STANDARD: showWifiStandard = src.showWifiStandard; return true;
             case Prefs.KEY_WIFI_STANDARD_SCALE: wifiStandardScale = src.wifiStandardScale; return true;
             case Prefs.KEY_WIFI_STANDARD_WEIGHT: wifiStandardWeight = src.wifiStandardWeight; return true;
+            case Prefs.KEY_WIFI_STANDARD_DX: wifiStandardDx = src.wifiStandardDx; return true;
+            case Prefs.KEY_WIFI_STANDARD_DY: wifiStandardDy = src.wifiStandardDy; return true;
             case Prefs.KEY_TYPE_HIDE_ON_WIFI: typeHideOnWifi = src.typeHideOnWifi; return true;
             case Prefs.KEY_PAUSED_GRAY_ALL: pausedGrayAll = src.pausedGrayAll; return true;
             case Prefs.KEY_CHARGE_FLOW: chargeFlow = src.chargeFlow; return true;
@@ -1386,6 +1396,8 @@ public final class TrioSettings {
         s.showWifiStandard = bundle.getBoolean(Prefs.KEY_SHOW_WIFI_STANDARD, Prefs.DEF_SHOW_WIFI_STANDARD);
         s.wifiStandardScale = Prefs.clamp(bundle.getInt(Prefs.KEY_WIFI_STANDARD_SCALE, Prefs.DEF_WIFI_STANDARD_SCALE), Prefs.MIN_WIFI_STANDARD_SCALE, Prefs.MAX_WIFI_STANDARD_SCALE);
         s.wifiStandardWeight = Prefs.clamp(bundle.getInt(Prefs.KEY_WIFI_STANDARD_WEIGHT, Prefs.DEF_WIFI_STANDARD_WEIGHT), Prefs.MIN_WIFI_STANDARD_WEIGHT, Prefs.MAX_WIFI_STANDARD_WEIGHT);
+        s.wifiStandardDx = Prefs.clamp(bundle.getInt(Prefs.KEY_WIFI_STANDARD_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        s.wifiStandardDy = Prefs.clamp(bundle.getInt(Prefs.KEY_WIFI_STANDARD_DY, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
         s.typeHideOnWifi = bundle.getBoolean(Prefs.KEY_TYPE_HIDE_ON_WIFI,
                 Prefs.DEF_TYPE_HIDE_ON_WIFI);
         s.pausedGrayAll = bundle.getBoolean(Prefs.KEY_PAUSED_GRAY_ALL, Prefs.DEF_PAUSED_GRAY_ALL);
@@ -1546,6 +1558,8 @@ public final class TrioSettings {
         b.putBoolean(Prefs.KEY_SHOW_WIFI_STANDARD, showWifiStandard);
         b.putInt(Prefs.KEY_WIFI_STANDARD_SCALE, wifiStandardScale);
         b.putInt(Prefs.KEY_WIFI_STANDARD_WEIGHT, wifiStandardWeight);
+        b.putInt(Prefs.KEY_WIFI_STANDARD_DX, wifiStandardDx);
+        b.putInt(Prefs.KEY_WIFI_STANDARD_DY, wifiStandardDy);
         b.putBoolean(Prefs.KEY_TYPE_HIDE_ON_WIFI, typeHideOnWifi);
         b.putBoolean(Prefs.KEY_CHARGING_SHOWS_VALUE, chargingShowsValue);
         b.putBoolean(Prefs.KEY_PAUSED_GRAY_ALL, pausedGrayAll);
@@ -1713,6 +1727,8 @@ public final class TrioSettings {
                 && showWifiStandard == s.showWifiStandard
                 && wifiStandardScale == s.wifiStandardScale
                 && wifiStandardWeight == s.wifiStandardWeight
+                && wifiStandardDx == s.wifiStandardDx
+                && wifiStandardDy == s.wifiStandardDy
                 && typeHideOnWifi == s.typeHideOnWifi
                 && chargingShowsValue == s.chargingShowsValue
                 && pausedGrayAll == s.pausedGrayAll

@@ -248,6 +248,8 @@ public final class TrioAppearance {
     public final boolean showWifiStandard;
     public final int wifiStandardScale;
     public final int wifiStandardWeight;
+    public final int wifiStandardDx;
+    public final int wifiStandardDy;
     /**
      * The network type steps aside while Wi-Fi is up; see {@link Prefs#KEY_TYPE_HIDE_ON_WIFI}.
      *
@@ -402,6 +404,8 @@ public final class TrioAppearance {
         showWifiStandard = c.showWifiStandard;
         wifiStandardScale = Prefs.clamp(c.wifiStandardScale, Prefs.MIN_WIFI_STANDARD_SCALE, Prefs.MAX_WIFI_STANDARD_SCALE);
         wifiStandardWeight = Prefs.clamp(c.wifiStandardWeight, Prefs.MIN_WIFI_STANDARD_WEIGHT, Prefs.MAX_WIFI_STANDARD_WEIGHT);
+        wifiStandardDx = Prefs.clamp(c.wifiStandardDx, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        wifiStandardDy = Prefs.clamp(c.wifiStandardDy, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
         dotScale = c.dotScale;
         splitMode = Prefs.clamp(c.splitMode, Prefs.MIN_SPLIT_MODE, Prefs.MAX_SPLIT_MODE);
         splitLink = Prefs.clamp(c.splitLink, Prefs.MIN_SPLIT_LINK, Prefs.MAX_SPLIT_LINK);

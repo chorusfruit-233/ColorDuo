@@ -168,7 +168,7 @@ def main():
         scene.write_text(SCENES)
         sources = sorted((ROOT / "tests/shims").rglob("*.java"))
         sources += [SOURCE / f"{name}.java" for name in (
-            "Prefs", "TrioSettings", "TrioAppearance", "TrioGeometry", "TrioZones", "TrioSizing", "TrioRenderer", "DuoPolicy", "ChargeSpeed")]
+            "Prefs", "TrioSettings", "TrioAppearance", "TrioGeometry", "TrioZones", "TrioSizing", "TrioRenderer", "ChargeFlowRenderer", "DuoPolicy", "ChargeSpeed")]
         subprocess.run(["javac", "-encoding", "UTF-8", "-d", str(classes),
                         *map(str, sources), str(scene)], check=True)
         subprocess.run(["java", "-Djava.awt.headless=true", "-Xmx512m", "-cp", str(classes),

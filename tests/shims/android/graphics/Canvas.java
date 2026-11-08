@@ -28,6 +28,8 @@ public class Canvas {
     private final Graphics2D g;
     private final Deque<AffineTransform> stack = new ArrayDeque<>();
 
+    public Canvas(Bitmap bitmap) {this(bitmap.image.createGraphics());}
+
     public Canvas(Graphics2D g) {
         this.g = g;
         this.g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
@@ -124,6 +126,16 @@ public class Canvas {
         g.setColor(new java.awt.Color(paint.getColor(), true));
         g.setStroke(paint.stroke());
         g.draw(new java.awt.geom.Line2D.Float(x1, y1, x2, y2));
+    }
+
+    public void drawBitmap(Bitmap bitmap,Rect source,RectF destination,Paint paint) {
+        if(source!=null)throw new UnsupportedOperationException("preview expects the full bitmap");
+        Graphics2D target=(Graphics2D)g.create();
+        target.setRenderingHint(RenderingHints.KEY_INTERPOLATION,paint!=null&&paint.isFilterBitmap()
+                ?RenderingHints.VALUE_INTERPOLATION_BILINEAR:RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        AffineTransform t=new AffineTransform();t.translate(destination.left,destination.top);
+        t.scale(destination.width()/bitmap.image.getWidth(),destination.height()/bitmap.image.getHeight());
+        target.drawImage(bitmap.image,t,null);target.dispose();
     }
 
     public void drawText(String text, float x, float y, Paint paint) {

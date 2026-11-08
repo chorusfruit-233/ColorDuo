@@ -28,9 +28,11 @@ public final class ColorOsRenderingTest {
         final List<String> texts = new ArrayList<>();
         final List<java.awt.geom.Rectangle2D> textBounds = new ArrayList<>();
         final List<java.awt.geom.Rectangle2D> wifiArcBounds = new ArrayList<>();
+        final List<java.awt.Shape> wifiArcInk = new ArrayList<>();
         final List<java.awt.geom.Rectangle2D> wifiDotBounds = new ArrayList<>();
         final List<java.awt.geom.Rectangle2D> outlineBounds = new ArrayList<>();
         final List<Float> textStrokes = new ArrayList<>();
+        final List<Float> textUnitScales = new ArrayList<>();
         float textSize;
 
         Frame() { this(new BufferedImage(480, 400, BufferedImage.TYPE_INT_ARGB).createGraphics()); }
@@ -48,12 +50,13 @@ public final class ColorOsRenderingTest {
             arcColors.add(paint.getColor());
             java.awt.Shape shape = new java.awt.geom.Arc2D.Float(oval.left,oval.top,
                     oval.width(),oval.height(),-start,-sweep,java.awt.geom.Arc2D.OPEN);
-            java.awt.geom.Rectangle2D ink = graphics.getTransform().createTransformedShape(
-                    paint.stroke().createStrokedShape(shape)).getBounds2D();
+            java.awt.Shape strokeInk=graphics.getTransform().createTransformedShape(
+                    paint.stroke().createStrokedShape(shape));
+            java.awt.geom.Rectangle2D ink=strokeInk.getBounds2D();
             if (Math.abs(((oval.left+oval.right)/2f)-TrioGeometry.W_CX)<0.01f
                     && (Math.abs(((oval.top+oval.bottom)/2f)-TrioGeometry.W1_CY)<0.01f
                         || Math.abs(((oval.top+oval.bottom)/2f)-TrioGeometry.W2_CY)<0.01f)) {
-                wifiArcBounds.add(ink);
+                wifiArcBounds.add(ink);wifiArcInk.add(strokeInk);
             } else outlineBounds.add(ink);
             super.drawArc(oval, start, sweep, center, paint);
         }
@@ -70,6 +73,8 @@ public final class ColorOsRenderingTest {
         }
         @Override public void drawText(String text, float x, float y, Paint paint) {
             texts.add(text);
+            java.awt.geom.Point2D unit=graphics.getTransform().deltaTransform(new java.awt.geom.Point2D.Float(1,0),null);
+            textUnitScales.add((float)Math.hypot(unit.getX(),unit.getY()));
             textColors.add(paint.getColor());
             textSize = paint.getTextSize();
             java.awt.geom.Point2D pen = graphics.getTransform().deltaTransform(
@@ -93,6 +98,9 @@ public final class ColorOsRenderingTest {
         automaticWifiUsesTypePosition();
         wifiStandardBadges();
         wifiStandardReadabilityControls();
+        wifiStandardWeightFallback();
+        wifiStandardManualOffsets();
+        wifiStandardFallbackBounds();
         fullCapsule();
         clockHandoff();
         readableDefaults();
@@ -113,8 +121,8 @@ public final class ColorOsRenderingTest {
 
 
     private static final class MarkerSample {
-        final double height,coverage;
-        MarkerSample(double h,double c){height=h;coverage=c;}
+        final double height,coverage,x,top,unit,stroke,symbolHeight;
+        MarkerSample(double h,double c,double x,double top,double unit,double stroke,double symbolHeight){height=h;coverage=c;this.x=x;this.top=top;this.unit=unit;this.stroke=stroke;this.symbolHeight=symbolHeight;}
     }
 
     private static MarkerSample markerSample(int layout,int size,int weight,int zone,boolean paired) {
@@ -127,7 +135,13 @@ public final class ColorOsRenderingTest {
 
     private static MarkerSample markerSample(int layout,int size,int weight,int zone,boolean paired,int iconScale,
                                               String standard) {
+        return markerSample(layout,size,weight,zone,paired,iconScale,standard,0,0);
+    }
+
+    private static MarkerSample markerSample(int layout,int size,int weight,int zone,boolean paired,int iconScale,
+                                              String standard,int offsetX,int offsetY) {
         TrioSettings cfg=TrioSettings.defaults();cfg.glyphScale=300;cfg.wifiScale=iconScale;
+        cfg.wifiStandardDx=offsetX;cfg.wifiStandardDy=offsetY;
         cfg.trioStyle=layout==2?Prefs.STYLE_CAPSULE:Prefs.STYLE_RING;
         cfg.splitMode=layout==1?1:0;cfg.showWifiStandard=true;
         cfg.wifiStandardScale=size;cfg.wifiStandardWeight=weight;
@@ -150,16 +164,15 @@ public final class ColorOsRenderingTest {
                 check(r.getMinX()-pad>=-1 && r.getMinY()-pad>=-1
                         && r.getMaxX()+pad<=m.width+1 && r.getMaxY()+pad<=m.height+1,
                         "largest and heaviest standard markers fit the real measured host");
-                for(java.awt.geom.Rectangle2D arc:frame.wifiArcBounds)
-                    check(r.getMinY()-pad>arc.getMaxY(),
-                            "lower-right standard clears the Wi-Fi arcs");
-                for(java.awt.geom.Rectangle2D dot:frame.wifiDotBounds)
-                    check(r.getMinX()-pad>dot.getMaxX(),
-                            "standard stays to the right of the Wi-Fi dot");
-                if(layout==0&&zone==TrioZones.Zone.CENTRE.ordinal())
+                if(size<=100&&offsetX==0&&offsetY==0) {
+                    assertWifiArcClearance(frame,r,pad);
+                    for(java.awt.geom.Rectangle2D dot:frame.wifiDotBounds)
+                        check(r.getMinX()-pad>dot.getMaxX(),"default anchor clears the Wi-Fi dot");
+                }
+                if(size<=100&&layout==0&&zone==TrioZones.Zone.CENTRE.ordinal())
                     assertMarkerInsideRing(r,pad,cfg,m);
             }
-            if(paired) {
+            if(paired&&size<=100) {
                 double pairLeft=Double.POSITIVE_INFINITY;
                 for(float[] circle:frame.circles)pairLeft=Math.min(pairLeft,circle[0]-circle[2]);
                 check(frame.textBounds.get(suffix).getMaxX()<pairLeft,
@@ -169,7 +182,25 @@ public final class ColorOsRenderingTest {
             int left=Math.max(0,(int)Math.floor(main.getMinX())-2),right=Math.min(image.getWidth(),(int)Math.ceil(main.getMaxX())+2);
             int top=Math.max(0,(int)Math.floor(main.getMinY())-2),bottom=Math.min(image.getHeight(),(int)Math.ceil(main.getMaxY())+2);
             for(int y=top;y<bottom;y++)for(int x=left;x<right;x++)coverage+=(image.getRGB(x,y)>>>24)/255.0;
-            return new MarkerSample(main.getHeight(),coverage);
+            java.awt.geom.Rectangle2D symbol=null;
+            for(java.awt.geom.Rectangle2D ink:frame.wifiArcBounds) {
+                if(symbol==null)symbol=(java.awt.geom.Rectangle2D)ink.clone();else java.awt.geom.Rectangle2D.union(symbol,ink,symbol);
+            }
+            for(java.awt.geom.Rectangle2D ink:frame.wifiDotBounds) {
+                if(symbol==null)symbol=(java.awt.geom.Rectangle2D)ink.clone();else java.awt.geom.Rectangle2D.union(symbol,ink,symbol);
+            }
+            return new MarkerSample(main.getHeight(),coverage,main.getMinX(),main.getMinY(),frame.textUnitScales.get(at),
+                    frame.textStrokes.get(at),symbol.getHeight());
+        }
+    }
+
+    private static void assertWifiArcClearance(Frame frame,java.awt.geom.Rectangle2D r,float pad) {
+        java.awt.geom.Rectangle2D box=new java.awt.geom.Rectangle2D.Double(r.getMinX()-pad,r.getMinY()-pad,
+                r.getWidth()+2*pad,r.getHeight()+2*pad);
+        for(java.awt.Shape arc:frame.wifiArcInk) {
+            java.awt.geom.Area intersection=new java.awt.geom.Area(arc);
+            intersection.intersect(new java.awt.geom.Area(box));
+            check(intersection.isEmpty(),"shifted standard clears the actual stroked Wi-Fi arcs");
         }
     }
 
@@ -231,9 +262,23 @@ public final class ColorOsRenderingTest {
             MarkerSample small=markerSample(layout,50,900,TrioZones.Zone.CENTRE.ordinal(),false);
             MarkerSample normal=markerSample(layout,100,900,TrioZones.Zone.CENTRE.ordinal(),false);
             MarkerSample large=markerSample(layout,250,900,TrioZones.Zone.CENTRE.ordinal(),false);
-            check(normal.height>small.height+1 && large.height>=normal.height-1,
-                    "size control grows the badge until its available corner is full: layout="+layout
-                            +" small="+small.height+" normal="+normal.height+" large="+large.height);
+            System.out.println("Wi-Fi 6E ink height: layout="+layout+" 50%="+small.height
+                    +" 100%="+normal.height+" 250%="+large.height);
+            check(normal.height/normal.unit>small.height/small.unit+1 && large.height/large.unit>normal.height/normal.unit+5,
+                    "large sizes visibly grow beyond the old corner limit in every layout");
+            double ratio=(large.height+large.stroke)/large.symbolHeight;
+            check(ratio>0.88&&ratio<0.98,"maximum marker is almost the full Wi-Fi symbol height: "+layout+" ratio="+ratio);
+            MarkerSample previous=normal;
+            for(int setting:new int[]{125,150,200,250}) {
+                MarkerSample current=markerSample(layout,setting,900,1,false);
+                check(current.height/current.unit>previous.height/previous.unit+0.5,
+                        "each larger size range produces real growth instead of being squeezed back");previous=current;
+            }
+            MarkerSample roomNormal=markerSample(layout,100,900,1,false,100,"6E",-5,-5);
+            MarkerSample roomLarge=markerSample(layout,250,900,1,false,100,"6E",-5,-5);
+            check(roomLarge.height/roomLarge.unit>roomNormal.height/roomNormal.unit+1,
+                    "size above 100 percent grows when the chosen anchor has spare space");
+
             MarkerSample digitSmall=markerSample(layout,50,900,TrioZones.Zone.CENTRE.ordinal(),false,100,"6");
             MarkerSample digitNormal=markerSample(layout,100,900,TrioZones.Zone.CENTRE.ordinal(),false,100,"6");
             check(digitNormal.height>digitSmall.height*1.4,
@@ -248,6 +293,88 @@ public final class ColorOsRenderingTest {
             markerSample(2,size,weight,TrioZones.Zone.LEFT.ordinal(),true);
         wifiArcAnchorsStayFixed();
         wifiStandardStaysInsideGlyph();
+    }
+
+    private static void wifiStandardWeightFallback() {
+        // Model a ROM whose numeric-weight lookup always resolves to the same native face.
+        android.graphics.Typeface.ignoreNumericWeights=true;
+        try {
+            for(int layout=0;layout<3;layout++)for(String standard:new String[]{"6","6E"}) {
+                MarkerSample previous=null,light=null;
+                for(int weight:new int[]{100,400,700,1000}) {
+                    MarkerSample sample=markerSample(layout,50,weight,1,false,100,standard);
+                    if(light==null)light=sample;
+                    if(previous!=null) {
+                        check(Math.abs(sample.height-previous.height)<0.01,
+                                "weight adjustment preserves the fitted glyph height");
+                        check(sample.coverage>previous.coverage*1.08,
+                                "each weight step adds visibly more ink even with one native font face: "+layout+"/"+standard+"/"+weight);
+                    }
+                    previous=sample;
+                }
+                check(previous.coverage>light.coverage*1.5,
+                        "the full weight range remains visibly adjustable on a fixed-weight ROM");
+            }
+        } finally {android.graphics.Typeface.ignoreNumericWeights=false;}
+    }
+
+    private static void wifiStandardManualOffsets() {
+        for(int layout=0;layout<3;layout++)for(String standard:new String[]{"6","6E"}) {
+            MarkerSample original=markerSample(layout,50,900,1,false,100,standard,0,0);
+            for(int[] offset:new int[][]{{5,-3},{-5,3}}) {
+                MarkerSample moved=markerSample(layout,50,900,1,false,100,standard,offset[0],offset[1]);
+                check(Math.abs(moved.height-original.height)<0.01,"offset does not resize a marker that already fits");
+                check(Math.abs(moved.x-original.x-offset[0]*original.unit)<0.01
+                                &&Math.abs(moved.top-original.top-offset[1]*original.unit)<0.01,
+                        "both axes follow the exact signed manual displacement");
+            }
+            MarkerSample reset=markerSample(layout,50,900,1,false,100,standard,0,0);
+            check(Math.abs(reset.x-original.x)<0.01&&Math.abs(reset.top-original.top)<0.01,
+                    "resetting offsets restores the anchor and invalidates cached geometry");
+            TrioSettings cfg=TrioSettings.defaults();cfg.glyphScale=300;cfg.showWifiStandard=true;
+            cfg.trioStyle=layout==2?Prefs.STYLE_CAPSULE:Prefs.STYLE_RING;cfg.splitMode=layout==1?1:0;
+            cfg.typeHideOnWifi=true;cfg=TrioZones.withPiece(cfg,1,TrioZones.Part.TYPE);
+            java.util.List<java.awt.geom.Rectangle2D> arcs=fixedWifiArcs(cfg,standard);
+            cfg.wifiStandardDx=20;cfg.wifiStandardDy=-20;sameWifiArcs(arcs,fixedWifiArcs(cfg,standard));
+        }
+        for(int layout=0;layout<2;layout++) {
+            MarkerSample fixed=markerSample(layout,250,900,1,false,100,"6E",0,0);
+            MarkerSample chosen=markerSample(layout,250,900,1,false,100,"6E",9,-10);
+            check(Math.abs(chosen.height/chosen.unit-fixed.height/fixed.unit)<0.01,
+                    "manual offsets do not change the requested maximum glyph size");
+        }
+    }
+
+    private static void wifiStandardFallbackBounds() {
+        for(int layout=0;layout<3;layout++)for(int blocker:new int[]{Prefs.PART_TYPE,Prefs.PART_VALUE}) {
+            for(int zone=0;zone<(layout==2?4:3);zone++) {
+                TrioSettings cfg=TrioSettings.defaults();
+                cfg.trioStyle=layout==2?Prefs.STYLE_CAPSULE:Prefs.STYLE_RING;
+                cfg.splitMode=layout==1?1:0;cfg.glyphScale=300;
+                cfg.showWifiStandard=true;cfg.typeHideOnWifi=false;
+                cfg.mobileTypeMode=Prefs.MOBILE_TYPE_IN_RING;
+                cfg.wifiStandardScale=250;cfg.wifiStandardDx=40;cfg.wifiStandardDy=40;
+                cfg.ringZones=new int[Prefs.ZONE_COUNT][];
+                for(int z=0;z<cfg.ringZones.length;z++)cfg.ringZones[z]=new int[0];
+                cfg.ringZones[zone]=new int[]{blocker,Prefs.PART_WIFI};
+                TrioState state=new TrioState();state.level=blocker==Prefs.PART_VALUE?-1:66;
+                state.wifiLevel=3;state.wifiPresent=true;state.wifiStandard="6E";
+                state.mobileType="";state.mobileService=DuoPolicy.Radio.AVAILABLE;
+                TrioSizing.Metrics m=TrioSizing.measure(TrioAppearance.of(cfg),4f,600,1000);
+                try(Frame frame=new Frame()) {
+                    TrioRenderer.drawSizedState(frame,m.width,m.height,state,cfg,m.scale,false);
+                    int at=frame.texts.indexOf("6");
+                    check(at>=0,"Wi-Fi fallback draws when a higher-priority reading is unavailable");
+                    for(int i=at;i<=at+1;i++) {
+                        java.awt.geom.Rectangle2D ink=frame.textBounds.get(i);
+                        float pad=frame.textStrokes.get(i)/2f;
+                        check(ink.getMinX()-pad>=-1&&ink.getMinY()-pad>=-1
+                                        &&ink.getMaxX()+pad<=m.width+1&&ink.getMaxY()+pad<=m.height+1,
+                                "fallback marker stays inside the host: layout="+layout+" zone="+zone+" blocker="+blocker);
+                    }
+                }
+            }
+        }
     }
 
     private static void assertMarkerInsideRing(java.awt.geom.Rectangle2D ink,float pad,
@@ -275,9 +402,9 @@ public final class ColorOsRenderingTest {
             for(int size:new int[]{50,100,250})for(int weight:new int[]{100,900,1000}) {
                 cfg.wifiStandardScale=size;cfg.wifiStandardWeight=weight;
                 TrioSizing.Metrics after=TrioSizing.measure(TrioAppearance.of(cfg),4f,400,600);
-                check(before.width==after.width&&before.height==after.height
+                if(size<=100)check(before.width==after.width&&before.height==after.height
                                 &&Math.abs(before.scale-after.scale)<0.0001f,
-                        "standard controls never add an external column or resize the glyph");
+                        "small and default markers retain the existing host sizing");
                 TrioState state=new TrioState();state.wifiLevel=3;state.wifiPresent=true;
                 for(String standard:new String[]{"4","5","6","6E","7"}) {
                     state.wifiStandard=standard;
@@ -285,8 +412,16 @@ public final class ColorOsRenderingTest {
                         TrioRenderer.drawSizedState(f,after.width,after.height,state,cfg,after.scale,false);
                         int at=f.texts.indexOf(standard.equals("6E")?"6":standard);
                         check(at>=0,"all standards remain visible while fitted inside");
-                        if(layout==0)for(int i=at;i<=at+(standard.equals("6E")?1:0);i++)
-                            assertMarkerInsideRing(f.textBounds.get(i),f.textStrokes.get(i)/2f,cfg,after);
+                        for(int i=at;i<=at+(standard.equals("6E")?1:0);i++) {
+                            java.awt.geom.Rectangle2D ink=f.textBounds.get(i);float pad=f.textStrokes.get(i)/2f;
+                            check(ink.getMinX()-pad>=-1&&ink.getMinY()-pad>=-1
+                                    &&ink.getMaxX()+pad<=after.width+1&&ink.getMaxY()+pad<=after.height+1,
+                                    "every enlarged standard fits the measured host without clipping");
+                            if(size<=100) {
+                                assertWifiArcClearance(f,ink,pad);
+                                if(layout==0)assertMarkerInsideRing(ink,pad,cfg,after);
+                            }
+                        }
                     }
                 }
             }

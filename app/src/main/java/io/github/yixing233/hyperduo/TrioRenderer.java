@@ -33,13 +33,17 @@ public final class TrioRenderer {
     private static final Paint FILL = new Paint(Paint.ANTI_ALIAS_FLAG);
     private static final Paint TEXT = new Paint(Paint.ANTI_ALIAS_FLAG);
     private static final Paint WIFI_STANDARD_TEXT = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private static final Typeface WIFI_STANDARD_FACE = Typeface.create("sans-serif", Typeface.NORMAL);
+    private static final Typeface WIFI_STANDARD_FACE = Typeface.create("sans-serif-condensed", Typeface.NORMAL);
     private static final Rect WIFI_STANDARD_INK = new Rect();
-    private static int wifiTypefaceWeight;
-    private static final WifiBadge[] WIFI_BADGES = new WifiBadge[4];
+    private static final WifiBadge[] WIFI_BADGES = new WifiBadge[24];
     private static int nextWifiBadge;
     private static final float WIFI_BADGE_RIGHT = 34f;
-    static { WIFI_STANDARD_TEXT.setTextAlign(Paint.Align.LEFT); }
+    private static final float WIFI_STANDARD_MAX_OUTLINE = 0.08f;
+    static {
+        WIFI_STANDARD_TEXT.setTextAlign(Paint.Align.LEFT);
+        WIFI_STANDARD_TEXT.setTypeface(WIFI_STANDARD_FACE);
+        WIFI_STANDARD_TEXT.setStrokeJoin(Paint.Join.ROUND);
+    }
     private static final Path BOLT = buildBolt();
     private static final RectF BOLT_BOUNDS = new RectF();
     static { BOLT.computeBounds(BOLT_BOUNDS, true); }
@@ -563,7 +567,7 @@ public final class TrioRenderer {
         final float sweep = 360f-bottomOpening;
         final float gapStart = topOpening<=0f?0f:0.5f-topOpening/(2f*sweep);
         final float gapEnd = topOpening<=0f?0f:0.5f+topOpening/(2f*sweep);
-        drawBattery(c,level,role,fg,a,gapStart,gapEnd,sweep,270f-sweep/2f);
+        drawBattery(c,flowPhase>=0?0:level,role,fg,a,gapStart,gapEnd,sweep,270f-sweep/2f);
         drawChargeFlow(c,level,role,a,flowPhase,gapStart,gapEnd,sweep,270f-sweep/2f);
         for (int z = 0; z < 3; z++) {
             final int part = r.parts[z];
@@ -995,7 +999,7 @@ public final class TrioRenderer {
         STROKE.setColor(withAlpha(fg, a.trackAlpha));
         canvas.drawPath(CAPSULE, STROKE);
 
-        if (level > 0) {
+        if (level > 0 && flowPhase < 0) {
             STROKE.setColor(role);
             if (level >= 100) canvas.drawPath(CAPSULE, STROKE);
             else drawCapsuleFill(canvas, stroke, level / 100f, topReach, bottomReach);
@@ -1268,8 +1272,14 @@ public final class TrioRenderer {
             return 0f;
         }
         if (part == Prefs.PART_WIFI && a.showWifiStandard && !wifiStandard.isEmpty()) {
+            float markerReach=WIFI_BADGE_RIGHT;
+            if(a.wifiStandardScale>100) {
+                WifiBadge badge=wifiBadge(a,wifiStandard,Float.POSITIVE_INFINITY,0,WIFI_BADGE_RIGHT,Float.POSITIVE_INFINITY);
+                if(badge!=null)markerReach=Math.max(Math.max(Math.abs(badge.mainInk.left),badge.mainInk.right),
+                        badge.suffixInk==null?0:badge.suffixInk.right);
+            }
             float reach=Math.max(TrioGeometry.W_INK_W/2f
-                    +Math.max(0f,a.arcStroke-TrioGeometry.W_STROKE)/2f,WIFI_BADGE_RIGHT)
+                    +Math.max(0f,a.arcStroke-TrioGeometry.W_STROKE)/2f,markerReach)
                     *TrioGeometry.capWifiScale(stroke)*a.wifiScaleFactor();
             return Math.min(reach,TrioGeometry.capOpeningWidth()/2f)
                     + TrioGeometry.capDotClearance() + stroke*0.5f;
@@ -1864,86 +1874,21 @@ public final class TrioRenderer {
         return value*value*.96f;
     }
 
-    /** Draw only inside the charged run. Gaps carry neither ink nor progress distance. */
-    static void drawChargeFlow(Canvas c, int level, int role, TrioAppearance a, float phase,
-                               float p0, float p1, float sweep, float start) {
-        if (phase < 0 || level <= 0) return;
-        float charged = Math.min(1f,level/100f), width = Math.min(a.chargeFlowWidth/100f,charged);
-        float head = phase*(charged+width)-width;
-        TrioGeometry.SplitRing split = a.ring && a.splitMode == 1 ? new TrioGeometry.SplitRing(a) : null;
-        float[] lengths = a.capsule ? capsuleFlowLengths(p0,p1) : null;
-        STROKE.setStrokeWidth(a.capsule ? a.ringStroke*TrioGeometry.CAP_STROKE_RATIO : a.ringStroke);
-        STROKE.setStrokeCap(Paint.Cap.BUTT);
-        int samples=Math.max(24,Math.round(width*120));
-        try {
-            for(int n=0;n<samples;n++) {
-                // Keep gradients smooth when users widen the band, with fewer calls for narrow bands.
-                float overlap=width/(samples*3f);
-                float from=head+width*n/samples-overlap, to=head+width*(n+1)/samples+overlap;
-                if(a.chargeFlowDirection==1) { float next=charged-from;from=charged-to;to=next; }
-                from=Math.max(0,from);to=Math.min(charged,to);
-                if(to<=from)continue;
-                float glow=chargeFlowGlow((n+.5f)/samples,a.chargeFlowGradient);
-                int red=(role>>16)&255,green=(role>>8)&255,blue=role&255;
-                STROKE.setColor((role&0xff000000)|((red+Math.round((255-red)*glow))<<16)
-                        |((green+Math.round((255-green)*glow))<<8)|(blue+Math.round((255-blue)*glow)));
-                if(a.capsule) capsuleFlowRange(c,from,to,p0,p1,lengths);
-                else if(split!=null) splitFlowRange(c,split,from,to);
-                else batteryRing(c,from,to,p0,p1,sweep,start);
-            }
-        } finally { STROKE.setStrokeCap(Paint.Cap.ROUND); }
+    /** Paint the entire charged run from one continuous arc-length colour field. */
+    static void drawChargeFlow(Canvas c,int level,int role,TrioAppearance a,float phase,
+                               float p0,float p1,float sweep,float start) {
+        ChargeFlowRenderer.draw(c,level,role,a,phase,p0,p1,sweep,start);
     }
 
-    private static float splitFlowT(TrioGeometry.SplitRing shape,int side,float distance) {
-        int first=side*(TrioGeometry.SplitRing.STEPS+1);
-        if(distance<=shape.distance[first])return 0;
-        for(int n=1;n<=TrioGeometry.SplitRing.STEPS;n++) {
-            int i=first+n;
-            if(distance<shape.distance[i])return (n-1+(distance-shape.distance[i-1])
-                    /(shape.distance[i]-shape.distance[i-1]))/TrioGeometry.SplitRing.STEPS;
-        }
-        return 1;
-    }
-
-    private static void splitFlowRange(Canvas c,TrioGeometry.SplitRing shape,float from,float to) {
-        for(int side=0;side<2;side++) {
-            float first=splitFlowT(shape,side,from*shape.length),last=splitFlowT(shape,side,to*shape.length);
-            if(last<=first)continue;
-            TrioGeometry.EllipseSide e=shape.sides[side];
-            if(e.rx==0)c.drawLine(e.x(first),e.y(first),e.x(last),e.y(last),STROKE);
-            else {
-                ARC.set(e.cx-e.rx,e.cy-e.ry,e.cx+e.rx,e.cy+e.ry);
-                c.drawArc(ARC,(float)Math.toDegrees(e.start+e.sweep*first),
-                        (float)Math.toDegrees(e.sweep*(last-first)),false,STROKE);
-            }
-        }
-    }
-
-    private static float[] capsuleFlowLengths(float topReach,float bottomReach) {
-        float left=TrioGeometry.CAP_LEFT,right=TrioGeometry.capRight(),r=TrioGeometry.CAP_RADIUS,cx=(left+right)/2;
-        return new float[]{Math.abs(cx-bottomReach-left-r),(float)Math.PI*r,Math.abs(cx-topReach-left-r),
-                Math.abs(right-r-cx-topReach),(float)Math.PI*r,Math.abs(right-r-cx-bottomReach)};
-    }
-
-    private static void capsuleFlowRange(Canvas c,float from,float to,float topReach,float bottomReach,float[] lengths) {
-        float left=TrioGeometry.CAP_LEFT,right=TrioGeometry.capRight(),r=TrioGeometry.CAP_RADIUS;
-        float top=TrioGeometry.CAP_TOP,bottom=TrioGeometry.CAP_BOTTOM,cx=(left+right)/2,cy=(top+bottom)/2;
-        float total=0;for(float v:lengths)total+=v;float offset=0;
-        for(int piece=0;piece<6;piece++) {
-            float length=lengths[piece];
-            float first=Math.max(0,from*total-offset),last=Math.min(length,to*total-offset);offset+=length;
-            if(last<=first || length<=0)continue;
-            float f=first/length,t=last/length;
-            if(piece==1 || piece==4) {
-                float x=piece==1?left+r:right-r,angle=piece==1?90:270;
-                ARC.set(x-r,cy-r,x+r,cy+r);c.drawArc(ARC,angle+180*f,180*(t-f),false,STROKE);
-            } else {
-                float x1=piece==0?cx-bottomReach:piece==2?left+r:piece==3?cx+topReach:right-r;
-                float x2=piece==0?left+r:piece==2?cx-topReach:piece==3?right-r:cx+bottomReach;
-                float y=piece==0 || piece==5?bottom:top;
-                c.drawLine(x1+(x2-x1)*f,y,x1+(x2-x1)*t,y,STROKE);
-            }
-        }
+    /** The exact static charged silhouette is also the animated fill's coverage mask. */
+    static void drawChargeFlowMask(Canvas c,int level,TrioAppearance a,float p0,float p1,float sweep,float start) {
+        STROKE.setStyle(Paint.Style.STROKE);STROKE.setStrokeCap(Paint.Cap.ROUND);
+        if(a.capsule) {
+            STROKE.setStrokeWidth(a.ringStroke*TrioGeometry.CAP_STROKE_RATIO);STROKE.setColor(Color.WHITE);
+            if(level>=100) {
+                buildCapsuleOutline(CAPSULE,p0,p1);c.drawPath(CAPSULE,STROKE);
+            } else drawCapsuleFill(c,STROKE.getStrokeWidth(),level/100f,p0,p1);
+        } else drawBattery(c,level,Color.WHITE,0,a,p0,p1,sweep,start,false);
     }
 
     // ----------------------------------------------------------------- battery
@@ -1951,19 +1896,30 @@ public final class TrioRenderer {
     private static void drawBattery(Canvas c, int level, int role, int fg,
                                     TrioAppearance a, float gapStart, float gapEnd,
                                     float sweep, float start) {
+        drawBattery(c,level,role,fg,a,gapStart,gapEnd,sweep,start,true);
+    }
+
+    /** Masks omit the track: withAlpha replaces even a transparent input's alpha. */
+    private static void drawBattery(Canvas c, int level, int role, int fg,
+                                    TrioAppearance a, float gapStart, float gapEnd,
+                                    float sweep, float start, boolean includeTrack) {
         STROKE.setStrokeWidth(a.ringStroke);
         if (a.ring && a.splitMode == 1) {
             STROKE.setStrokeCap(a.splitCap == 1 ? Paint.Cap.ROUND : Paint.Cap.BUTT);
             TrioGeometry.SplitRing shape = new TrioGeometry.SplitRing(a);
-            STROKE.setColor(withAlpha(fg, a.trackAlpha));
-            splitBattery(c, shape, 1f);
+            if (includeTrack) {
+                STROKE.setColor(withAlpha(fg, a.trackAlpha));
+                splitBattery(c, shape, 1f);
+            }
             if (level > 0) { STROKE.setColor(role); splitBattery(c, shape, Math.min(1,level/100f)); }
             STROKE.setStrokeCap(Paint.Cap.ROUND);
             return;
         }
 
-        STROKE.setColor(withAlpha(fg, a.trackAlpha));
-        batteryRing(c, 0f, 1f, gapStart, gapEnd, sweep, start);
+        if (includeTrack) {
+            STROKE.setColor(withAlpha(fg, a.trackAlpha));
+            batteryRing(c, 0f, 1f, gapStart, gapEnd, sweep, start);
+        }
 
         if (level > 0) {
             STROKE.setColor(role);
@@ -2056,13 +2012,14 @@ public final class TrioRenderer {
     // -------------------------------------------------------------------- wifi
 
 
-    private static void prepareWifiStandard(TrioAppearance a,float size) {
-        if(wifiTypefaceWeight!=a.wifiStandardWeight) {
-            WIFI_STANDARD_TEXT.setTypeface(Typeface.create(WIFI_STANDARD_FACE,a.wifiStandardWeight,false));
-            wifiTypefaceWeight=a.wifiStandardWeight;
-        }
+    private static void prepareWifiStandard(TrioAppearance a,float size,float widthScale) {
         WIFI_STANDARD_TEXT.setTextSize(size);
-        float embolden=size*Math.max(0,a.wifiStandardWeight-700)/12000f;
+        // Preserve the ink height while using the spare vertical room in this narrow corner.
+        WIFI_STANDARD_TEXT.setTextScaleX(widthScale);
+        // ROM font aliases can return the same face for every numeric weight. Keep one
+        // base outline and apply a visible, continuous stroke over the entire slider range.
+        float embolden=size*WIFI_STANDARD_MAX_OUTLINE*(a.wifiStandardWeight-Prefs.MIN_WIFI_STANDARD_WEIGHT)
+                /(Prefs.MAX_WIFI_STANDARD_WEIGHT-Prefs.MIN_WIFI_STANDARD_WEIGHT);
         WIFI_STANDARD_TEXT.setStrokeWidth(embolden);
         WIFI_STANDARD_TEXT.setStyle(embolden>0?Paint.Style.FILL_AND_STROKE:Paint.Style.FILL);
     }
@@ -2070,68 +2027,178 @@ public final class TrioRenderer {
     /** Measured badge only. None of these metrics participate in the Wi-Fi arc transform. */
     private static final class WifiBadge {
         final String standard,main;
-        final int scale,weight;
-        final float stroke,radius,dy,right,bottom,size,x,baseline,suffixX;
+        final int scale,weight,offsetX,offsetY;
+        final float stroke,radius,dy,right,bottom,size,x,baseline,suffixX,suffixOffset,widthScale;
         final RectF mainInk,suffixInk;
 
-        WifiBadge(TrioAppearance a,String standard,float radius,float dy,float right,float bottom,float size) {
+        WifiBadge(TrioAppearance a,String standard,float radius,float dy,float right,float bottom,float size,float widthScale) {
             this.standard=standard;main=standard.equals("6E")?"6":standard;
             scale=a.wifiStandardScale;weight=a.wifiStandardWeight;stroke=a.arcStroke;
-            this.radius=radius;this.dy=dy;this.right=right;this.bottom=bottom;this.size=size;
-            prepareWifiStandard(a,size);
+            offsetX=a.wifiStandardDx;offsetY=a.wifiStandardDy;
+            this.radius=radius;this.dy=dy;this.right=right;this.bottom=bottom;this.size=size;this.widthScale=widthScale;
+            prepareWifiStandard(a,size,widthScale);
+            // Measure the same native outline at every weight, and reserve the heaviest
+            // stroke once. Changing weight must not squeeze or resize the glyph again.
+            WIFI_STANDARD_TEXT.setStyle(Paint.Style.FILL);WIFI_STANDARD_TEXT.setStrokeWidth(0);
             WIFI_STANDARD_TEXT.getTextBounds(main,0,main.length(),WIFI_STANDARD_INK);
-            float pad=WIFI_STANDARD_TEXT.getStrokeWidth()/2f+0.65f;
+            float pad=size*WIFI_STANDARD_MAX_OUTLINE/2f+0.65f;
             // Main ink starts to the right of the Wi-Fi dot. All text clears the middle arc.
-            x=8.5f-WIFI_STANDARD_INK.left+pad;
+            // Reclaim unused bearing/spacing, retaining one unit beyond the dot's true bounds.
+            RectF dotInk=new RectF();WIFI_DOT.computeBounds(dotInk,true);
+            float left=Math.min(8.5f,dotInk.right-TrioGeometry.W_CX+1f);
+            x=left-WIFI_STANDARD_INK.left+pad+offsetX;
             mainInk=new RectF(x+WIFI_STANDARD_INK.left-pad,WIFI_STANDARD_INK.top-pad,
                     x+WIFI_STANDARD_INK.right+pad,WIFI_STANDARD_INK.bottom+pad);
-            suffixX=x+WIFI_STANDARD_TEXT.measureText(main)+size*0.035f;
             if(standard.equals("6E")) {
-                prepareWifiStandard(a,size*0.5f);
+                // A top-aligned small E uses its ink bearing, not the main glyph's advance.
+                prepareWifiStandard(a,size*0.3f,widthScale);
+                WIFI_STANDARD_TEXT.setStyle(Paint.Style.FILL);WIFI_STANDARD_TEXT.setStrokeWidth(0);
                 WIFI_STANDARD_TEXT.getTextBounds("E",0,1,WIFI_STANDARD_INK);
-                pad=WIFI_STANDARD_TEXT.getStrokeWidth()/2f+0.65f;
+                pad=size*0.3f*WIFI_STANDARD_MAX_OUTLINE/2f+0.65f;
+                suffixX=mainInk.right+0.4f-WIFI_STANDARD_INK.left+pad;
+                suffixOffset=mainInk.top-(WIFI_STANDARD_INK.top-pad);
                 suffixInk=new RectF(suffixX+WIFI_STANDARD_INK.left-pad,
-                        WIFI_STANDARD_INK.top-size*0.35f-pad,
+                        WIFI_STANDARD_INK.top+suffixOffset-pad,
                         suffixX+WIFI_STANDARD_INK.right+pad,
-                        WIFI_STANDARD_INK.bottom-size*0.35f+pad);
-            } else suffixInk=null;
+                        WIFI_STANDARD_INK.bottom+suffixOffset+pad);
+            } else {suffixX=0;suffixOffset=0;suffixInk=null;}
             float top=Math.min(mainInk.top,suffixInk==null?mainInk.top:suffixInk.top);
-            baseline=65.25f+stroke/2f+1.5f-TrioGeometry.W_INK_CY-top;
+            baseline=65.25f+stroke/2f+1.5f-TrioGeometry.W_INK_CY-top+offsetY;
             mainInk.top+=baseline;mainInk.bottom+=baseline;
             if(suffixInk!=null){suffixInk.top+=baseline;suffixInk.bottom+=baseline;}
         }
 
         boolean matches(TrioAppearance a,String text,float r,float y,float w,float h) {
             return standard.equals(text)&&scale==a.wifiStandardScale&&weight==a.wifiStandardWeight
+                    &&offsetX==a.wifiStandardDx&&offsetY==a.wifiStandardDy
                     &&stroke==a.arcStroke&&radius==r&&dy==y&&right==w&&bottom==h;
         }
         boolean fits() {return fits(mainInk)&&(suffixInk==null||fits(suffixInk));}
         private boolean fits(RectF ink) {
-            if(ink.right>Math.min(WIFI_BADGE_RIGHT,right)||ink.bottom>Math.min(33f,bottom))return false;
+            // The small-size baseline is fitted at its original anchor. User offsets
+            // move the result without changing its size or causing it to disappear.
+            float edge=Math.min(WIFI_BADGE_RIGHT,right);
+            if(ink.right-offsetX>edge||ink.bottom-offsetY>Math.min(33f,bottom))return false;
             if(!Float.isFinite(radius))return true;
-            float y=Math.max(Math.abs(ink.top+dy),Math.abs(ink.bottom+dy));
-            return ink.right*ink.right+y*y<=radius*radius;
+            float y=Math.max(Math.abs(ink.top-offsetY+dy),Math.abs(ink.bottom-offsetY+dy));
+            float x=Math.max(Math.abs(ink.left-offsetX),Math.abs(ink.right-offsetX));
+            return x*x+y*y<=radius*radius;
         }
     }
 
     private static WifiBadge wifiBadge(TrioAppearance a,String text,float radius,float dy,float right,float bottom) {
         for(WifiBadge cached:WIFI_BADGES)
             if(cached!=null&&cached.matches(a,text,radius,dy,right,bottom))return cached;
-        float requested=24f*a.wifiStandardScale/100f;
-        WifiBadge badge=new WifiBadge(a,text,radius,dy,right,bottom,requested);
-        if(!badge.fits()) {
-            float low=0.25f,high=requested;
-            badge=new WifiBadge(a,text,radius,dy,right,bottom,low);
-            if(!badge.fits())return null;
-            for(int i=0;i<12;i++) {
+        WifiBadge badge=fittedWifiBadge(a,text,radius,dy,right,bottom,24f*Math.min(100,a.wifiStandardScale)/100f);
+        if(a.wifiStandardScale>100) {
+            float base=badge==null?wifiStandardInkHeight(a,text,24f):badge.mainInk.height()-1.3f;
+            float fraction=(a.wifiStandardScale-100f)/(Prefs.MAX_WIFI_STANDARD_SCALE-100f);
+            float target=base+(wifiSymbolInkHeight(a)*0.95f-base)*fraction;
+            float low=0.25f,high=Math.max(24f,target*4f);
+            for(int i=0;i<14;i++) {
                 float size=(low+high)/2f;
-                WifiBadge candidate=new WifiBadge(a,text,radius,dy,right,bottom,size);
-                if(candidate.fits()){low=size;badge=candidate;}else high=size;
+                if(wifiStandardInkHeight(a,text,size)<=target)low=size;else high=size;
             }
+            // Large sizes are deliberate. The user owns their position; do not squeeze
+            // them back into the old corner or the battery ring's interior.
+            badge=new WifiBadge(a,text,radius,dy,right,bottom,low,0.85f);
         }
         WIFI_BADGES[nextWifiBadge]=badge;
         nextWifiBadge=(nextWifiBadge+1)%WIFI_BADGES.length;
         return badge;
+    }
+
+    private static float wifiSymbolInkHeight(TrioAppearance a) {
+        float bottom=Math.max(TrioGeometry.W_BOTTOM,65.25f+a.arcStroke/2f);
+        return bottom-(TrioGeometry.W_TOP-a.arcStroke/2f);
+    }
+
+    private static float wifiStandardInkHeight(TrioAppearance a,String text,float size) {
+        String main=text.equals("6E")?"6":text;
+        prepareWifiStandard(a,size,0.85f);
+        WIFI_STANDARD_TEXT.setStyle(Paint.Style.FILL);WIFI_STANDARD_TEXT.setStrokeWidth(0);
+        WIFI_STANDARD_TEXT.getTextBounds(main,0,main.length(),WIFI_STANDARD_INK);
+        return WIFI_STANDARD_INK.bottom-WIFI_STANDARD_INK.top+size*WIFI_STANDARD_MAX_OUTLINE;
+    }
+
+    /** Keep the previous small/default sizes, then grow above 100% toward the full Wi-Fi height. */
+    private static WifiBadge fittedWifiBadge(TrioAppearance a,String text,float radius,float dy,
+                                              float right,float bottom,float requested) {
+        WifiBadge badge=new WifiBadge(a,text,radius,dy,right,bottom,requested,0.85f);
+        if(badge.fits())return badge;
+        float low=0.25f,high=requested;
+        badge=new WifiBadge(a,text,radius,dy,right,bottom,low,0.85f);
+        if(!badge.fits())return null;
+        for(int i=0;i<12;i++) {
+            float size=(low+high)/2f;
+            WifiBadge candidate=new WifiBadge(a,text,radius,dy,right,bottom,size,0.85f);
+            if(candidate.fits()){low=size;badge=candidate;}else high=size;
+        }
+        return badge;
+    }
+
+    /** Reserve the actual enlarged marker in the host instead of clipping it or shrinking its font. */
+    static TrioSizing.Bounds includeWifiStandardBounds(TrioAppearance a,TrioSizing.Bounds original) {
+        if(!a.showWifiStandard||!a.ownsWifi()
+                ||a.wifiStandardScale<=100&&a.wifiStandardDx==0&&a.wifiStandardDy==0)return original;
+        float[] box={original.x,original.y,original.x+original.width,original.y+original.height};
+        if(a.ring) {
+            // Reveal fallback Wi-Fi slots too: a type/percentage ahead of Wi-Fi can
+            // disappear while the measured host remains mounted. Charging can only
+            // hide Wi-Fi, so an unplugged frame with missing readings covers both.
+            int[] parts=a.ring(-1,false,3,"",0,true).parts;
+            for(int z=0;z<3;z++)if(parts[z]==Prefs.PART_WIFI) {
+                float extra=Math.max(0,a.arcStroke-TrioGeometry.W_STROKE),width=78f-a.ringStroke;
+                float height=z==0?TrioGeometry.DOT_BOX_TOP:z==1?TrioGeometry.DOT_BOX_CENTRE:TrioGeometry.DOT_BOX_BOTTOM;
+                float room=a.splitMode==1&&z!=1?Math.min(width,TrioGeometry.splitOpeningWidth(a,z)):width;
+                float scale=Math.min(room/(TrioGeometry.W_INK_W+extra),height/(TrioGeometry.W_INK_H+extra))*a.wifiScaleFactor();
+                if(scale<=0)continue;
+                float cy=a.splitMode==1?alignedY(a,z,(TrioGeometry.W_INK_H+extra)*scale/2):TrioGeometry.ZONE_CY[z];
+                float radius=z==1?(TrioGeometry.B_R-a.ringStroke/2f-1.5f)/scale:Float.POSITIVE_INFINITY;
+                includeWifiBadge(box,a,TrioGeometry.B_CX,cy,scale,radius,(cy-TrioGeometry.B_CY)/scale,
+                        (TrioGeometry.INK_X+TrioGeometry.INK_W-TrioGeometry.B_CX-1f)/scale,
+                        (TrioGeometry.INK_Y+TrioGeometry.INK_H-cy-1f)/scale);
+            }
+        } else if(a.capsule) {
+            float stroke=a.ringStroke*TrioGeometry.CAP_STROKE_RATIO;
+            int[] parts=a.capsule(-1,false,3,"",0,true).parts;
+            float scale=TrioGeometry.capWifiScale(stroke)*a.wifiScaleFactor();
+            if(scale>0)for(int z=0;z<parts.length;z++)if(parts[z]==Prefs.PART_WIFI) {
+                boolean opening=z==0||z==2;
+                float cx=opening?TrioGeometry.CAP_INK_X+TrioGeometry.capInkW()/2:
+                        z==3?TrioGeometry.capLeftIconCx(stroke,Prefs.PART_WIFI)+a.capsuleLeftDx:
+                        TrioGeometry.capRightIconCx(stroke,Prefs.PART_WIFI)+a.capsuleRightDx;
+                float cy=opening?TrioGeometry.capOpeningCy(z==0,stroke):
+                        TrioGeometry.capInteriorCy(stroke)+(z==3?a.capsuleLeftDy:a.capsuleRightDy);
+                includeWifiBadge(box,a,cx,cy,scale,Float.POSITIVE_INFINITY,0,
+                        opening?WIFI_BADGE_RIGHT:(TrioGeometry.capReadingEdge(stroke,false)-cx-1f)/scale,
+                        ((opening?TrioGeometry.CAP_INK_BOTTOM:TrioGeometry.capInteriorBottom(stroke))-cy-1f)/scale);
+            }
+        } else if(a.rect(100,false,3,"5G",2).wifi) {
+            float scale=TrioGeometry.RECT_WIFI_SCALE*a.wifiScaleFactor();
+            float cx=TrioGeometry.rectWifiOffsetX()+TrioGeometry.W_CX*scale;
+            float cy=TrioGeometry.rectWifiOffsetY(a.arcStroke)+TrioGeometry.W_INK_CY*scale;
+            includeWifiBadge(box,a,cx,cy,scale,Float.POSITIVE_INFINITY,0,
+                    (TrioGeometry.RECT_INK_X+TrioGeometry.RECT_INK_W-cx-1f)/scale,
+                    (TrioGeometry.RECT_INK_Y+TrioGeometry.RECT_INK_H-cy-1f)/scale);
+        }
+        return new TrioSizing.Bounds(box[0],box[1],box[2]-box[0],box[3]-box[1]);
+    }
+
+    private static void includeWifiBadge(float[] box,TrioAppearance a,float cx,float cy,float scale,
+                                         float radius,float dy,float right,float bottom) {
+        // Reserve every supported label so a Wi-Fi protocol transition never changes host size.
+        for(String standard:new String[]{"4","5","6","6E","7"}) {
+            WifiBadge badge=wifiBadge(a,standard,radius,dy,right,bottom);
+            if(badge==null)continue;
+            for(int i=0;i<(badge.suffixInk==null?1:2);i++) {
+                RectF ink=i==0?badge.mainInk:badge.suffixInk;
+                box[0]=Math.min(box[0],cx+ink.left*scale-1);
+                box[1]=Math.min(box[1],cy+ink.top*scale-1);
+                box[2]=Math.max(box[2],cx+ink.right*scale+1);
+                box[3]=Math.max(box[3],cy+ink.bottom*scale+1);
+            }
+        }
     }
 
     private static void drawWifiArcs(Canvas c,int level,int fg,TrioAppearance a,String standard,
@@ -2140,13 +2207,13 @@ public final class TrioRenderer {
         if(standard==null||standard.isEmpty()||level<0)return;
         WifiBadge badge=wifiBadge(a,standard,radius,dy,right,bottom);
         if(badge==null)return;
-        prepareWifiStandard(a,badge.size);WIFI_STANDARD_TEXT.setColor(fg);
+        prepareWifiStandard(a,badge.size,badge.widthScale);WIFI_STANDARD_TEXT.setColor(fg);
         c.drawText(badge.main,TrioGeometry.W_CX+badge.x,
                 TrioGeometry.W_INK_CY+badge.baseline,WIFI_STANDARD_TEXT);
         if(badge.suffixInk!=null) {
-            prepareWifiStandard(a,badge.size*0.5f);
+            prepareWifiStandard(a,badge.size*0.3f,badge.widthScale);
             c.drawText("E",TrioGeometry.W_CX+badge.suffixX,
-                    TrioGeometry.W_INK_CY+badge.baseline-badge.size*0.35f,WIFI_STANDARD_TEXT);
+                    TrioGeometry.W_INK_CY+badge.baseline+badge.suffixOffset,WIFI_STANDARD_TEXT);
         }
     }
 
