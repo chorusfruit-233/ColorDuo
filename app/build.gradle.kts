@@ -20,8 +20,8 @@ android {
         applicationId = "io.github.chorusfruit_233.colorduo"
         minSdk = 29
         targetSdk = 36
-        versionCode = tagVersionCode ?: 10061
-        versionName = tagVersionName ?: "0.4.1-test1"
+        versionCode = tagVersionCode ?: 10062
+        versionName = tagVersionName ?: "0.4.1"
     }
 
     flavorDimensions += "xposedApi"
