@@ -1888,7 +1888,7 @@ public final class TrioRenderer {
             if(level>=100) {
                 buildCapsuleOutline(CAPSULE,p0,p1);c.drawPath(CAPSULE,STROKE);
             } else drawCapsuleFill(c,STROKE.getStrokeWidth(),level/100f,p0,p1);
-        } else drawBattery(c,level,Color.WHITE,0,a,p0,p1,sweep,start);
+        } else drawBattery(c,level,Color.WHITE,0,a,p0,p1,sweep,start,false);
     }
 
     // ----------------------------------------------------------------- battery
@@ -1896,19 +1896,30 @@ public final class TrioRenderer {
     private static void drawBattery(Canvas c, int level, int role, int fg,
                                     TrioAppearance a, float gapStart, float gapEnd,
                                     float sweep, float start) {
+        drawBattery(c,level,role,fg,a,gapStart,gapEnd,sweep,start,true);
+    }
+
+    /** Masks omit the track: withAlpha replaces even a transparent input's alpha. */
+    private static void drawBattery(Canvas c, int level, int role, int fg,
+                                    TrioAppearance a, float gapStart, float gapEnd,
+                                    float sweep, float start, boolean includeTrack) {
         STROKE.setStrokeWidth(a.ringStroke);
         if (a.ring && a.splitMode == 1) {
             STROKE.setStrokeCap(a.splitCap == 1 ? Paint.Cap.ROUND : Paint.Cap.BUTT);
             TrioGeometry.SplitRing shape = new TrioGeometry.SplitRing(a);
-            STROKE.setColor(withAlpha(fg, a.trackAlpha));
-            splitBattery(c, shape, 1f);
+            if (includeTrack) {
+                STROKE.setColor(withAlpha(fg, a.trackAlpha));
+                splitBattery(c, shape, 1f);
+            }
             if (level > 0) { STROKE.setColor(role); splitBattery(c, shape, Math.min(1,level/100f)); }
             STROKE.setStrokeCap(Paint.Cap.ROUND);
             return;
         }
 
-        STROKE.setColor(withAlpha(fg, a.trackAlpha));
-        batteryRing(c, 0f, 1f, gapStart, gapEnd, sweep, start);
+        if (includeTrack) {
+            STROKE.setColor(withAlpha(fg, a.trackAlpha));
+            batteryRing(c, 0f, 1f, gapStart, gapEnd, sweep, start);
+        }
 
         if (level > 0) {
             STROKE.setColor(role);

@@ -104,7 +104,24 @@ public class ChargeFlowTest {
   Object[] after=(Object[])cache.get(null);
   check(java.util.Arrays.equals(before,after),"phase and battery level reuse the geometry field");
  }
+ static void trackDoesNotEnterFlowMask()throws Exception {
+  for(int shape=0;shape<3;shape++) {
+   TrioSettings s=TrioSettings.defaults();s.chargeFlow=true;s.ringStroke=18;
+   s.trioStyle=shape==2?Prefs.STYLE_CAPSULE:Prefs.STYLE_RING;s.splitMode=shape==1?1:0;
+   for(int level:new int[]{1,25,66,100}) {
+    TrioSettings chargedOnly=s.copy();chargedOnly.trackAlpha=0;
+    Frame reference=mask(chargedOnly,level);
+    for(int track:new int[]{0,128,255})for(int direction=0;direction<2;direction++) {
+     s.trackAlpha=track;s.chargeFlowDirection=direction;
+     Frame moving=flow(s,level,.5f);
+     confined(moving,reference);
+     check(ink(moving)>0,"charged fill remains visible regardless of track opacity");
+    }
+   }
+  }
+ }
  public static void main(String[] args)throws Exception {
+  trackDoesNotEnterFlowMask();
   roundedCapCoverage();
   continuousCapsAndJoins();
   TrioSettings s=TrioSettings.defaults();s.enabled=true;s.trackAlpha=0;s.chargeFlow=true;s.pausedGrayAll=false;
