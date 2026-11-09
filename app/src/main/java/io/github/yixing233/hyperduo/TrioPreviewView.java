@@ -187,6 +187,13 @@ public final class TrioPreviewView extends View {
                 && TrioState.sClockText.isEmpty()) {
             TrioState.sClockText = "19:41";
         }
+        // The same synthetic reading for memory: this process has no MemoryTicker, and
+        // the preview exists to show what a placed piece looks like, not to report the
+        // settings app's own footprint.
+        if (TrioAppearance.of(this.settings).hasRingPart(Prefs.PART_MEMORY)
+                && TrioState.sMemoryPercent == TrioState.MEMORY_UNKNOWN) {
+            TrioState.sMemoryPercent = 68;
+        }
         invalidate();
     }
 

@@ -1098,6 +1098,11 @@ public final class TrioAppearance {
                 // The clock always has something to say; whether the arrangement shows it
                 // is the renderer's business.
                 return true;
+            case Prefs.PART_MEMORY:
+                // Same answer for the same reason: the reading has no switch of its own,
+                // and a frame drawn before the first sample must still reserve the cell -
+                // otherwise the piece would appear only after the ticker's first tick.
+                return true;
             default:
                 return false;
         }
