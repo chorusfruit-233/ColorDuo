@@ -1187,8 +1187,8 @@ final class ColorOsHooks {
         void readState() {
             Object battery = value(Refl.callByName(viewModel, "getBatteryIcon"));
             if (battery == null) battery = Refl.callByName(meter, "getBatteryIcon");
-            Object level=value(batteryLevelFlow);
-            state.level=level instanceof Number?((Number)level).intValue():integer(Refl.callByName(battery,"getPowerLevel"),-1);
+            Object batteryLevelValue=value(batteryLevelFlow);
+            state.level=batteryLevelValue instanceof Number?((Number)batteryLevelValue).intValue():integer(Refl.callByName(battery,"getPowerLevel"),-1);
             state.useTint = true;
             Object color = value(Refl.callByName(viewModel, "getBatteryColor"));
             Object tone=Refl.callByName(color,"getSingleToneColor");
