@@ -251,8 +251,12 @@ class LayoutControlsTest {
         assertEquals(listOf(AdvancedGroup.Position), advancedGroupsFor(
             slidersForEditor(TrioSettingsPart.Type,a), contentControlsFor(TrioSettingsPart.Type,network),a))
         val independent = settings(); a = TrioAppearance.of(independent)
-        assertEquals(listOf(AdvancedGroup.Position), advancedGroupsFor(slidersForEditor(TrioSettingsPart.Mobile,a),
-            contentControlsFor(TrioSettingsPart.Mobile,independent),a))
+        assertTrue(advancedGroupsFor(slidersForEditor(TrioSettingsPart.Mobile,a),
+            contentControlsFor(TrioSettingsPart.Mobile,independent),a).isEmpty())
+        val placed=TrioZones.withPiece(independent,TrioZones.Zone.TOP.ordinal,TrioZones.Part.MOBILE)
+        a=TrioAppearance.of(placed)
+        assertEquals(listOf(AdvancedGroup.Position),advancedGroupsFor(slidersForEditor(TrioSettingsPart.Mobile,a),
+            contentControlsFor(TrioSettingsPart.Mobile,placed),a))
     }
     @Test fun componentOffsetsAndExistingProtocolOffsetsAreAdvancedOnly() {
         val a = TrioAppearance.of(settings())
