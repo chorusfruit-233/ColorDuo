@@ -618,6 +618,9 @@ public final class TrioRenderer {
                         ? (TrioGeometry.B_R-a.ringStroke/2f-1.5f)/scale : Float.POSITIVE_INFINITY;
                 final float right = (TrioGeometry.INK_X+TrioGeometry.INK_W-cx-1f)/scale;
                 final float bottom = (TrioGeometry.INK_Y+TrioGeometry.INK_H-wifiCy-1f)/scale;
+                WifiBadge badge=wifiStandard==null||wifiStandard.isEmpty()||wifiLevel<0?null:
+                        wifiBadge(a,wifiStandard,radius,(wifiCy-TrioGeometry.B_CY)/scale,right,bottom);
+                if(badge!=null)c.translate(-badge.groupX,-badge.groupY);
                 drawWifiArcs(c,wifiLevel,fg,a,wifiStandard,radius,
                         (wifiCy-TrioGeometry.B_CY)/scale,right,bottom);
             } else if (part == Prefs.PART_BOLT) {
@@ -2042,12 +2045,14 @@ public final class TrioRenderer {
         WIFI_STANDARD_TEXT.setStyle(embolden>0?Paint.Style.FILL_AND_STROKE:Paint.Style.FILL);
     }
 
-    /** Measured badge only. None of these metrics participate in the Wi-Fi arc transform. */
+    /** Badge sizing stays independent; ring placement translates the complete group afterwards. */
     private static final class WifiBadge {
         final String standard,main;
         final int scale,weight,offsetX,offsetY;
         final float stroke,radius,dy,right,bottom,size,x,baseline,suffixX,suffixOffset,widthScale;
         final RectF mainInk,suffixInk;
+        final float groupX,groupY;
+        final RectF groupInk;
 
         WifiBadge(TrioAppearance a,String standard,float radius,float dy,float right,float bottom,float size,float widthScale) {
             this.standard=standard;main=standard.equals("6E")?"6":standard;
@@ -2084,6 +2089,17 @@ public final class TrioRenderer {
             baseline=65.25f+stroke/2f+1.5f-TrioGeometry.W_INK_CY-top+offsetY;
             mainInk.top+=baseline;mainInk.bottom+=baseline;
             if(suffixInk!=null){suffixInk.top+=baseline;suffixInk.bottom+=baseline;}
+            // Union in Wi-Fi-local coordinates. Translation only: never refit either symbol or text.
+            float half=TrioGeometry.W1_R*Math.abs((float)Math.cos(Math.toRadians(TrioGeometry.W1_START)))+stroke/2f;
+            float minX=Math.min(-half,mainInk.left),maxX=Math.max(half,mainInk.right);
+            float minY=Math.min(TrioGeometry.W_TOP-stroke/2f-TrioGeometry.W_INK_CY,mainInk.top);
+            float maxY=Math.max(Math.max(TrioGeometry.W_BOTTOM,65.25f+stroke/2f)-TrioGeometry.W_INK_CY,mainInk.bottom);
+            if(suffixInk!=null) {
+                minX=Math.min(minX,suffixInk.left);maxX=Math.max(maxX,suffixInk.right);
+                minY=Math.min(minY,suffixInk.top);maxY=Math.max(maxY,suffixInk.bottom);
+            }
+            groupInk=new RectF(minX,minY,maxX,maxY);
+            groupX=(minX+maxX)/2f;groupY=(minY+maxY)/2f;
         }
 
         boolean matches(TrioAppearance a,String text,float r,float y,float w,float h) {
@@ -2209,12 +2225,19 @@ public final class TrioRenderer {
         for(String standard:new String[]{"4","5","6","6E","7"}) {
             WifiBadge badge=wifiBadge(a,standard,radius,dy,right,bottom);
             if(badge==null)continue;
+            float x=cx-(a.ring?badge.groupX*scale:0),y=cy-(a.ring?badge.groupY*scale:0);
+            if(a.ring) {
+                box[0]=Math.min(box[0],x+badge.groupInk.left*scale-1);
+                box[1]=Math.min(box[1],y+badge.groupInk.top*scale-1);
+                box[2]=Math.max(box[2],x+badge.groupInk.right*scale+1);
+                box[3]=Math.max(box[3],y+badge.groupInk.bottom*scale+1);
+            }
             for(int i=0;i<(badge.suffixInk==null?1:2);i++) {
                 RectF ink=i==0?badge.mainInk:badge.suffixInk;
-                box[0]=Math.min(box[0],cx+ink.left*scale-1);
-                box[1]=Math.min(box[1],cy+ink.top*scale-1);
-                box[2]=Math.max(box[2],cx+ink.right*scale+1);
-                box[3]=Math.max(box[3],cy+ink.bottom*scale+1);
+                box[0]=Math.min(box[0],x+ink.left*scale-1);
+                box[1]=Math.min(box[1],y+ink.top*scale-1);
+                box[2]=Math.max(box[2],x+ink.right*scale+1);
+                box[3]=Math.max(box[3],y+ink.bottom*scale+1);
             }
         }
     }

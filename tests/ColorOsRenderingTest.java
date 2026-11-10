@@ -189,7 +189,7 @@ public final class ColorOsRenderingTest {
             for(java.awt.geom.Rectangle2D ink:frame.wifiDotBounds) {
                 if(symbol==null)symbol=(java.awt.geom.Rectangle2D)ink.clone();else java.awt.geom.Rectangle2D.union(symbol,ink,symbol);
             }
-            return new MarkerSample(main.getHeight(),coverage,main.getMinX(),main.getMinY(),frame.textUnitScales.get(at),
+            return new MarkerSample(main.getHeight(),coverage,main.getMinX()-symbol.getCenterX(),main.getMinY()-symbol.getCenterY(),frame.textUnitScales.get(at),
                     frame.textStrokes.get(at),symbol.getHeight());
         }
     }
@@ -226,9 +226,11 @@ public final class ColorOsRenderingTest {
         check(!expected.isEmpty() && expected.size()==actual.size(),"both scenes retain the original Wi-Fi arcs");
         for(int i=0;i<expected.size();i++) {
             java.awt.geom.Rectangle2D a=expected.get(i),b=actual.get(i);
-            check(Math.abs(a.getMinX()-b.getMinX())<0.002 && Math.abs(a.getMinY()-b.getMinY())<0.002
+            double dx=expected.get(0).getMinX()-actual.get(0).getMinX();
+            double dy=expected.get(0).getMinY()-actual.get(0).getMinY();
+            check(Math.abs(a.getMinX()-b.getMinX()-dx)<0.002 && Math.abs(a.getMinY()-b.getMinY()-dy)<0.002
                     && Math.abs(a.getWidth()-b.getWidth())<0.002 && Math.abs(a.getHeight()-b.getHeight())<0.002,
-                    "standard size and weight never change the arcs' artwork position or scale");
+                    "group centering translates arcs without resizing or distorting their artwork");
         }
     }
 
@@ -257,7 +259,40 @@ public final class ColorOsRenderingTest {
         }
     }
 
+    private static void wifiRingGroupCentered() {
+        for(int size:new int[]{50,100,150,250})for(String standard:new String[]{"6","6E"})
+        for(int[] offset:new int[][]{{0,0},{20,-20},{-40,40}}) {
+            TrioSettings cfg=TrioSettings.defaults();cfg.glyphScale=300;cfg.showWifiStandard=true;
+            cfg.wifiStandardScale=size;cfg.wifiStandardDx=offset[0];cfg.wifiStandardDy=offset[1];
+            cfg.trioStyle=Prefs.STYLE_RING;cfg.typeHideOnWifi=true;
+            cfg.mobileTypeMode=Prefs.MOBILE_TYPE_IN_RING;
+            cfg=TrioZones.withPiece(cfg,1,TrioZones.Part.TYPE);
+            TrioState state=new TrioState();state.wifiLevel=3;state.wifiPresent=true;state.wifiStandard=standard;
+            TrioAppearance a=TrioAppearance.of(cfg);TrioSizing.Metrics m=TrioSizing.measure(a,4f,300,480);
+            try(Frame f=new Frame()) {
+                TrioRenderer.drawSizedState(f,m.width,m.height,state,cfg,m.scale,false);
+                java.awt.geom.Rectangle2D union=null;
+                java.util.List<java.awt.geom.Rectangle2D> ink=new java.util.ArrayList<>();
+                ink.addAll(f.wifiArcBounds);ink.addAll(f.wifiDotBounds);
+                for(int i=0;i<f.texts.size();i++)if(f.texts.get(i).equals("6")||f.texts.get(i).equals("E")) {
+                    java.awt.geom.Rectangle2D r=f.textBounds.get(i);double pad=f.textStrokes.get(i)/2;
+                    ink.add(new java.awt.geom.Rectangle2D.Double(r.getMinX()-pad,r.getMinY()-pad,r.getWidth()+2*pad,r.getHeight()+2*pad));
+                }
+                for(java.awt.geom.Rectangle2D r:ink) {
+                    if(union==null)union=(java.awt.geom.Rectangle2D)r.clone();else java.awt.geom.Rectangle2D.union(union,r,union);
+                    check(r.getMinX()>=-1&&r.getMaxX()<=m.width+1&&r.getMinY()>=-1&&r.getMaxY()<=m.height+1,
+                            "centering reserves both shifted arcs and text inside the host");
+                }
+                float[] t=new float[3];TrioSizing.transform(m.width,m.height,a,m.scale,t);
+                check(Math.abs(union.getCenterX()-(TrioGeometry.B_CX*t[0]+t[1]))<1.5*t[0]
+                        &&Math.abs(union.getCenterY()-(TrioGeometry.ZONE_CY[1]*t[0]+t[2]))<1.5*t[0],
+                        "ring Wi-Fi and custom standard are centered as one visible group");
+            }
+        }
+    }
+
     private static void wifiStandardReadabilityControls() {
+        wifiRingGroupCentered();
         for(int layout=0;layout<3;layout++) {
             MarkerSample small=markerSample(layout,50,900,TrioZones.Zone.CENTRE.ordinal(),false);
             MarkerSample normal=markerSample(layout,100,900,TrioZones.Zone.CENTRE.ordinal(),false);
