@@ -109,7 +109,7 @@ public final class ColorOsRenderingTest {
         int[] parts={Prefs.PART_WIFI,Prefs.PART_MOBILE,Prefs.PART_SIM_1,Prefs.PART_SIM_2,Prefs.PART_VALUE,Prefs.PART_BOLT,Prefs.PART_TYPE,Prefs.PART_CLOCK};
         String[] fields={"wifiDx","mobileDx","sim1Dx","sim2Dx","valueDx","boltDx","typeDx","clockDx"};
         TrioState state=new TrioState();state.level=66;state.charging=true;state.wifiLevel=3;state.wifiPresent=true;
-        state.mobileLevel=4;state.slotLevels=new int[]{4,2};state.sims=2;state.mobileType="5G";TrioState.sClockText="12:34";
+        state.mobileLevel=4;state.slotLevels=new int[]{4,2};state.sims=2;state.mobileType="5G";
         for(int i=0;i<parts.length;i++)for(int offset:new int[]{-20,20}) {
             TrioSettings base=TrioSettings.defaults();base.enabled=true;base.trioStyle=Prefs.STYLE_RING;base.glyphScale=100;
             base.typeHideOnWifi=false;base.showWifiStandard=false;base.signalMode=Prefs.SIGNAL_IN_RING;

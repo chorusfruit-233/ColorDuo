@@ -3364,6 +3364,7 @@ final class TrioHooks {
         }
         if (label.getVisibility() != View.VISIBLE
                 || !text.contentEquals(label.getText())
+                || label.getPaddingLeft() != Math.round(Math.abs(TrioConfig.appearance().typeDx)*label.getResources().getDisplayMetrics().density)
                 || label.suffixScale != TrioConfig.appearance().typeSuffixScale
                 || label.getTextSize() != outTypeSizePx(container)
                 // A new font moves none of the three values above, so without this
@@ -3876,6 +3877,7 @@ final class TrioHooks {
                 || perf.getTextSize() != perfTextSize(text, container, host)
                 || perf.getLineSpacingMultiplier()
                         != perfLineSpacing(perf, text, container)
+                || perf.getPaddingLeft() != Math.round(Math.abs(TrioConfig.appearance().perfDx)*perf.getResources().getDisplayMetrics().density)
                 || perf.weight != weight
                 || perf.fontGeneration != TrioRenderer.fontGeneration()) {
             requestPerfSync(container);
