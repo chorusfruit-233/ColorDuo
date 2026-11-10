@@ -115,7 +115,7 @@ public final class ColorOsRenderingTest {
             base.typeHideOnWifi=false;base.showWifiStandard=false;base.signalMode=Prefs.SIGNAL_IN_RING;
             base.chargingShowsValue=false;base.showSim1=true;base.showSim2=true;
             base.mobileTypeMode=Prefs.MOBILE_TYPE_IN_RING;state.mobileService=DuoPolicy.Radio.AVAILABLE;
-            base.ringZones=new int[][]{new int[0],new int[]{parts[i]},new int[0]};
+            base.ringZones=Prefs.isSignalRow(parts[i])?new int[][]{new int[]{parts[i]},new int[0],new int[0]}:new int[][]{new int[0],new int[]{parts[i]},new int[0]};
             TrioSettings moved=base.copy();TrioSettings.class.getField(fields[i]).setInt(moved,offset);
             TrioAppearance before=TrioAppearance.of(base),after=TrioAppearance.of(moved);
             TrioSizing.Metrics m0=TrioSizing.measure(before,2f,300,480),m1=TrioSizing.measure(after,2f,300,480);

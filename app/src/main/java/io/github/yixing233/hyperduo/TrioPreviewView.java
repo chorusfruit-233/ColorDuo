@@ -629,7 +629,7 @@ public final class TrioPreviewView extends View {
         // ratio of the icon box here any more than it is on the status bar, so
         // a smaller reading really does show up smaller in this cell.
         final int hostHeight = TrioRenderer.outSignalHeight(a.outSignalSize, density);
-        final int hostWidth = TrioRenderer.outSignalWidth(hostHeight);
+        final int hostWidth = TrioRenderer.outSignalWidth(hostHeight,a);
         if (hostWidth <= 0) {
             return;
         }

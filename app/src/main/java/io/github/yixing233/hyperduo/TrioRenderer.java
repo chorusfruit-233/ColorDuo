@@ -2418,6 +2418,10 @@ public final class TrioRenderer {
      * The pixel width that gives a box {@code height} pixels tall the reference
      * aspect, dot row or not.
      */
+    static int outSignalWidth(int height,TrioAppearance a) {
+        return outSignalWidth(height)+(int)Math.ceil(2f*Math.abs(a.mobileDx)*height/TrioGeometry.STACK_INK_H);
+    }
+
     static int outSignalWidth(int height) {
         if (height <= 0) {
             return 0;
@@ -2456,7 +2460,7 @@ public final class TrioRenderer {
         // it would make the same bars a third taller whenever the dot row is
         // absent.
         final float inkH = outSignalInkH(dotRow);
-        final float scale = Math.min(width / inkW, height / TrioGeometry.STACK_INK_H);
+        final float scale = Math.min(width / (inkW+2f*Math.abs(a.mobileDx)), height / TrioGeometry.STACK_INK_H);
         if (scale <= 0f) {
             return false;
         }

@@ -5002,7 +5002,7 @@ final class TrioHooks {
         if (height <= 0) {
             return;
         }
-        final int width = TrioRenderer.outSignalWidth(height);
+        final int width = TrioRenderer.outSignalWidth(height,TrioConfig.appearance());
         if (width <= 0) {
             return;
         }
