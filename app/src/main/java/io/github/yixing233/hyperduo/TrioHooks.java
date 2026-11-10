@@ -3234,6 +3234,15 @@ final class TrioHooks {
      * the container, so such a map's values would keep their own keys alive.
      */
     static final class OutTypeLabel extends TextView {
+        int positionOffset;
+        void syncOffset() {
+            int next=TrioConfig.appearance().typeDx;
+            if(positionOffset!=next) {
+                positionOffset=next;
+                requestLayout();invalidate();
+            }
+        }
+
         /** The glyph host supplying the ink scale and the icon colour. */
         View host;
         /**
@@ -3364,7 +3373,7 @@ final class TrioHooks {
         }
         if (label.getVisibility() != View.VISIBLE
                 || !text.contentEquals(label.getText())
-                || label.getPaddingLeft() != Math.round(Math.abs(TrioConfig.appearance().typeDx)*label.getResources().getDisplayMetrics().density)
+                || label.positionOffset != TrioConfig.appearance().typeDx
                 || label.suffixScale != TrioConfig.appearance().typeSuffixScale
                 || label.getTextSize() != outTypeSizePx(container)
                 // A new font moves none of the three values above, so without this
@@ -3557,6 +3566,7 @@ final class TrioHooks {
 
     private static void updateOutTypeLabel(ViewGroup container, OutTypeLabel label,
                                            View host, View anchor) {
+        label.syncOffset();
         final TrioAppearance a = TrioConfig.appearance();
         final TrioState state = stateFor(host);
         if (state != null) {
@@ -3723,6 +3733,15 @@ final class TrioHooks {
      * class rather than a tag on somebody else's.
      */
     static final class PerfLabel extends TextView {
+        int positionOffset;
+        void syncOffset() {
+            int next=TrioConfig.appearance().perfDx;
+            if(positionOffset!=next) {
+                positionOffset=next;
+                requestLayout();invalidate();
+            }
+        }
+
         /** The glyph host the ink colour comes from. */
         View host;
         /**
@@ -3877,7 +3896,7 @@ final class TrioHooks {
                 || perf.getTextSize() != perfTextSize(text, container, host)
                 || perf.getLineSpacingMultiplier()
                         != perfLineSpacing(perf, text, container)
-                || perf.getPaddingLeft() != Math.round(Math.abs(TrioConfig.appearance().perfDx)*perf.getResources().getDisplayMetrics().density)
+                || perf.positionOffset != TrioConfig.appearance().perfDx
                 || perf.weight != weight
                 || perf.fontGeneration != TrioRenderer.fontGeneration()) {
             requestPerfSync(container);
@@ -4263,6 +4282,7 @@ final class TrioHooks {
 
     private static void updatePerfLabel(ViewGroup container, PerfLabel perf,
                                         View host, View anchor) {
+        perf.syncOffset();
         final TrioAppearance a = TrioConfig.appearance();
         final TrioState state = stateFor(host);
         if (state != null) {

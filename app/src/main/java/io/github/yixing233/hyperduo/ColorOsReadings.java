@@ -62,6 +62,7 @@ final class ColorOsReadings extends ViewGroup {
         signal.setVisibility(appearance.stackedOut() && !registering ? VISIBLE : GONE);
         signal.invalidate();
 
+        perf.syncOffset();type.syncOffset();
         String performance = TrioHooks.perfText(appearance);
         if (!performance.contentEquals(perf.getText())) perf.setText(performance);
         perf.setVisibility(performance.isEmpty() ? GONE : VISIBLE);
