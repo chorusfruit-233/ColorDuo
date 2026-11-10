@@ -3256,6 +3256,18 @@ final class TrioHooks {
         OutTypeLabel(Context context) {
             super(context);
         }
+
+        @Override protected void onMeasure(int widthSpec,int heightSpec) {
+            int reserve=Math.round(Math.abs(TrioConfig.appearance().typeDx)*getResources().getDisplayMetrics().density);
+            setPadding(reserve,getPaddingTop(),reserve,getPaddingBottom());
+            super.onMeasure(widthSpec,heightSpec);
+        }
+
+        @Override protected void onDraw(Canvas canvas) {
+            int save=canvas.save();
+            canvas.translate(TrioConfig.appearance().typeDx*getResources().getDisplayMetrics().density,0);
+            try { super.onDraw(canvas); } finally { canvas.restoreToCount(save); }
+        }
     }
 
     /**
@@ -3736,6 +3748,18 @@ final class TrioHooks {
 
         PerfLabel(Context context) {
             super(context);
+        }
+
+        @Override protected void onMeasure(int widthSpec,int heightSpec) {
+            int reserve=Math.round(Math.abs(TrioConfig.appearance().perfDx)*getResources().getDisplayMetrics().density);
+            setPadding(reserve,getPaddingTop(),reserve,getPaddingBottom());
+            super.onMeasure(widthSpec,heightSpec);
+        }
+
+        @Override protected void onDraw(Canvas canvas) {
+            int save=canvas.save();
+            canvas.translate(TrioConfig.appearance().perfDx*getResources().getDisplayMetrics().density,0);
+            try { super.onDraw(canvas); } finally { canvas.restoreToCount(save); }
         }
     }
 

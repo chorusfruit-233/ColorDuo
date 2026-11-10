@@ -248,7 +248,45 @@ public final class TrioAppearance {
     public final boolean showWifiStandard;
     public final int wifiStandardScale;
     public final int wifiStandardWeight;
+    public float horizontalOffset(int part) {
+        switch(part) {
+            case Prefs.PART_WIFI:return wifiDx;
+            case Prefs.PART_MOBILE:return mobileDx;
+            case Prefs.PART_SIM_1:return sim1Dx;
+            case Prefs.PART_SIM_2:return sim2Dx;
+            case Prefs.PART_VALUE:return valueDx;
+            case Prefs.PART_BOLT:return boltDx;
+            case Prefs.PART_TYPE:return typeDx;
+            case Prefs.PART_CLOCK:return clockDx;
+            default:return 0; // Stacked SIMs already have pairX.
+        }
+    }
+
+    public float horizontalReserve() {
+        float reach=0;
+        reach=Math.max(reach,Math.abs(wifiDx));
+        reach=Math.max(reach,Math.abs(mobileDx));
+        reach=Math.max(reach,Math.abs(sim1Dx));
+        reach=Math.max(reach,Math.abs(sim2Dx));
+        reach=Math.max(reach,Math.abs(valueDx));
+        reach=Math.max(reach,Math.abs(boltDx));
+        reach=Math.max(reach,Math.abs(typeDx));
+        reach=Math.max(reach,Math.abs(clockDx));
+        reach=Math.max(reach,Math.abs(batteryDx));
+        return reach;
+    }
+
     public final int wifiStandardDx;
+    public final int wifiDx;
+    public final int mobileDx;
+    public final int sim1Dx;
+    public final int sim2Dx;
+    public final int valueDx;
+    public final int boltDx;
+    public final int typeDx;
+    public final int clockDx;
+    public final int batteryDx;
+    public final int perfDx;
     public final int wifiStandardDy;
     /**
      * The network type steps aside while Wi-Fi is up; see {@link Prefs#KEY_TYPE_HIDE_ON_WIFI}.
@@ -405,6 +443,16 @@ public final class TrioAppearance {
         wifiStandardScale = Prefs.clamp(c.wifiStandardScale, Prefs.MIN_WIFI_STANDARD_SCALE, Prefs.MAX_WIFI_STANDARD_SCALE);
         wifiStandardWeight = Prefs.clamp(c.wifiStandardWeight, Prefs.MIN_WIFI_STANDARD_WEIGHT, Prefs.MAX_WIFI_STANDARD_WEIGHT);
         wifiStandardDx = Prefs.clamp(c.wifiStandardDx, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        wifiDx = Prefs.clamp(c.wifiDx, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        mobileDx = Prefs.clamp(c.mobileDx, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        sim1Dx = Prefs.clamp(c.sim1Dx, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        sim2Dx = Prefs.clamp(c.sim2Dx, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        valueDx = Prefs.clamp(c.valueDx, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        boltDx = Prefs.clamp(c.boltDx, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        typeDx = Prefs.clamp(c.typeDx, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        clockDx = Prefs.clamp(c.clockDx, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        batteryDx = Prefs.clamp(c.batteryDx, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        perfDx = Prefs.clamp(c.perfDx, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
         wifiStandardDy = Prefs.clamp(c.wifiStandardDy, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
         dotScale = c.dotScale;
         splitMode = Prefs.clamp(c.splitMode, Prefs.MIN_SPLIT_MODE, Prefs.MAX_SPLIT_MODE);

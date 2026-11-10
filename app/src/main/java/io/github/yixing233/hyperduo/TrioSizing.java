@@ -13,6 +13,13 @@ public final class TrioSizing {
     }
 
     static Bounds bounds(TrioAppearance a) {
+        Bounds b=baseBounds(a);
+        float reserve=a.horizontalReserve();
+        // Symmetric reserve keeps the original centre fixed as one component moves.
+        return reserve==0?b:new Bounds(b.x-reserve,b.y,b.width+reserve*2,b.height);
+    }
+
+    private static Bounds baseBounds(TrioAppearance a) {
         TrioGeometry.setCapsuleLength(a.capsuleLength);
         final TrioGeometry.SplitRing split = a.ring && (a.splitMode == 1 || a.drawsSimPair() || a.signalIconScale != 100)
                 ? new TrioGeometry.SplitRing(a) : null;

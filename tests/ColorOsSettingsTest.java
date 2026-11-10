@@ -8,7 +8,27 @@ import java.util.Arrays;
 
 /** Executes real settings transport, ownership and rendering with the existing desktop shims. */
 public final class ColorOsSettingsTest {
+    private static void componentOffsetSettings() {
+        String[] fields={"wifiDx","mobileDx","sim1Dx","sim2Dx","valueDx","boltDx","typeDx","clockDx","batteryDx","perfDx"};
+        String[] keys={Prefs.KEY_WIFI_DX,Prefs.KEY_MOBILE_DX,Prefs.KEY_SIM1_DX,Prefs.KEY_SIM2_DX,Prefs.KEY_VALUE_DX,Prefs.KEY_BOLT_DX,Prefs.KEY_TYPE_DX,Prefs.KEY_CLOCK_DX,Prefs.KEY_BATTERY_DX,Prefs.KEY_PERF_DX};
+        try {
+            for(int i=0;i<fields.length;i++) {
+                java.lang.reflect.Field field=TrioSettings.class.getField(fields[i]);
+                TrioSettings fresh=TrioSettings.defaults();check(field.getInt(fresh)==0,"component offset upgrade default");
+                field.setInt(fresh,-17);
+                check(field.getInt(fresh.copy())==-17,"offset survives copy");
+                check(field.getInt(TrioSettings.fromBundle(fresh.toBundle()))==-17,"offset survives full reload");
+                TrioSettings live=TrioSettings.defaults();check(live.applyKeyFrom(fresh,keys[i])&&field.getInt(live)==-17,"offset live update");
+                check(!fresh.equals(TrioSettings.defaults()),"offset participates in change detection");
+                check(TrioAppearance.class.getField(fields[i]).getInt(TrioAppearance.of(fresh))==-17,"offset reaches renderer");
+                Bundle invalid=new Bundle();invalid.putInt(keys[i],999);
+                check(field.getInt(TrioSettings.fromBundle(invalid))==40,"offset clamps to supported range");
+            }
+        } catch(ReflectiveOperationException e) {throw new AssertionError(e);}
+    }
+
     public static void main(String[] args) {
+        componentOffsetSettings();
         wifiStandardSettings();
         wifiStandardOffsetSettings();
         hdVisibilitySettings();

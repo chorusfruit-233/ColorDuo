@@ -225,6 +225,16 @@ public final class TrioSettings {
     public int wifiStandardScale;
     public int wifiStandardWeight;
     public int wifiStandardDx;
+    public int wifiDx;
+    public int mobileDx;
+    public int sim1Dx;
+    public int sim2Dx;
+    public int valueDx;
+    public int boltDx;
+    public int typeDx;
+    public int clockDx;
+    public int batteryDx;
+    public int perfDx;
     public int wifiStandardDy;
     /** Drop the network type while Wi-Fi is up; see {@link Prefs#KEY_TYPE_HIDE_ON_WIFI}. */
     public boolean typeHideOnWifi;
@@ -427,6 +437,16 @@ public final class TrioSettings {
         s.wifiStandardScale = Prefs.DEF_WIFI_STANDARD_SCALE;
         s.wifiStandardWeight = Prefs.DEF_WIFI_STANDARD_WEIGHT;
         s.wifiStandardDx = Prefs.DEF_WIFI_STANDARD_OFFSET;
+        s.wifiDx = Prefs.DEF_WIFI_STANDARD_OFFSET;
+        s.mobileDx = Prefs.DEF_WIFI_STANDARD_OFFSET;
+        s.sim1Dx = Prefs.DEF_WIFI_STANDARD_OFFSET;
+        s.sim2Dx = Prefs.DEF_WIFI_STANDARD_OFFSET;
+        s.valueDx = Prefs.DEF_WIFI_STANDARD_OFFSET;
+        s.boltDx = Prefs.DEF_WIFI_STANDARD_OFFSET;
+        s.typeDx = Prefs.DEF_WIFI_STANDARD_OFFSET;
+        s.clockDx = Prefs.DEF_WIFI_STANDARD_OFFSET;
+        s.batteryDx = Prefs.DEF_WIFI_STANDARD_OFFSET;
+        s.perfDx = Prefs.DEF_WIFI_STANDARD_OFFSET;
         s.wifiStandardDy = Prefs.DEF_WIFI_STANDARD_OFFSET;
         s.typeHideOnWifi = Prefs.DEF_TYPE_HIDE_ON_WIFI;
         s.chargingShowsValue = Prefs.DEF_CHARGING_SHOWS_VALUE;
@@ -661,6 +681,16 @@ public final class TrioSettings {
         s.wifiStandardScale = Prefs.clamp(p.getInt(Prefs.KEY_WIFI_STANDARD_SCALE, Prefs.DEF_WIFI_STANDARD_SCALE), Prefs.MIN_WIFI_STANDARD_SCALE, Prefs.MAX_WIFI_STANDARD_SCALE);
         s.wifiStandardWeight = Prefs.clamp(p.getInt(Prefs.KEY_WIFI_STANDARD_WEIGHT, Prefs.DEF_WIFI_STANDARD_WEIGHT), Prefs.MIN_WIFI_STANDARD_WEIGHT, Prefs.MAX_WIFI_STANDARD_WEIGHT);
         s.wifiStandardDx = Prefs.clamp(p.getInt(Prefs.KEY_WIFI_STANDARD_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        s.wifiDx = Prefs.clamp(p.getInt(Prefs.KEY_WIFI_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        s.mobileDx = Prefs.clamp(p.getInt(Prefs.KEY_MOBILE_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        s.sim1Dx = Prefs.clamp(p.getInt(Prefs.KEY_SIM1_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        s.sim2Dx = Prefs.clamp(p.getInt(Prefs.KEY_SIM2_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        s.valueDx = Prefs.clamp(p.getInt(Prefs.KEY_VALUE_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        s.boltDx = Prefs.clamp(p.getInt(Prefs.KEY_BOLT_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        s.typeDx = Prefs.clamp(p.getInt(Prefs.KEY_TYPE_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        s.clockDx = Prefs.clamp(p.getInt(Prefs.KEY_CLOCK_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        s.batteryDx = Prefs.clamp(p.getInt(Prefs.KEY_BATTERY_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        s.perfDx = Prefs.clamp(p.getInt(Prefs.KEY_PERF_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
         s.wifiStandardDy = Prefs.clamp(p.getInt(Prefs.KEY_WIFI_STANDARD_DY, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
         s.typeHideOnWifi = p.getBoolean(Prefs.KEY_TYPE_HIDE_ON_WIFI,
                 Prefs.DEF_TYPE_HIDE_ON_WIFI);
@@ -1061,6 +1091,16 @@ public final class TrioSettings {
         s.wifiStandardScale = wifiStandardScale;
         s.wifiStandardWeight = wifiStandardWeight;
         s.wifiStandardDx = wifiStandardDx;
+        s.wifiDx = wifiDx;
+        s.mobileDx = mobileDx;
+        s.sim1Dx = sim1Dx;
+        s.sim2Dx = sim2Dx;
+        s.valueDx = valueDx;
+        s.boltDx = boltDx;
+        s.typeDx = typeDx;
+        s.clockDx = clockDx;
+        s.batteryDx = batteryDx;
+        s.perfDx = perfDx;
         s.wifiStandardDy = wifiStandardDy;
         s.typeHideOnWifi = typeHideOnWifi;
         s.chargingShowsValue = chargingShowsValue;
@@ -1201,6 +1241,16 @@ public final class TrioSettings {
             case Prefs.KEY_WIFI_STANDARD_SCALE: wifiStandardScale = src.wifiStandardScale; return true;
             case Prefs.KEY_WIFI_STANDARD_WEIGHT: wifiStandardWeight = src.wifiStandardWeight; return true;
             case Prefs.KEY_WIFI_STANDARD_DX: wifiStandardDx = src.wifiStandardDx; return true;
+            case Prefs.KEY_WIFI_DX: wifiDx = src.wifiDx; return true;
+            case Prefs.KEY_MOBILE_DX: mobileDx = src.mobileDx; return true;
+            case Prefs.KEY_SIM1_DX: sim1Dx = src.sim1Dx; return true;
+            case Prefs.KEY_SIM2_DX: sim2Dx = src.sim2Dx; return true;
+            case Prefs.KEY_VALUE_DX: valueDx = src.valueDx; return true;
+            case Prefs.KEY_BOLT_DX: boltDx = src.boltDx; return true;
+            case Prefs.KEY_TYPE_DX: typeDx = src.typeDx; return true;
+            case Prefs.KEY_CLOCK_DX: clockDx = src.clockDx; return true;
+            case Prefs.KEY_BATTERY_DX: batteryDx = src.batteryDx; return true;
+            case Prefs.KEY_PERF_DX: perfDx = src.perfDx; return true;
             case Prefs.KEY_WIFI_STANDARD_DY: wifiStandardDy = src.wifiStandardDy; return true;
             case Prefs.KEY_TYPE_HIDE_ON_WIFI: typeHideOnWifi = src.typeHideOnWifi; return true;
             case Prefs.KEY_PAUSED_GRAY_ALL: pausedGrayAll = src.pausedGrayAll; return true;
@@ -1397,6 +1447,16 @@ public final class TrioSettings {
         s.wifiStandardScale = Prefs.clamp(bundle.getInt(Prefs.KEY_WIFI_STANDARD_SCALE, Prefs.DEF_WIFI_STANDARD_SCALE), Prefs.MIN_WIFI_STANDARD_SCALE, Prefs.MAX_WIFI_STANDARD_SCALE);
         s.wifiStandardWeight = Prefs.clamp(bundle.getInt(Prefs.KEY_WIFI_STANDARD_WEIGHT, Prefs.DEF_WIFI_STANDARD_WEIGHT), Prefs.MIN_WIFI_STANDARD_WEIGHT, Prefs.MAX_WIFI_STANDARD_WEIGHT);
         s.wifiStandardDx = Prefs.clamp(bundle.getInt(Prefs.KEY_WIFI_STANDARD_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        s.wifiDx = Prefs.clamp(bundle.getInt(Prefs.KEY_WIFI_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        s.mobileDx = Prefs.clamp(bundle.getInt(Prefs.KEY_MOBILE_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        s.sim1Dx = Prefs.clamp(bundle.getInt(Prefs.KEY_SIM1_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        s.sim2Dx = Prefs.clamp(bundle.getInt(Prefs.KEY_SIM2_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        s.valueDx = Prefs.clamp(bundle.getInt(Prefs.KEY_VALUE_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        s.boltDx = Prefs.clamp(bundle.getInt(Prefs.KEY_BOLT_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        s.typeDx = Prefs.clamp(bundle.getInt(Prefs.KEY_TYPE_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        s.clockDx = Prefs.clamp(bundle.getInt(Prefs.KEY_CLOCK_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        s.batteryDx = Prefs.clamp(bundle.getInt(Prefs.KEY_BATTERY_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        s.perfDx = Prefs.clamp(bundle.getInt(Prefs.KEY_PERF_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
         s.wifiStandardDy = Prefs.clamp(bundle.getInt(Prefs.KEY_WIFI_STANDARD_DY, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
         s.typeHideOnWifi = bundle.getBoolean(Prefs.KEY_TYPE_HIDE_ON_WIFI,
                 Prefs.DEF_TYPE_HIDE_ON_WIFI);
@@ -1559,6 +1619,16 @@ public final class TrioSettings {
         b.putInt(Prefs.KEY_WIFI_STANDARD_SCALE, wifiStandardScale);
         b.putInt(Prefs.KEY_WIFI_STANDARD_WEIGHT, wifiStandardWeight);
         b.putInt(Prefs.KEY_WIFI_STANDARD_DX, wifiStandardDx);
+        b.putInt(Prefs.KEY_WIFI_DX, wifiDx);
+        b.putInt(Prefs.KEY_MOBILE_DX, mobileDx);
+        b.putInt(Prefs.KEY_SIM1_DX, sim1Dx);
+        b.putInt(Prefs.KEY_SIM2_DX, sim2Dx);
+        b.putInt(Prefs.KEY_VALUE_DX, valueDx);
+        b.putInt(Prefs.KEY_BOLT_DX, boltDx);
+        b.putInt(Prefs.KEY_TYPE_DX, typeDx);
+        b.putInt(Prefs.KEY_CLOCK_DX, clockDx);
+        b.putInt(Prefs.KEY_BATTERY_DX, batteryDx);
+        b.putInt(Prefs.KEY_PERF_DX, perfDx);
         b.putInt(Prefs.KEY_WIFI_STANDARD_DY, wifiStandardDy);
         b.putBoolean(Prefs.KEY_TYPE_HIDE_ON_WIFI, typeHideOnWifi);
         b.putBoolean(Prefs.KEY_CHARGING_SHOWS_VALUE, chargingShowsValue);
@@ -1728,6 +1798,16 @@ public final class TrioSettings {
                 && wifiStandardScale == s.wifiStandardScale
                 && wifiStandardWeight == s.wifiStandardWeight
                 && wifiStandardDx == s.wifiStandardDx
+                && wifiDx == s.wifiDx
+                && mobileDx == s.mobileDx
+                && sim1Dx == s.sim1Dx
+                && sim2Dx == s.sim2Dx
+                && valueDx == s.valueDx
+                && boltDx == s.boltDx
+                && typeDx == s.typeDx
+                && clockDx == s.clockDx
+                && batteryDx == s.batteryDx
+                && perfDx == s.perfDx
                 && wifiStandardDy == s.wifiStandardDy
                 && typeHideOnWifi == s.typeHideOnWifi
                 && chargingShowsValue == s.chargingShowsValue

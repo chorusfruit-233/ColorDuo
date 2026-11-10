@@ -91,7 +91,45 @@ public final class ColorOsRenderingTest {
         @Override public void close() { graphics.dispose(); }
     }
 
+    private static java.awt.geom.Rectangle2D componentBox(Frame f,int part) {
+        java.util.List<java.awt.geom.Rectangle2D> boxes=new java.util.ArrayList<>();
+        if(part==Prefs.PART_WIFI) {boxes.addAll(f.wifiArcBounds);boxes.addAll(f.wifiDotBounds);}
+        else if(part==Prefs.PART_BOLT)boxes.addAll(f.pathBounds);
+        else if(part==Prefs.PART_MOBILE||part==Prefs.PART_SIM_1||part==Prefs.PART_SIM_2) {
+            for(float[] circle:f.circles)boxes.add(new java.awt.geom.Rectangle2D.Float(circle[0]-circle[2],circle[1]-circle[2],circle[2]*2,circle[2]*2));
+        } else boxes.addAll(f.textBounds);
+        java.awt.geom.Rectangle2D result=null;
+        for(java.awt.geom.Rectangle2D box:boxes) {
+            if(result==null)result=(java.awt.geom.Rectangle2D)box.clone();else java.awt.geom.Rectangle2D.union(result,box,result);
+        }
+        check(result!=null,"fixture paints the selected component");return result;
+    }
+
+    private static void componentHorizontalOffsets() throws Exception {
+        int[] parts={Prefs.PART_WIFI,Prefs.PART_MOBILE,Prefs.PART_SIM_1,Prefs.PART_SIM_2,Prefs.PART_VALUE,Prefs.PART_BOLT,Prefs.PART_TYPE,Prefs.PART_CLOCK};
+        String[] fields={"wifiDx","mobileDx","sim1Dx","sim2Dx","valueDx","boltDx","typeDx","clockDx"};
+        TrioState state=new TrioState();state.level=66;state.charging=true;state.wifiLevel=3;state.wifiPresent=true;
+        state.mobileLevel=4;state.slotLevels=new int[]{4,2};state.sims=2;state.mobileType="5G";TrioState.sClockText="12:34";
+        for(int i=0;i<parts.length;i++)for(int offset:new int[]{-20,20}) {
+            TrioSettings base=TrioSettings.defaults();base.enabled=true;base.trioStyle=Prefs.STYLE_RING;base.glyphScale=100;
+            base.typeHideOnWifi=false;base.showWifiStandard=false;base.signalMode=Prefs.SIGNAL_IN_RING;
+            base.ringZones=new int[][]{new int[0],new int[]{parts[i]},new int[0]};
+            TrioSettings moved=base.copy();TrioSettings.class.getField(fields[i]).setInt(moved,offset);
+            TrioAppearance before=TrioAppearance.of(base),after=TrioAppearance.of(moved);
+            TrioSizing.Metrics m0=TrioSizing.measure(before,2f,300,480),m1=TrioSizing.measure(after,2f,300,480);
+            try(Frame f0=new Frame();Frame f1=new Frame()) {
+                TrioRenderer.drawSizedState(f0,m0.width,m0.height,state,base,m0.scale,false);
+                TrioRenderer.drawSizedState(f1,m1.width,m1.height,state,moved,m1.scale,false);
+                java.awt.geom.Rectangle2D a=componentBox(f0,parts[i]),b=componentBox(f1,parts[i]);
+                float[] t0=new float[3],t1=new float[3];TrioSizing.transform(m0.width,m0.height,before,m0.scale,t0);TrioSizing.transform(m1.width,m1.height,after,m1.scale,t1);
+                check(Math.abs((b.getCenterX()-t1[1])/t1[0]-(a.getCenterX()-t0[1])/t0[0]-offset)<.02,"signed offset moves only the component horizontally");
+                check(Math.abs(a.getWidth()/t0[0]-b.getWidth()/t1[0])<.02&&Math.abs(a.getHeight()/t0[0]-b.getHeight()/t1[0])<.02,"offset never resizes the component");
+            }
+        }
+    }
+
     public static void main(String[] args) throws Exception {
+        componentHorizontalOffsets();
         adaptiveRingOpenings();
         physicalSizing();
         activeNetworkTypePolicy();

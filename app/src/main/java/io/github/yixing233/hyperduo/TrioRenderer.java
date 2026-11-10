@@ -585,8 +585,10 @@ public final class TrioRenderer {
         final float sweep = 360f-bottomOpening;
         final float gapStart = topOpening<=0f?0f:0.5f-topOpening/(2f*sweep);
         final float gapEnd = topOpening<=0f?0f:0.5f+topOpening/(2f*sweep);
+        final int batterySave=c.save();c.translate(a.batteryDx,0);
         drawBattery(c,flowPhase>=0?0:level,role,fg,a,gapStart,gapEnd,sweep,270f-sweep/2f);
         drawChargeFlow(c,level,role,a,flowPhase,gapStart,gapEnd,sweep,270f-sweep/2f);
+        c.restoreToCount(batterySave);
         for (int z = 0; z < 3; z++) {
             final int part = r.parts[z];
             if (part == Prefs.PART_NONE) continue;
@@ -598,7 +600,7 @@ public final class TrioRenderer {
             final float height = z == 0 ? TrioGeometry.DOT_BOX_TOP
                     : z == 1 ? TrioGeometry.DOT_BOX_CENTRE : TrioGeometry.DOT_BOX_BOTTOM;
             final int save = c.save();
-            c.translate(cx, cy);
+            c.translate(cx+a.horizontalOffset(part), cy);
             if (part == Prefs.PART_WIFI) {
                 // The reference bounds include the default stroke. Extra thickness
                 // must count before scaling, otherwise the arcs escape their slot.
@@ -1016,6 +1018,7 @@ public final class TrioRenderer {
         final float topReach = openingReach(cap, TrioZones.Zone.TOP, stroke, level, mobileType, a, wifiStandard);
         final float bottomReach =
                 openingReach(cap, TrioZones.Zone.BOTTOM, stroke, level, mobileType, a, wifiStandard);
+        final int batterySave=canvas.save();canvas.translate(a.batteryDx,0);
         buildCapsuleOutline(CAPSULE, topReach, bottomReach);
         STROKE.setColor(withAlpha(fg, a.trackAlpha));
         canvas.drawPath(CAPSULE, STROKE);
@@ -1027,6 +1030,7 @@ public final class TrioRenderer {
         }
 
         drawChargeFlow(canvas,level,role,a,flowPhase,topReach,bottomReach,0,0);
+        canvas.restoreToCount(batterySave);
         if (cap.dots && !radioMuted) {
             drawCapsuleDots(canvas, mobileLevel, slotLevels, cap.dual, stroke, fg, a, cap, dataSlot);
         }
@@ -1493,11 +1497,11 @@ public final class TrioRenderer {
             final float x = first + i * TrioGeometry.CAP_DOT_PITCH * iconScale;
             if (topRow && !topPair) {
                 FILL.setColor(i < topActive ? fg : inactive);
-                c.drawCircle(x, topY, TrioGeometry.CAP_DOT_R*a.dotScaleFactor()*iconScale, FILL);
+                c.drawCircle(x+a.horizontalOffset(cap==null?Prefs.PART_MOBILE:cap.dotParts[TrioZones.Zone.TOP.ordinal()]), topY, TrioGeometry.CAP_DOT_R*a.dotScaleFactor()*iconScale, FILL);
             }
             if (bottomRow && !bottomPair) {
                 FILL.setColor(i < bottomActive ? fg : inactive);
-                c.drawCircle(x, bottomY, TrioGeometry.CAP_DOT_R*a.dotScaleFactor()*iconScale, FILL);
+                c.drawCircle(x+a.horizontalOffset(cap==null?Prefs.PART_MOBILE:cap.dotParts[TrioZones.Zone.BOTTOM.ordinal()]), bottomY, TrioGeometry.CAP_DOT_R*a.dotScaleFactor()*iconScale, FILL);
             }
         }
         if (topRow && topPair) drawSimPairCapsule(c, slotLevels, true, fg, a);
@@ -1540,6 +1544,8 @@ public final class TrioRenderer {
     private static void drawCapsuleTime(Canvas c, float stroke, int fg, TrioAppearance a,
                                         float cx, float cy, float heightHint,
                                         SlotAlign align, float widthLimit) {
+        final int offsetSave=c.save();c.translate(a.clockDx,0);
+        try {
         final String text = TrioState.sClockText;
         if (text == null || text.isEmpty()) {
             return;
@@ -1558,6 +1564,7 @@ public final class TrioRenderer {
         TEXT.setColor(fg);
         alignFor(align);
         c.drawText(text, cx, cy + (size * TrioGeometry.CAP_HEIGHT_RATIO) * 0.5f, TEXT);
+        } finally { c.restoreToCount(offsetSave); }
     }
 
     /** The battery percentage, when a capsule cell carries it. */
@@ -1570,6 +1577,8 @@ public final class TrioRenderer {
     private static void drawCapsuleValue(Canvas c, float stroke, int level, int fg,
                                          TrioAppearance a, float cx, float cy,
                                          float heightHint, SlotAlign align, float widthLimit) {
+        final int offsetSave=c.save();c.translate(a.valueDx,0);
+        try {
         final String text = String.valueOf(level);
         applyWeight(a.valueWeight);
         final float size = capsuleTextSize(text, a.valueSize, stroke,
@@ -1579,6 +1588,7 @@ public final class TrioRenderer {
         TEXT.setColor(fg);
         alignFor(align);
         c.drawText(text, cx, cy + (size * TrioGeometry.CAP_HEIGHT_RATIO) * 0.5f, TEXT);
+        } finally { c.restoreToCount(offsetSave); }
     }
 
     /** The network type, when a capsule cell carries it. */
@@ -1586,6 +1596,8 @@ public final class TrioRenderer {
                                         TrioAppearance a, float cx, float cy,
                                         float heightHint, float widthLimit, int sizeSetting,
                                         SlotAlign align) {
+        final int offsetSave=c.save();c.translate(a.typeDx,0);
+        try {
         applyWeight(a.typeWeight);
         // Fitted to the width of the cell it is actually in. An opening spans the
         // capsule, a body cell does not, and handing both the opening's width let a
@@ -1595,6 +1607,7 @@ public final class TrioRenderer {
                 effectiveHeightLimit(heightHint, stroke));
         drawType(c, type, cx, cy + (size * TrioGeometry.CAP_HEIGHT_RATIO) * 0.5f,
                 size, fg, a, align);
+        } finally { c.restoreToCount(offsetSave); }
     }
 
     /**
@@ -1653,6 +1666,8 @@ public final class TrioRenderer {
     /** Wi-Fi arcs keep their cell centre; the optional standard uses independent space. */
     private static void drawCapsuleWifi(Canvas c, float stroke, int level, int fg,
                                         TrioAppearance a, float cx, float cy, String wifiStandard, boolean opening) {
+        final int offsetSave=c.save();c.translate(a.wifiDx,0);
+        try {
         // The user's size multiplies the fit, and the placement below is recomputed from the
         // product: offset = centre - reference * scale only stays centred while the scale it
         // was derived from is the scale being drawn.
@@ -1672,6 +1687,7 @@ public final class TrioRenderer {
                 : TrioGeometry.capInteriorBottom(stroke))-cy-1f)/scale;
         drawWifiArcs(c,level,fg,a,wifiStandard,Float.POSITIVE_INFINITY,0f,right,bottom);
         c.restoreToCount(save);
+        } finally { c.restoreToCount(offsetSave); }
     }
 
     /**
@@ -1684,6 +1700,8 @@ public final class TrioRenderer {
      */
     private static void drawCapsuleBolt(Canvas c, float stroke, int color, TrioAppearance a,
                                         float cx, float cy) {
+        final int offsetSave=c.save();c.translate(a.boltDx,0);
+        try {
         final float factor = a.boltScaleFactor();
         final float scale = TrioGeometry.capBoltScale(stroke) * factor;
         final int save = c.save();
@@ -1694,6 +1712,7 @@ public final class TrioRenderer {
         FILL.setColor(color);
         c.drawPath(BOLT, FILL);
         c.restoreToCount(save);
+        } finally { c.restoreToCount(offsetSave); }
     }
 
     // ------------------------------------------------------ rectangular pieces
@@ -1719,9 +1738,9 @@ public final class TrioRenderer {
         for (int i = 0; i < TrioGeometry.RECT_DOT_ROWS; i++) {
             final float y = TrioGeometry.RECT_DOT_TOP + i * TrioGeometry.RECT_DOT_STEP;
             FILL.setColor(i < leftActive ? fg : inactive);
-            c.drawCircle(TrioGeometry.RECT_DOT_LX, y, TrioGeometry.RECT_DOT_R, FILL);
+            c.drawCircle(TrioGeometry.RECT_DOT_LX+(dual?a.sim1Dx:a.mobileDx), y, TrioGeometry.RECT_DOT_R, FILL);
             FILL.setColor(i < rightActive ? fg : inactive);
-            c.drawCircle(TrioGeometry.RECT_DOT_RX, y, TrioGeometry.RECT_DOT_R, FILL);
+            c.drawCircle(TrioGeometry.RECT_DOT_RX+(dual?a.sim2Dx:a.mobileDx), y, TrioGeometry.RECT_DOT_R, FILL);
         }
     }
 
@@ -1742,6 +1761,8 @@ public final class TrioRenderer {
      */
     private static void drawRectBatteryBar(Canvas c, int level, int role, int fg,
                                           TrioAppearance a) {
+        final int offsetSave=c.save();c.translate(a.batteryDx,0);
+        try {
         final float left = TrioGeometry.RECT_BAR_LEFT;
         final float right = TrioGeometry.RECT_BAR_RIGHT;
         final float r = a.ringStroke * 0.5f;
@@ -1769,10 +1790,13 @@ public final class TrioRenderer {
         RECT_BAR.addRoundRect(RECT_RECT, RECT_RADII, Path.Direction.CW);
         FILL.setColor(role);
         c.drawPath(RECT_BAR, FILL);
+        } finally { c.restoreToCount(offsetSave); }
     }
 
     /** The Wi-Fi group moved into the top slot; the arcs themselves are unchanged. */
     private static void drawRectWifi(Canvas c, int level, int fg, TrioAppearance a, String wifiStandard) {
+        final int offsetSave=c.save();c.translate(a.wifiDx,0);
+        try {
         final int save = c.save();
         c.translate(TrioGeometry.rectWifiOffsetX(), TrioGeometry.rectWifiOffsetY(a.arcStroke));
         final float rectScale = TrioGeometry.RECT_WIFI_SCALE * a.wifiScaleFactor();
@@ -1783,9 +1807,12 @@ public final class TrioRenderer {
                 -TrioGeometry.rectWifiOffsetY(a.arcStroke)-1f)/rectScale-TrioGeometry.W_INK_CY;
         drawWifiArcs(c,level,fg,a,wifiStandard,Float.POSITIVE_INFINITY,0f,right,bottom);
         c.restoreToCount(save);
+        } finally { c.restoreToCount(offsetSave); }
     }
 
     private static void drawRectBolt(Canvas c, int color, TrioAppearance a) {
+        final int offsetSave=c.save();c.translate(a.boltDx,0);
+        try {
         final int save = c.save();
         final float factor = a.boltScaleFactor();
         c.translate(TrioGeometry.rectBoltOffsetX(factor), TrioGeometry.rectBoltOffsetY(factor));
@@ -1793,6 +1820,7 @@ public final class TrioRenderer {
         FILL.setColor(color);
         c.drawPath(BOLT, FILL);
         c.restoreToCount(save);
+        } finally { c.restoreToCount(offsetSave); }
     }
 
     /**
@@ -1803,14 +1831,19 @@ public final class TrioRenderer {
      * {@link #fitSize} if the slot is too narrow for it.
      */
     private static void drawRectType(Canvas c, String type, int fg, TrioAppearance a) {
+        final int offsetSave=c.save();c.translate(a.typeDx,0);
+        try {
         final float requested = a.typeSize * TrioGeometry.RECT_TYPE_SCALE;
         applyWeight(a.typeWeight);
         final float size = fitSize(type, requested, TrioGeometry.RECT_TEXT_CLEAR, a.typeSuffixScale);
         drawType(c, type, TrioGeometry.RECT_VALUE_X, TrioGeometry.RECT_TYPE_BASELINE, size, fg, a);
+        } finally { c.restoreToCount(offsetSave); }
     }
 
     /** The percentage, in the middle of the arrangement and at its own scale. */
     private static void drawRectValue(Canvas c, int level, int fg, TrioAppearance a) {
+        final int offsetSave=c.save();c.translate(a.valueDx,0);
+        try {
         final String text = String.valueOf(level);
         final float requested = a.valueSize * TrioGeometry.RECT_VALUE_SCALE;
         applyWeight(a.valueWeight);
@@ -1818,6 +1851,7 @@ public final class TrioRenderer {
         TEXT.setTextSize(size);
         TEXT.setColor(fg);
         c.drawText(text, TrioGeometry.RECT_VALUE_X, TrioGeometry.RECT_VALUE_BASELINE, TEXT);
+        } finally { c.restoreToCount(offsetSave); }
     }
 
     /**
@@ -2427,7 +2461,7 @@ public final class TrioRenderer {
             return false;
         }
         final int columns = TrioGeometry.STACK_COLUMNS;
-        final float x0 = (width - inkW * scale) / 2f;
+        final float x0 = (width - inkW * scale) / 2f+a.mobileDx*scale;
         // One baseline for all four bars: the steps are in the tops, which is
         // what makes the row read as a level rather than as four separate bars.
         final float baseline = (height - inkH * scale) / 2f

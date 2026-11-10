@@ -178,6 +178,56 @@ private fun buildGeometrySliders(): List<SliderSpec> {
     val type = TrioZones.Part.TYPE
     val bolt = TrioZones.Part.BOLT
     return listOf(
+        SliderSpec(group = GeometryGroup.Text, part = TrioZones.Part.WIFI,
+            min = Prefs.MIN_WIFI_STANDARD_OFFSET, max = Prefs.MAX_WIFI_STANDARD_OFFSET,
+            read = { it.wifiDx }, write = { r, v -> r.setWifiDx(v) },
+            titleRes = { R.string.wifi_dx_title }, summaryRes = { R.string.component_dx_summary },
+            enabled = { it.glyph }, editorOwner = TrioSettingsPart.Wifi),
+        SliderSpec(group = GeometryGroup.Text, part = TrioZones.Part.MOBILE,
+            min = Prefs.MIN_WIFI_STANDARD_OFFSET, max = Prefs.MAX_WIFI_STANDARD_OFFSET,
+            read = { it.mobileDx }, write = { r, v -> r.setMobileDx(v) },
+            titleRes = { R.string.mobile_dx_title }, summaryRes = { R.string.component_dx_summary },
+            enabled = { it.glyph }, editorOwner = TrioSettingsPart.Mobile),
+        SliderSpec(group = GeometryGroup.Text, part = TrioZones.Part.MOBILE,
+            min = Prefs.MIN_WIFI_STANDARD_OFFSET, max = Prefs.MAX_WIFI_STANDARD_OFFSET,
+            read = { it.sim1Dx }, write = { r, v -> r.setSim1Dx(v) },
+            titleRes = { R.string.sim1_dx_title }, summaryRes = { R.string.component_dx_summary },
+            enabled = { it.glyph }, editorOwner = TrioSettingsPart.Mobile),
+        SliderSpec(group = GeometryGroup.Text, part = TrioZones.Part.MOBILE,
+            min = Prefs.MIN_WIFI_STANDARD_OFFSET, max = Prefs.MAX_WIFI_STANDARD_OFFSET,
+            read = { it.sim2Dx }, write = { r, v -> r.setSim2Dx(v) },
+            titleRes = { R.string.sim2_dx_title }, summaryRes = { R.string.component_dx_summary },
+            enabled = { it.glyph }, editorOwner = TrioSettingsPart.Mobile),
+        SliderSpec(group = GeometryGroup.Text, part = TrioZones.Part.VALUE,
+            min = Prefs.MIN_WIFI_STANDARD_OFFSET, max = Prefs.MAX_WIFI_STANDARD_OFFSET,
+            read = { it.valueDx }, write = { r, v -> r.setValueDx(v) },
+            titleRes = { R.string.value_dx_title }, summaryRes = { R.string.component_dx_summary },
+            enabled = { it.glyph }, editorOwner = TrioSettingsPart.Value),
+        SliderSpec(group = GeometryGroup.Text, part = TrioZones.Part.BOLT,
+            min = Prefs.MIN_WIFI_STANDARD_OFFSET, max = Prefs.MAX_WIFI_STANDARD_OFFSET,
+            read = { it.boltDx }, write = { r, v -> r.setBoltDx(v) },
+            titleRes = { R.string.bolt_dx_title }, summaryRes = { R.string.component_dx_summary },
+            enabled = { it.glyph }, editorOwner = TrioSettingsPart.Bolt),
+        SliderSpec(group = GeometryGroup.Text, part = TrioZones.Part.TYPE,
+            min = Prefs.MIN_WIFI_STANDARD_OFFSET, max = Prefs.MAX_WIFI_STANDARD_OFFSET,
+            read = { it.typeDx }, write = { r, v -> r.setTypeDx(v) },
+            titleRes = { R.string.type_dx_title }, summaryRes = { R.string.component_dx_summary },
+            enabled = { it.glyph }, editorOwner = TrioSettingsPart.Wifi),
+        SliderSpec(group = GeometryGroup.Text, part = TrioZones.Part.CLOCK,
+            min = Prefs.MIN_WIFI_STANDARD_OFFSET, max = Prefs.MAX_WIFI_STANDARD_OFFSET,
+            read = { it.clockDx }, write = { r, v -> r.setClockDx(v) },
+            titleRes = { R.string.clock_dx_title }, summaryRes = { R.string.component_dx_summary },
+            enabled = { it.glyph }, editorOwner = TrioSettingsPart.Clock),
+        SliderSpec(group = GeometryGroup.Text, part = null,
+            min = Prefs.MIN_WIFI_STANDARD_OFFSET, max = Prefs.MAX_WIFI_STANDARD_OFFSET,
+            read = { it.batteryDx }, write = { r, v -> r.setBatteryDx(v) },
+            titleRes = { R.string.battery_dx_title }, summaryRes = { R.string.component_dx_summary },
+            enabled = { it.glyph }, editorOwner = TrioSettingsPart.Battery),
+        SliderSpec(group = GeometryGroup.Text, part = null,
+            min = Prefs.MIN_WIFI_STANDARD_OFFSET, max = Prefs.MAX_WIFI_STANDARD_OFFSET,
+            read = { it.perfDx }, write = { r, v -> r.setPerfDx(v) },
+            titleRes = { R.string.perf_dx_title }, summaryRes = { R.string.component_dx_summary },
+            enabled = { it.glyph }, editorOwner = TrioSettingsPart.Readouts),
         SliderSpec(group = GeometryGroup.Track, part = null,
             min = Prefs.MIN_CHARGE_FLOW_SPEED, max = Prefs.MAX_CHARGE_FLOW_SPEED, read = { it.chargeFlowSpeed },
             write = { r, v -> r.setChargeFlowSpeed(v) }, titleRes = { R.string.charge_flow_speed_title },
@@ -797,6 +847,11 @@ internal fun CapsuleContainerRows(
     }
     val a = remember(settings) { TrioAppearance.of(settings) }
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        var expanded by rememberSaveable(a.style) { mutableStateOf(false) }
+        ArrowPreference(title = stringResource(R.string.advanced_capsule),
+            summary = stringResource(if (expanded) R.string.advanced_hide else R.string.advanced_show),
+            onClick = { expanded = !expanded })
+        if (expanded) Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp)) {
         specs.forEach { spec ->
             val hint = gateHintFor(spec, a)
             if (hint == null) {
@@ -807,6 +862,7 @@ internal fun CapsuleContainerRows(
                 }
             }
         }
+    }
     }
 }
 
@@ -1064,7 +1120,11 @@ private fun gateHintFor(spec: SliderSpec, a: TrioAppearance): String? {
     return stringResource(R.string.gate_hint, stringResource(missing.second))
 }
 
+private fun isPositionSlider(spec: SliderSpec, a: TrioAppearance): Boolean =
+    spec.titleRes(a) in listOf(R.string.wifi_dx_title, R.string.mobile_dx_title, R.string.sim1_dx_title, R.string.sim2_dx_title, R.string.value_dx_title, R.string.bolt_dx_title, R.string.type_dx_title, R.string.clock_dx_title, R.string.battery_dx_title, R.string.perf_dx_title, R.string.wifi_standard_dx_title, R.string.wifi_standard_dy_title)
+
 internal fun isAdvancedSlider(spec: SliderSpec, a: TrioAppearance): Boolean =
+    isPositionSlider(spec, a) ||
     spec.scope in listOf(SliderScope.SplitLeft, SliderScope.SplitRight, SliderScope.CapsuleStructure) ||
     spec.titleRes(a) in listOf(R.string.pair_pitch_title,R.string.pair_bend_title,R.string.pair_x_title,
         R.string.pair_y_title,R.string.sim_stack_gap_title,R.string.out_type_margin_left_title,
@@ -1074,7 +1134,7 @@ internal fun isAdvancedSlider(spec: SliderSpec, a: TrioAppearance): Boolean =
 internal enum class AdvancedGroup(val titleRes: Int) {
     LeftArc(R.string.advanced_left_arc), RightArc(R.string.advanced_right_arc),
     Capsule(R.string.advanced_capsule), DualSim(R.string.advanced_dual_sim),
-    NetworkType(R.string.advanced_network_type)
+    NetworkType(R.string.advanced_network_type), Position(R.string.advanced_component_position)
 }
 
 internal fun advancedGroup(control: ContentControl): AdvancedGroup? = when (control) {
@@ -1083,6 +1143,7 @@ internal fun advancedGroup(control: ContentControl): AdvancedGroup? = when (cont
 }
 
 internal fun advancedGroup(spec: SliderSpec, a: TrioAppearance): AdvancedGroup? = when {
+    isPositionSlider(spec, a) -> AdvancedGroup.Position
     spec.scope == SliderScope.SplitLeft -> AdvancedGroup.LeftArc
     spec.scope == SliderScope.SplitRight -> AdvancedGroup.RightArc
     spec.scope == SliderScope.CapsuleStructure -> AdvancedGroup.Capsule

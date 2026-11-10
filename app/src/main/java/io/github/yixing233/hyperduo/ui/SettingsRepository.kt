@@ -301,6 +301,17 @@ class SettingsRepository(context: Context) {
     fun setWifiStandardScale(value: Int) = writeInt(Prefs.KEY_WIFI_STANDARD_SCALE, value)
     fun setWifiStandardWeight(value: Int) = writeInt(Prefs.KEY_WIFI_STANDARD_WEIGHT, value)
     fun setWifiStandardDx(value: Int) = writeInt(Prefs.KEY_WIFI_STANDARD_DX, value)
+    fun setWifiDx(value: Int) = writeInt(Prefs.KEY_WIFI_DX, value)
+    fun setMobileDx(value: Int) = writeInt(Prefs.KEY_MOBILE_DX, value)
+    fun setSim1Dx(value: Int) = writeInt(Prefs.KEY_SIM1_DX, value)
+    fun setSim2Dx(value: Int) = writeInt(Prefs.KEY_SIM2_DX, value)
+    fun setValueDx(value: Int) = writeInt(Prefs.KEY_VALUE_DX, value)
+    fun setBoltDx(value: Int) = writeInt(Prefs.KEY_BOLT_DX, value)
+    fun setTypeDx(value: Int) = writeInt(Prefs.KEY_TYPE_DX, value)
+    fun setClockDx(value: Int) = writeInt(Prefs.KEY_CLOCK_DX, value)
+    fun setBatteryDx(value: Int) = writeInt(Prefs.KEY_BATTERY_DX, value)
+    fun setPerfDx(value: Int) = writeInt(Prefs.KEY_PERF_DX, value)
+
     fun setWifiStandardDy(value: Int) = writeInt(Prefs.KEY_WIFI_STANDARD_DY, value)
     /** Drop the network type while Wi-Fi is up; see [Prefs.KEY_TYPE_HIDE_ON_WIFI]. */
     fun setTypeHideOnWifi(value: Boolean) =

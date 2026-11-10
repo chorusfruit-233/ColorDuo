@@ -431,4 +431,16 @@
     <string name="wifi_standard_dx_summary">Default 0. Positive moves right, negative left. The number and E suffix move together.</string>
     <string name="wifi_standard_dy_title">Standard marker vertical offset</string>
     <string name="wifi_standard_dy_summary">Default 0. Positive moves down, negative up. The number and E suffix move together.</string>
+    <string name="wifi_dx_title">Wi-Fi horizontal offset</string>
+    <string name="mobile_dx_title">Mobile signal horizontal offset</string>
+    <string name="sim1_dx_title">SIM 1 horizontal offset</string>
+    <string name="sim2_dx_title">SIM 2 horizontal offset</string>
+    <string name="value_dx_title">Battery number horizontal offset</string>
+    <string name="bolt_dx_title">Charging bolt horizontal offset</string>
+    <string name="type_dx_title">Network type horizontal offset</string>
+    <string name="clock_dx_title">Clock horizontal offset</string>
+    <string name="battery_dx_title">Battery outline horizontal offset</string>
+    <string name="perf_dx_title">Power and temperature horizontal offset</string>
+    <string name="advanced_component_position">Advanced positioning</string>
+    <string name="component_dx_summary">Negative moves left; positive moves right. Zero restores the default position.</string>
 </resources>

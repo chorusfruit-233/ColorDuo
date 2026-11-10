@@ -1126,6 +1126,17 @@ public final class Prefs {
     public static final String KEY_WIFI_STANDARD_SCALE = "wifi_standard_scale";
     public static final String KEY_WIFI_STANDARD_WEIGHT = "wifi_standard_weight";
     public static final String KEY_WIFI_STANDARD_DX = "wifi_standard_dx";
+    public static final String KEY_WIFI_DX = "wifi_dx";
+    public static final String KEY_MOBILE_DX = "mobile_dx";
+    public static final String KEY_SIM1_DX = "sim1_dx";
+    public static final String KEY_SIM2_DX = "sim2_dx";
+    public static final String KEY_VALUE_DX = "value_dx";
+    public static final String KEY_BOLT_DX = "bolt_dx";
+    public static final String KEY_TYPE_DX = "type_dx";
+    public static final String KEY_CLOCK_DX = "clock_dx";
+    public static final String KEY_BATTERY_DX = "battery_dx";
+    public static final String KEY_PERF_DX = "perf_dx";
+
     public static final String KEY_WIFI_STANDARD_DY = "wifi_standard_dy";
 
     /**
