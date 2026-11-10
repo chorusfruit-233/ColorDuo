@@ -155,7 +155,7 @@ final class ColorOsReadings extends ViewGroup {
             return;
         }
         float density = getResources().getDisplayMetrics().density;
-        int signalHeight = TrioRenderer.outSignalHeight(appearance.outSignalSize, density);
+        int signalHeight = TrioRenderer.outSignalHeight(appearance.outSignalSize, density,appearance);
         signal.measure(MeasureSpec.makeMeasureSpec(TrioRenderer.outSignalWidth(signalHeight,appearance), MeasureSpec.EXACTLY),
                 MeasureSpec.makeMeasureSpec(signalHeight, MeasureSpec.EXACTLY));
         int unspecified = MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);

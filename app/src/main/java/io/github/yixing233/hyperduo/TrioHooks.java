@@ -3234,11 +3234,11 @@ final class TrioHooks {
      * the container, so such a map's values would keep their own keys alive.
      */
     static final class OutTypeLabel extends TextView {
-        int positionOffset;
+        int positionOffset,positionOffsetY;
         void syncOffset() {
-            int next=TrioConfig.appearance().typeDx;
-            if(positionOffset!=next) {
-                positionOffset=next;
+            int next=TrioConfig.appearance().typeDx,nextY=TrioConfig.appearance().typeDy;
+            if(positionOffset!=next||positionOffsetY!=nextY) {
+                positionOffset=next;positionOffsetY=nextY;
                 requestLayout();invalidate();
             }
         }
@@ -3268,13 +3268,13 @@ final class TrioHooks {
 
         @Override protected void onMeasure(int widthSpec,int heightSpec) {
             int reserve=Math.round(Math.abs(TrioConfig.appearance().typeDx)*getResources().getDisplayMetrics().density);
-            setPadding(reserve,getPaddingTop(),reserve,getPaddingBottom());
+            setPadding(reserve,Math.round(Math.abs(TrioConfig.appearance().typeDy)*getResources().getDisplayMetrics().density),reserve,Math.round(Math.abs(TrioConfig.appearance().typeDy)*getResources().getDisplayMetrics().density));
             super.onMeasure(widthSpec,heightSpec);
         }
 
         @Override protected void onDraw(Canvas canvas) {
             int save=canvas.save();
-            canvas.translate(TrioConfig.appearance().typeDx*getResources().getDisplayMetrics().density,0);
+            canvas.translate(TrioConfig.appearance().typeDx*getResources().getDisplayMetrics().density,TrioConfig.appearance().typeDy*getResources().getDisplayMetrics().density);
             try { super.onDraw(canvas); } finally { canvas.restoreToCount(save); }
         }
     }
@@ -3374,6 +3374,7 @@ final class TrioHooks {
         if (label.getVisibility() != View.VISIBLE
                 || !text.contentEquals(label.getText())
                 || label.positionOffset != TrioConfig.appearance().typeDx
+                || label.positionOffsetY != TrioConfig.appearance().typeDy
                 || label.suffixScale != TrioConfig.appearance().typeSuffixScale
                 || label.getTextSize() != outTypeSizePx(container)
                 // A new font moves none of the three values above, so without this
@@ -3733,11 +3734,11 @@ final class TrioHooks {
      * class rather than a tag on somebody else's.
      */
     static final class PerfLabel extends TextView {
-        int positionOffset;
+        int positionOffset,positionOffsetY;
         void syncOffset() {
-            int next=TrioConfig.appearance().perfDx;
-            if(positionOffset!=next) {
-                positionOffset=next;
+            int next=TrioConfig.appearance().perfDx,nextY=TrioConfig.appearance().perfDy;
+            if(positionOffset!=next||positionOffsetY!=nextY) {
+                positionOffset=next;positionOffsetY=nextY;
                 requestLayout();invalidate();
             }
         }
@@ -3772,13 +3773,13 @@ final class TrioHooks {
 
         @Override protected void onMeasure(int widthSpec,int heightSpec) {
             int reserve=Math.round(Math.abs(TrioConfig.appearance().perfDx)*getResources().getDisplayMetrics().density);
-            setPadding(reserve,getPaddingTop(),reserve,getPaddingBottom());
+            setPadding(reserve,Math.round(Math.abs(TrioConfig.appearance().perfDy)*getResources().getDisplayMetrics().density),reserve,Math.round(Math.abs(TrioConfig.appearance().perfDy)*getResources().getDisplayMetrics().density));
             super.onMeasure(widthSpec,heightSpec);
         }
 
         @Override protected void onDraw(Canvas canvas) {
             int save=canvas.save();
-            canvas.translate(TrioConfig.appearance().perfDx*getResources().getDisplayMetrics().density,0);
+            canvas.translate(TrioConfig.appearance().perfDx*getResources().getDisplayMetrics().density,TrioConfig.appearance().perfDy*getResources().getDisplayMetrics().density);
             try { super.onDraw(canvas); } finally { canvas.restoreToCount(save); }
         }
     }
@@ -3897,6 +3898,7 @@ final class TrioHooks {
                 || perf.getLineSpacingMultiplier()
                         != perfLineSpacing(perf, text, container)
                 || perf.positionOffset != TrioConfig.appearance().perfDx
+                || perf.positionOffsetY != TrioConfig.appearance().perfDy
                 || perf.weight != weight
                 || perf.fontGeneration != TrioRenderer.fontGeneration()) {
             requestPerfSync(container);
@@ -5070,7 +5072,7 @@ final class TrioHooks {
      */
     private static int outSignalHeight(View host) {
         final float density = host.getResources().getDisplayMetrics().density;
-        return TrioRenderer.outSignalHeight(TrioConfig.appearance().outSignalSize, density);
+        return TrioRenderer.outSignalHeight(TrioConfig.appearance().outSignalSize, density,TrioConfig.appearance());
     }
 
     /**

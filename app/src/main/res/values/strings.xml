@@ -442,4 +442,23 @@
     <string name="perf_dx_title">功率与温度水平位移</string>
     <string name="advanced_component_position">位置高级参数</string>
     <string name="component_dx_summary">负值向左，正值向右；0 为默认位置。</string>
+    <string name="wifi_dy_title">Wi-Fi 整体竖直位移</string>
+    <string name="mobile_dy_title">移动信号竖直位移</string>
+    <string name="sim1_dy_title">SIM 1 竖直位移</string>
+    <string name="sim2_dy_title">SIM 2 竖直位移</string>
+    <string name="value_dy_title">电量数字竖直位移</string>
+    <string name="bolt_dy_title">闪电竖直位移</string>
+    <string name="type_dy_title">网络类型竖直位移</string>
+    <string name="clock_dy_title">时钟竖直位移</string>
+    <string name="battery_dy_title">电量轮廓竖直位移</string>
+    <string name="perf_dy_title">功率与温度竖直位移</string>
+    <string name="component_dy_summary">负值向上，正值向下；0 为默认位置。</string>
+    <string name="advanced_parameters_title">高级参数</string>
+    <string name="parameters_wifi">Wi-Fi 整体</string>
+    <string name="parameters_wifi_standard">协议标准号</string>
+    <string name="parameters_network_type">网络类型</string>
+    <string name="parameters_mobile">移动信号</string>
+    <string name="parameters_sim1">SIM 1</string>
+    <string name="parameters_sim2">SIM 2</string>
+    <string name="parameters_pair">双卡堆叠</string>
 </resources>

@@ -12,17 +12,37 @@ public final class TrioSizing {
         }
     }
 
-    static Bounds bounds(TrioAppearance a) {
+    private static final TrioAppearance[] BOUNDS_KEYS=new TrioAppearance[4];
+    private static final Bounds[] BOUNDS_CACHE=new Bounds[4];
+    private static final int[] BOUNDS_FONTS=new int[4];
+    private static int nextBounds;
+
+    static synchronized Bounds bounds(TrioAppearance a) {
+        // The shared capsule geometry must be selected even when this lookup hits.
+        TrioGeometry.setCapsuleLength(a.capsuleLength);
+        int font=TrioRenderer.fontGeneration();
+        for(int i=0;i<BOUNDS_KEYS.length;i++)
+            if(BOUNDS_KEYS[i]==a&&BOUNDS_FONTS[i]==font)return BOUNDS_CACHE[i];
+        Bounds result=uncachedBounds(a);
+        BOUNDS_KEYS[nextBounds]=a;BOUNDS_FONTS[nextBounds]=font;BOUNDS_CACHE[nextBounds]=result;
+        nextBounds=(nextBounds+1)%BOUNDS_KEYS.length;
+        return result;
+    }
+    static synchronized void clearCaches() {
+        java.util.Arrays.fill(BOUNDS_KEYS,null);java.util.Arrays.fill(BOUNDS_CACHE,null);nextBounds=0;
+    }
+
+    private static Bounds uncachedBounds(TrioAppearance a) {
         Bounds b=baseBounds(a);
-        float reserve=a.horizontalReserve();
+        float reserve=a.horizontalReserve(),vertical=a.verticalReserve();
         // Symmetric reserve keeps the original centre fixed as one component moves.
-        return reserve==0?b:new Bounds(b.x-reserve,b.y,b.width+reserve*2,b.height);
+        return reserve==0&&vertical==0?b:new Bounds(b.x-reserve,b.y-vertical,b.width+reserve*2,b.height+vertical*2);
     }
 
     private static Bounds baseBounds(TrioAppearance a) {
         TrioGeometry.setCapsuleLength(a.capsuleLength);
         final TrioGeometry.SplitRing split = a.ring && (a.splitMode == 1 || a.drawsSimPair() || a.signalIconScale != 100)
-                ? new TrioGeometry.SplitRing(a) : null;
+                ? TrioGeometry.splitRing(a) : null;
         float capMinX=TrioGeometry.CAP_INK_X, capMaxX=capMinX+TrioGeometry.capInkW();
         float capMinY=TrioGeometry.CAP_INK_TOP, capMaxY=TrioGeometry.CAP_INK_BOTTOM;
         if (a.capsule && a.drawsSimPair()) {

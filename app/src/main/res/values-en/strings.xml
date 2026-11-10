@@ -443,4 +443,23 @@
     <string name="perf_dx_title">Power and temperature horizontal offset</string>
     <string name="advanced_component_position">Advanced positioning</string>
     <string name="component_dx_summary">Negative moves left; positive moves right. Zero restores the default position.</string>
+    <string name="wifi_dy_title">Wi-Fi vertical offset</string>
+    <string name="mobile_dy_title">Mobile signal vertical offset</string>
+    <string name="sim1_dy_title">SIM 1 vertical offset</string>
+    <string name="sim2_dy_title">SIM 2 vertical offset</string>
+    <string name="value_dy_title">Battery number vertical offset</string>
+    <string name="bolt_dy_title">Charging bolt vertical offset</string>
+    <string name="type_dy_title">Network type vertical offset</string>
+    <string name="clock_dy_title">Clock vertical offset</string>
+    <string name="battery_dy_title">Battery outline vertical offset</string>
+    <string name="perf_dy_title">Power and temperature vertical offset</string>
+    <string name="component_dy_summary">Negative moves up; positive moves down. Zero restores the default position.</string>
+    <string name="advanced_parameters_title">Advanced parameters</string>
+    <string name="parameters_wifi">Wi-Fi group</string>
+    <string name="parameters_wifi_standard">Protocol marker</string>
+    <string name="parameters_network_type">Network type</string>
+    <string name="parameters_mobile">Mobile signal</string>
+    <string name="parameters_sim1">SIM 1</string>
+    <string name="parameters_sim2">SIM 2</string>
+    <string name="parameters_pair">Stacked SIMs</string>
 </resources>

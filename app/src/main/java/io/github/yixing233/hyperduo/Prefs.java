@@ -1127,15 +1127,25 @@ public final class Prefs {
     public static final String KEY_WIFI_STANDARD_WEIGHT = "wifi_standard_weight";
     public static final String KEY_WIFI_STANDARD_DX = "wifi_standard_dx";
     public static final String KEY_WIFI_DX = "wifi_dx";
+    public static final String KEY_WIFI_DY = "wifi_dy";
     public static final String KEY_MOBILE_DX = "mobile_dx";
+    public static final String KEY_MOBILE_DY = "mobile_dy";
     public static final String KEY_SIM1_DX = "sim1_dx";
+    public static final String KEY_SIM1_DY = "sim1_dy";
     public static final String KEY_SIM2_DX = "sim2_dx";
+    public static final String KEY_SIM2_DY = "sim2_dy";
     public static final String KEY_VALUE_DX = "value_dx";
+    public static final String KEY_VALUE_DY = "value_dy";
     public static final String KEY_BOLT_DX = "bolt_dx";
+    public static final String KEY_BOLT_DY = "bolt_dy";
     public static final String KEY_TYPE_DX = "type_dx";
+    public static final String KEY_TYPE_DY = "type_dy";
     public static final String KEY_CLOCK_DX = "clock_dx";
+    public static final String KEY_CLOCK_DY = "clock_dy";
     public static final String KEY_BATTERY_DX = "battery_dx";
+    public static final String KEY_BATTERY_DY = "battery_dy";
     public static final String KEY_PERF_DX = "perf_dx";
+    public static final String KEY_PERF_DY = "perf_dy";
 
     public static final String KEY_WIFI_STANDARD_DY = "wifi_standard_dy";
 

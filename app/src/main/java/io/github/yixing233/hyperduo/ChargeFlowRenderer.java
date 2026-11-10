@@ -95,7 +95,7 @@ final class ChargeFlowRenderer {
             r.arc(right-radius,cy,radius,radius,270,180);
             r.line(right-radius,bottom,cx+p1,bottom);
         } else if(a.ring&&a.splitMode==1) {
-            TrioGeometry.SplitRing split=new TrioGeometry.SplitRing(a);
+            TrioGeometry.SplitRing split=TrioGeometry.splitRing(a);
             for(int side=0;side<2;side++)for(int n=1;n<=TrioGeometry.SplitRing.STEPS;n++) {
                 int i=side*(TrioGeometry.SplitRing.STEPS+1)+n;
                 r.line(split.x[i-1],split.y[i-1],split.x[i],split.y[i]);

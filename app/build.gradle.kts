@@ -20,7 +20,7 @@ android {
         applicationId = "io.github.chorusfruit_233.colorduo"
         minSdk = 29
         targetSdk = 36
-        versionCode = tagVersionCode ?: 10064
+        versionCode = tagVersionCode ?: 10065
         versionName = tagVersionName ?: "0.4.1"
     }
 

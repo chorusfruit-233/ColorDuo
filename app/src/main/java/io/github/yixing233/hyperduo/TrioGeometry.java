@@ -2085,6 +2085,19 @@ final class TrioGeometry {
     }
 
     /** Independent sampled side paths. Progress is measured over actual ink length. */
+    private static final TrioAppearance[] SPLIT_KEYS=new TrioAppearance[4];
+    private static final SplitRing[] SPLIT_SHAPES=new SplitRing[4];
+    private static int nextSplit;
+    static synchronized SplitRing splitRing(TrioAppearance a) {
+        for(int i=0;i<SPLIT_KEYS.length;i++)if(SPLIT_KEYS[i]==a)return SPLIT_SHAPES[i];
+        SplitRing result=new SplitRing(a);
+        SPLIT_KEYS[nextSplit]=a;SPLIT_SHAPES[nextSplit]=result;nextSplit=(nextSplit+1)%SPLIT_KEYS.length;
+        return result;
+    }
+    static synchronized void clearCaches() {
+        java.util.Arrays.fill(SPLIT_KEYS,null);java.util.Arrays.fill(SPLIT_SHAPES,null);nextSplit=0;
+    }
+
     static final class SplitRing {
         static final int STEPS = 256;
         final EllipseSide[] sides=new EllipseSide[2];
