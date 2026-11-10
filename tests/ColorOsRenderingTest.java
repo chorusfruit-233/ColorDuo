@@ -102,7 +102,7 @@ public final class ColorOsRenderingTest {
         for(java.awt.geom.Rectangle2D box:boxes) {
             if(result==null)result=(java.awt.geom.Rectangle2D)box.clone();else java.awt.geom.Rectangle2D.union(result,box,result);
         }
-        check(result!=null,"fixture paints the selected component");return result;
+        check(result!=null,"fixture paints the selected component "+part);return result;
     }
 
     private static void componentHorizontalOffsets() throws Exception {
@@ -113,6 +113,8 @@ public final class ColorOsRenderingTest {
         for(int i=0;i<parts.length;i++)for(int offset:new int[]{-20,20}) {
             TrioSettings base=TrioSettings.defaults();base.enabled=true;base.trioStyle=Prefs.STYLE_RING;base.glyphScale=100;
             base.typeHideOnWifi=false;base.showWifiStandard=false;base.signalMode=Prefs.SIGNAL_IN_RING;
+            base.chargingShowsValue=false;base.showSim1=true;base.showSim2=true;
+            base.mobileTypeMode=Prefs.MOBILE_TYPE_IN_RING;state.mobileService=DuoPolicy.Radio.AVAILABLE;
             base.ringZones=new int[][]{new int[0],new int[]{parts[i]},new int[0]};
             TrioSettings moved=base.copy();TrioSettings.class.getField(fields[i]).setInt(moved,offset);
             TrioAppearance before=TrioAppearance.of(base),after=TrioAppearance.of(moved);
