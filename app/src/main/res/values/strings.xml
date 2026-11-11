@@ -59,6 +59,7 @@
     <string name="ring_position_bolt">充电闪电的位置</string>
     <string name="ring_position_type">网络类型的位置</string>
     <string name="ring_position_clock">时钟的位置</string>
+    <string name="ring_position_memory">内存的位置</string>
     <string name="ring_position_native">归还系统</string>
     <string name="drawing_occupant_sim_1">卡一信号点</string>
     <string name="drawing_occupant_sim_2">卡二信号点</string>
@@ -105,6 +106,8 @@
     <string name="drawing_occupant_wifi">Wi-Fi 弧</string>
     <string name="drawing_occupant_mobile">移动信号点</string>
     <string name="drawing_occupant_type">网络类型</string>
+    <string name="show_memory_summary">显示已用内存比例，亮屏时每 3 秒采样；字号与字重跟随电量数字。</string>
+    <string name="drawing_occupant_memory">内存占用</string>
     <string name="drawing_master_off">已关闭总开关，预览按你选的样式照画，但状态栏不会显示。</string>
     <string name="drawing_settings_title">「%1$s」的设置</string>
     <string name="drawing_settings_none">这一项没有可调的尺寸或颜色。</string>

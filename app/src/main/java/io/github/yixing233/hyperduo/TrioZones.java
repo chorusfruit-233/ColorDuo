@@ -127,6 +127,8 @@ public final class TrioZones {
         SIM_2,
         /** The capsule's fixed left clock, editable but not removable. */
         CLOCK,
+        /** Runtime memory usage as a percentage, sampled by {@code MemoryTicker}. */
+        MEMORY,
         /** Two physical SIM rows placed together. */
         SIM_PAIR
     }
@@ -842,6 +844,7 @@ public final class TrioZones {
             case BOLT: return Prefs.PART_BOLT;
             case TYPE: return Prefs.PART_TYPE;
             case CLOCK: return Prefs.PART_CLOCK;
+            case MEMORY: return Prefs.PART_MEMORY;
             default: return Prefs.PART_NONE;
         }
     }
@@ -854,6 +857,7 @@ public final class TrioZones {
             case Prefs.PART_BOLT: return Part.BOLT;
             case Prefs.PART_TYPE: return Part.TYPE;
             case Prefs.PART_CLOCK: return Part.CLOCK;
+            case Prefs.PART_MEMORY: return Part.MEMORY;
             case Prefs.PART_SIM_1: return Part.SIM_1;
             case Prefs.PART_SIM_2: return Part.SIM_2;
             case Prefs.PART_SIM_PAIR: return Part.SIM_PAIR;

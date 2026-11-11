@@ -524,9 +524,10 @@ private fun RingPositionControl(
         TrioZones.Part.BOLT -> R.string.ring_position_bolt
         TrioZones.Part.TYPE -> R.string.ring_position_type
         TrioZones.Part.CLOCK -> R.string.ring_position_clock
+        TrioZones.Part.MEMORY -> R.string.ring_position_memory
     }
     val paired = part == TrioZones.Part.SIM_PAIR
-    val unplaced = if (paired) emptyList() else listOf(if (part == TrioZones.Part.TYPE) R.string.signal_hidden else R.string.ring_position_native)
+    val unplaced = if (paired) emptyList() else listOf(if (part == TrioZones.Part.TYPE || part == TrioZones.Part.MEMORY) R.string.signal_hidden else R.string.ring_position_native)
     val choice = if (paired) (selected - 1).coerceAtLeast(0) else selected
     ContentChoice(choice, title,
         null,

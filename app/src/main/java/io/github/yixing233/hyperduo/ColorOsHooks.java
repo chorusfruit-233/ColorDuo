@@ -114,6 +114,7 @@ final class ColorOsHooks {
     private ColorOsHooks() {}
 
     static boolean isInstalled() { return installed; }
+    static boolean isAodShowing() { return doze != null && doze.isShowing(); }
 
     static void drainRetiredCallbacks() { MAIN.removeCallbacksAndMessages(null); }
 
@@ -830,6 +831,7 @@ final class ColorOsHooks {
             SIGNAL_FLOWS.sync(Collections.emptyList());
         }
         ClockTicker.refreshNow();
+        MemoryTicker.refreshNow();
         for (WeakReference<Host> reference : new ArrayList<>(HOSTS.values())) {
             Host host = reference.get();
             if (host == null || host.nativeDepth != 0) continue;

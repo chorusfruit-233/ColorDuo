@@ -27,6 +27,13 @@ final class TrioState {
      */
     static String sClockText = "19:41";
 
+    /**
+     * Synthetic RAM reading for the harness: there is no {@code MemoryTicker} in this
+     * process, and a fixed value keeps a render reproducible.
+     */
+    static final int MEMORY_UNKNOWN = -1;
+    static int sMemoryPercent = 68;
+
     int level = 72;
     boolean useTint;
     int tintColor;

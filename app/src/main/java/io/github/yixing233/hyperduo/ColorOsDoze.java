@@ -53,13 +53,17 @@ final class ColorOsDoze {
         } catch (RuntimeException ignored) {
             return false;
         }
+        return !isShowing();
+    }
+
+    boolean isShowing() {
         try {
             // Read an existing native singleton. Do not start the AOD subsystem ourselves.
-            if (singleton != null && Boolean.TRUE.equals(showing(singleton.get(null)))) return false;
+            return singleton != null && Boolean.TRUE.equals(showing(singleton.get(null)));
         } catch (ReflectiveOperationException | RuntimeException ignored) {
-            // Other firmware still has the platform power/display gates above.
+            // Callers retain their platform power/display gates on other firmware.
+            return false;
         }
-        return true;
     }
 
     void watch(Context context, Runnable repaint) {

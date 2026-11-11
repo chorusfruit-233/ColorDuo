@@ -317,6 +317,7 @@ final class TrioGeometry {
 
     static float ringOpeningDegrees(int part) {
         return part == Prefs.PART_VALUE || part == Prefs.PART_TYPE || part == Prefs.PART_CLOCK
+                || part == Prefs.PART_MEMORY
                 ? TEXT_GAP_WIDTH_DEG : GAP_WIDTH_DEG;
     }
 
@@ -1489,6 +1490,9 @@ final class TrioGeometry {
                 return capTextReach("5GA", stroke, roomH);
             case Prefs.PART_CLOCK:
                 return capTextReach("19:41", stroke, roomH);
+            case Prefs.PART_MEMORY:
+                // Four characters at the widest, and the trailing sign is part of the ink.
+                return capTextReach("100%", stroke, roomH);
             default:
                 return 0f;
         }

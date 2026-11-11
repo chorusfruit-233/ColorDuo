@@ -289,7 +289,7 @@ public final class TrioRenderer {
         return false;
     }
 
-    /** The percentage slider must stop where its assigned ring slots stop growing. */
+    /** Shared battery/RAM typography stops where its assigned ring slots stop growing. */
     public static int maxValueSize(TrioAppearance appearance) {
         if (!appearance.ring) return appearance.capsule
                 ? Prefs.MAX_CAPSULE_VALUE_SIZE : Prefs.MAX_VALUE_SIZE;
@@ -300,14 +300,14 @@ public final class TrioRenderer {
             if (appearance.ringZones[z].length > 0) occupied[z] = appearance.ringZones[z][0];
         }
         int maximum = 0;
-        for (int z = 0; z < 3; z++) {
-            boolean placed = false;
-            for (int part : appearance.ringZones[z]) if (part == Prefs.PART_VALUE) placed = true;
-            if (!placed) continue;
+        for (int z = 0; z < 3; z++) for (int part : appearance.ringZones[z]) {
+            if (part != Prefs.PART_VALUE && part != Prefs.PART_MEMORY) continue;
+            final String wide = part == Prefs.PART_MEMORY ? "100%" : "100";
+            final String pair = part == Prefs.PART_MEMORY ? "88%" : "88";
             maximum = Math.max(maximum, Prefs.MIN_VALUE_SIZE);
             for (int size = Prefs.MAX_RING_VALUE_SIZE; size >= Prefs.MIN_VALUE_SIZE; size--) {
-                if (ringTextSize("100", size, z, appearance.ringStroke, 100, occupied) >= size - 0.01f
-                        && ringTextSize("88", size, z, appearance.ringStroke, 100, occupied) >= size - 0.01f) {
+                if (ringTextSize(wide, size, z, appearance.ringStroke, 100, occupied) >= size - 0.01f
+                        && ringTextSize(pair, size, z, appearance.ringStroke, 100, occupied) >= size - 0.01f) {
                     maximum = Math.max(maximum, size);
                     break;
                 }
@@ -663,11 +663,15 @@ public final class TrioRenderer {
                 drawArcDotRow(c,active,z,radius,fg,a);
             } else {
                 final String text = part == Prefs.PART_VALUE ? String.valueOf(level)
-                        : part == Prefs.PART_TYPE ? type : TrioState.sClockText;
+                        : part == Prefs.PART_TYPE ? type
+                        : part == Prefs.PART_MEMORY ? memoryText()
+                        : TrioState.sClockText;
                 if (text != null && !text.isEmpty()) {
-                    final int weight = part == Prefs.PART_VALUE ? a.valueWeight
+                    final int weight = part == Prefs.PART_VALUE || part == Prefs.PART_MEMORY
+                            ? a.valueWeight
                             : part == Prefs.PART_TYPE ? a.typeWeight : a.clockWeight;
-                    final float requested = part == Prefs.PART_VALUE ? a.valueSize
+                    final float requested = part == Prefs.PART_VALUE || part == Prefs.PART_MEMORY
+                            ? a.valueSize
                             : part == Prefs.PART_TYPE ? a.typeSize : a.clockSize;
                     applyWeight(weight);
                     TEXT.setTextSize(requested);
@@ -727,12 +731,16 @@ public final class TrioRenderer {
                     BOLT_BOUNDS.right-TrioGeometry.BOLT_CX_REF)*scale;
             edgeY=TrioGeometry.ZONE_CY[zone]+((zone==0?BOLT_BOUNDS.bottom:BOLT_BOUNDS.top)
                     -TrioGeometry.BOLT_INK_CY)*scale;
-        } else if(part==Prefs.PART_VALUE || part==Prefs.PART_TYPE || part==Prefs.PART_CLOCK) {
+        } else if(part==Prefs.PART_VALUE || part==Prefs.PART_MEMORY
+                || part==Prefs.PART_TYPE || part==Prefs.PART_CLOCK) {
             final String text=part==Prefs.PART_VALUE?String.valueOf(level)
+                    :part==Prefs.PART_MEMORY?memoryText()
                     :part==Prefs.PART_TYPE?type:TrioState.sClockText;
             if(text==null || text.isEmpty()) return 0f;
-            applyWeight(part==Prefs.PART_VALUE?a.valueWeight:part==Prefs.PART_TYPE?a.typeWeight:a.clockWeight);
-            final float requested=part==Prefs.PART_VALUE?a.valueSize:part==Prefs.PART_TYPE?a.typeSize:a.clockSize;
+            applyWeight(part==Prefs.PART_VALUE || part==Prefs.PART_MEMORY
+                    ?a.valueWeight:part==Prefs.PART_TYPE?a.typeWeight:a.clockWeight);
+            final float requested=part==Prefs.PART_VALUE || part==Prefs.PART_MEMORY
+                    ?a.valueSize:part==Prefs.PART_TYPE?a.typeSize:a.clockSize;
             final int suffix=part==Prefs.PART_TYPE?a.typeSuffixScale:100;
             final float size=ringTextSize(text,requested,zone,a.ringStroke,suffix,ring.parts);
             reach=centredTextReach(text,size,suffix);
@@ -1105,6 +1113,9 @@ public final class TrioRenderer {
             case Prefs.PART_CLOCK:
                 drawCapsuleTime(c, stroke, fg, a, cx, cy, -1f, SlotAlign.LEFT, leftWidth);
                 break;
+            case Prefs.PART_MEMORY:
+                drawCapsuleMemory(c, stroke, fg, a, cx, cy, -1f, SlotAlign.LEFT, leftWidth);
+                break;
             case Prefs.PART_VALUE:
                 drawCapsuleValue(c, stroke, level, fg, a, cx, cy, -1f, SlotAlign.LEFT, leftWidth);
                 break;
@@ -1198,6 +1209,11 @@ public final class TrioRenderer {
             case Prefs.PART_CLOCK:
                 drawCapsuleTime(c, stroke, fg, a, cx, cy, openingRoom(band, stroke),
                         opening ? SlotAlign.CENTRE : SlotAlign.RIGHT);
+                break;
+            case Prefs.PART_MEMORY:
+                drawCapsuleMemory(c, stroke, fg, a, cx, cy, openingRoom(band, stroke),
+                        opening ? SlotAlign.CENTRE : SlotAlign.RIGHT,
+                        capsuleSlotWidth(band, openingRoom(band, stroke), stroke, false));
                 break;
             default:
                 break;
@@ -1391,20 +1407,36 @@ public final class TrioRenderer {
         }
         float left0 = total * fraction;
 
-        // The six pieces, clockwise from the bottom gap's left edge. Each starts
-        // exactly where the previous one ended, so the fill has no seam; the two
-        // gaps between the top and bottom runs are not pieces, because they carry
-        // ink in neither pass and counting them would make the fraction wrong.
+        // BUTT for the walk, and only for the walk.
         //
-        // Both caps sweep +180 here and not -180: the sweep has to follow the
-        // direction of travel, or the fill would run the cap backwards and the two
-        // ends would meet in the middle of it.
-        left0 = run(c, left0, bottomLeft, cx - bottomReach, bottom, left + r, bottom);
-        left0 = cap(c, left0, capLen, left + r, cy, r, 90f, 180f);
-        left0 = run(c, left0, topLeft, left + r, top, cx - topReach, top);
-        left0 = run(c, left0, topRight, cx + topReach, top, right - r, top);
-        left0 = cap(c, left0, capLen, right - r, cy, r, 270f, 180f);
-        run(c, left0, bottomRight, right - r, bottom, cx + bottomReach, bottom);
+        // The six pieces below are drawn one call each, and adjacent pieces meet exactly at
+        // the four corner tangents. The shared STROKE carries a ROUND cap because the Wi-Fi
+        // arcs need one, so every piece ended in a half-round bead: at an interior joint the
+        // two beads overlapped into a single thicker dot, which is the bright knot users saw
+        // at the capsule's four corners (three of them while the level stopped short of the
+        // last). A flat cap makes each piece end where the next begins, so the joins are
+        // invisible; the fill's own end becomes a clean cut, which is what a bar of ink
+        // should look like.
+        final Paint.Cap previousCap = STROKE.getStrokeCap();
+        STROKE.setStrokeCap(Paint.Cap.BUTT);
+        try {
+            // The six pieces, clockwise from the bottom gap's left edge. Each starts
+            // exactly where the previous one ended, so the fill has no seam; the two
+            // gaps between the top and bottom runs are not pieces, because they carry
+            // ink in neither pass and counting them would make the fraction wrong.
+            //
+            // Both caps sweep +180 here and not -180: the sweep has to follow the
+            // direction of travel, or the fill would run the cap backwards and the two
+            // ends would meet in the middle of it.
+            left0 = run(c, left0, bottomLeft, cx - bottomReach, bottom, left + r, bottom);
+            left0 = cap(c, left0, capLen, left + r, cy, r, 90f, 180f);
+            left0 = run(c, left0, topLeft, left + r, top, cx - topReach, top);
+            left0 = run(c, left0, topRight, cx + topReach, top, right - r, top);
+            left0 = cap(c, left0, capLen, right - r, cy, r, 270f, 180f);
+            run(c, left0, bottomRight, right - r, bottom, cx + bottomReach, bottom);
+        } finally {
+            STROKE.setStrokeCap(previousCap);
+        }
     }
 
     /**
@@ -1576,6 +1608,47 @@ public final class TrioRenderer {
         TEXT.setColor(fg);
         alignFor(align);
         c.drawText(text, cx, cy + (size * TrioGeometry.CAP_HEIGHT_RATIO) * 0.5f, TEXT);
+    }
+
+    /**
+     * The memory percentage, when a capsule cell carries it.
+     *
+     * <p>Shares the percentage's own size and weight settings: it is the same kind of ink -
+     * a short run of digits - and giving it a third slider pair would ask the user to tune
+     * two numbers that are meant to look alike. The trailing {@code %} is what tells the two
+     * readings apart at a glance; without it a cell holding {@code 72} would be
+     * indistinguishable from the battery's own percentage.
+     *
+     * <p>Nothing is drawn before the first sample: {@link TrioState#MEMORY_UNKNOWN} is a
+     * real state (the ticker has not run yet, or {@code ActivityManager} refused), and
+     * painting a placeholder would show a number the phone never reported.
+     */
+    private static void drawCapsuleMemory(Canvas c, float stroke, int fg,
+                                          TrioAppearance a, float cx, float cy,
+                                          float heightHint, SlotAlign align, float widthLimit) {
+        final String text = memoryText();
+        if (text.isEmpty()) {
+            return;
+        }
+        applyWeight(a.valueWeight);
+        final float size = capsuleTextSize(text, a.valueSize, stroke, widthLimit,
+                100, effectiveHeightLimit(heightHint, stroke));
+        TEXT.setTextSize(size);
+        TEXT.setColor(fg);
+        alignFor(align);
+        c.drawText(text, cx, cy + (size * TrioGeometry.CAP_HEIGHT_RATIO) * 0.5f, TEXT);
+    }
+
+    /**
+     * The memory percentage as a drawing string, or {@code ""} before the first sample.
+     *
+     * <p>One helper rather than the same condition at each arrangement's dispatch: the
+     * ring, the capsule and the preview all have to agree about when the piece has ink,
+     * and "unknown" must read as nothing rather than as {@code -1%}.
+     */
+    private static String memoryText() {
+        final int percent = TrioState.sMemoryPercent;
+        return percent < 0 ? "" : percent + "%";
     }
 
     /** The network type, when a capsule cell carries it. */

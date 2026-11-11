@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+"""Exercise the production RAM sampler with real layout settings and controlled Android services."""
+from pathlib import Path
+import subprocess
+import tempfile
+
+ROOT = Path(__file__).resolve().parents[1]
+SOURCE = ROOT / "app/src/main/java/io/github/yixing233/hyperduo"
+fixtures = {
+    "android/os/Looper.java": """package android.os; public class Looper {
+ public static final Looper MAIN=new Looper(); public static boolean onMain=true;
+ public static Looper getMainLooper(){return MAIN;} public static Looper myLooper(){return onMain?MAIN:null;}
+}""",
+    "android/os/SystemClock.java": "package android.os; public class SystemClock {public static long now; public static long uptimeMillis(){return now;}}",
+    "android/os/Handler.java": """package android.os; import java.util.*; public class Handler {
+ public record Task(Handler owner,Runnable run,long due){} public static final List<Task> tasks=new ArrayList<>();
+ public Handler(Looper l){} public boolean post(Runnable r){return postDelayed(r,0);}
+ public boolean postDelayed(Runnable r,long delay){tasks.add(new Task(this,r,SystemClock.now+delay));return true;}
+ public void removeCallbacksAndMessages(Object token){tasks.removeIf(t->t.owner==this);}
+ public static void advance(long ms){SystemClock.now+=ms;for(;;){Task next=null;
+  for(Task t:tasks)if(t.due<=SystemClock.now&&(next==null||t.due<next.due))next=t;
+  if(next==null)return;tasks.remove(next);next.run.run();}}
+}""",
+    "android/os/PowerManager.java": """package android.os; public class PowerManager {
+ public boolean interactive=true,broken; public boolean isInteractive(){if(broken)throw new IllegalStateException();return interactive;}
+}""",
+    "android/app/ActivityManager.java": """package android.app; public class ActivityManager {
+ public long total=1000,available=320;public int calls;public boolean broken;
+ public static class MemoryInfo {public long totalMem,availMem;}
+ public void getMemoryInfo(MemoryInfo out){calls++;if(broken)throw new SecurityException();out.totalMem=total;out.availMem=available;}
+}""",
+    "android/content/Context.java": """package android.content; public class Context {
+ public static final String ACTIVITY_SERVICE="activity"; public android.app.ActivityManager memory=new android.app.ActivityManager();
+ public android.os.PowerManager power=new android.os.PowerManager();public Context application=this;
+ public Context getApplicationContext(){return application;}
+ public Object getSystemService(String type){return memory;}
+ public <T>T getSystemService(Class<T> type){return type.cast(type==android.os.PowerManager.class?power:memory);}
+}""",
+    "io/github/yixing233/hyperduo/TrioConfig.java": """package io.github.yixing233.hyperduo; class TrioConfig {
+ static TrioSettings settings=TrioSettings.defaults();static TrioSettings get(){return settings;}
+ static TrioAppearance appearance(){return TrioAppearance.of(settings);}static boolean debugLog(){return false;}
+}""",
+    "io/github/yixing233/hyperduo/TrioHooks.java": """package io.github.yixing233.hyperduo; class TrioHooks {
+ static int repaints;static void invalidateHosts(){repaints++;}
+}""",
+    "io/github/yixing233/hyperduo/ColorOsHooks.java": """package io.github.yixing233.hyperduo; class ColorOsHooks {
+ static boolean aod;static boolean isAodShowing(){return aod;}
+}""",
+    "io/github/yixing233/hyperduo/ColorOsReload.java": """package io.github.yixing233.hyperduo; class ColorOsReload {
+ static boolean retiring;static android.os.Handler watched;
+ static void watch(android.os.Handler h){watched=h;}
+}""",
+}
+scenes = ("sampling", "unavailable", "sleep", "aod", "rectangle", "unused-left", "disabled",
+          "removed", "throttle", "retired", "wake", "thread", "missing-power")
+with tempfile.TemporaryDirectory(prefix="colorduo-memory-") as directory:
+    files = [p for p in (ROOT / "tests/shims").rglob("*.java") if str(p.relative_to(ROOT / "tests/shims")) not in fixtures]
+    for name, content in fixtures.items():
+        path = Path(directory) / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content)
+        files.append(path)
+    files += [SOURCE / (name + ".java") for name in (
+        "Prefs", "TrioSettings", "TrioAppearance", "TrioGeometry", "TrioZones", "TrioSizing",
+        "TrioRenderer", "ChargeFlowRenderer", "DuoPolicy", "ChargeSpeed", "ColorOsChargeSpeed", "MemoryTicker")]
+    files.append(ROOT / "tests/MemoryTickerTest.java")
+    subprocess.run(["javac", "-encoding", "UTF-8", "-d", directory, *map(str, files)], check=True)
+    failures = []
+    for scene in scenes:
+        result = subprocess.run(["java", "-Djava.awt.headless=true", "-cp", directory,
+                                 "io.github.yixing233.hyperduo.MemoryTickerTest", scene])
+        if result.returncode:
+            failures.append(scene)
+    if failures:
+        raise SystemExit("RAM regressions failed: " + ", ".join(failures))
+    print(f"RAM sampling, layout ownership, sleep and lifecycle: {len(scenes)} scenarios passed")

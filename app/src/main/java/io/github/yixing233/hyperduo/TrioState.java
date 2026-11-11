@@ -103,6 +103,17 @@ final class TrioState {
     static volatile String sClockText = "";
 
     /**
+     * Memory in use, as a percentage, or {@link #MEMORY_UNKNOWN} until the first sample.
+     *
+     * <p>Published by {@link MemoryTicker}, which is the only thing that samples it. Kept
+     * here rather than read at draw time because the renderer runs on every frame of every
+     * host, while the reading only changes on a scale of seconds - sampling {@code
+     * ActivityManager} once per frame would turn a status-bar draw into an IPC storm.
+     */
+    static final int MEMORY_UNKNOWN = -1;
+    static volatile int sMemoryPercent = MEMORY_UNKNOWN;
+
+    /**
      * Whether an external power source is attached to the phone at all.
      *
      * <p>Not the same question as {@code status == CHARGING}: once the battery is
@@ -353,6 +364,9 @@ final class TrioState {
             // The one reading with no event behind it: the clock is correct until
             // the minute rolls over, so it has to wake itself up.
             ClockTicker.start(sContext);
+            // The second reading with no event behind it: memory drifts continuously, so
+            // the ticker publishes it on its own interval and repaints when it moved.
+            MemoryTicker.start(sContext);
         } catch (Throwable ignored) {
             // leave it null; the reading stays on the single-row fallback
         }
