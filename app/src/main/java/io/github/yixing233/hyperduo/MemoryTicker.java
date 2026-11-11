@@ -127,7 +127,11 @@ final class MemoryTicker {
      * interval rather than a sample and an IPC.
      */
     private static boolean usesMemory() {
-        return TrioConfig.appearance().hasRingPart(Prefs.PART_MEMORY);
+        final TrioAppearance a = TrioConfig.appearance();
+        // Placed AND switched on. A disabled module keeps its stored layout, so the
+        // placement alone would keep sampling and invalidating after the master switch
+        // went off - and those invalidations reach the ColorOS host refresh directly.
+        return a.glyph && a.hasRingPart(Prefs.PART_MEMORY);
     }
 
     /**

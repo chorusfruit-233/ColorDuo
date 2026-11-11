@@ -731,12 +731,16 @@ public final class TrioRenderer {
                     BOLT_BOUNDS.right-TrioGeometry.BOLT_CX_REF)*scale;
             edgeY=TrioGeometry.ZONE_CY[zone]+((zone==0?BOLT_BOUNDS.bottom:BOLT_BOUNDS.top)
                     -TrioGeometry.BOLT_INK_CY)*scale;
-        } else if(part==Prefs.PART_VALUE || part==Prefs.PART_TYPE || part==Prefs.PART_CLOCK) {
+        } else if(part==Prefs.PART_VALUE || part==Prefs.PART_MEMORY
+                || part==Prefs.PART_TYPE || part==Prefs.PART_CLOCK) {
             final String text=part==Prefs.PART_VALUE?String.valueOf(level)
+                    :part==Prefs.PART_MEMORY?memoryText()
                     :part==Prefs.PART_TYPE?type:TrioState.sClockText;
             if(text==null || text.isEmpty()) return 0f;
-            applyWeight(part==Prefs.PART_VALUE?a.valueWeight:part==Prefs.PART_TYPE?a.typeWeight:a.clockWeight);
-            final float requested=part==Prefs.PART_VALUE?a.valueSize:part==Prefs.PART_TYPE?a.typeSize:a.clockSize;
+            applyWeight(part==Prefs.PART_VALUE || part==Prefs.PART_MEMORY
+                    ?a.valueWeight:part==Prefs.PART_TYPE?a.typeWeight:a.clockWeight);
+            final float requested=part==Prefs.PART_VALUE || part==Prefs.PART_MEMORY
+                    ?a.valueSize:part==Prefs.PART_TYPE?a.typeSize:a.clockSize;
             final int suffix=part==Prefs.PART_TYPE?a.typeSuffixScale:100;
             final float size=ringTextSize(text,requested,zone,a.ringStroke,suffix,ring.parts);
             reach=centredTextReach(text,size,suffix);
