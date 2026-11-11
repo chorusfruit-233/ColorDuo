@@ -106,7 +106,7 @@
     <string name="drawing_occupant_wifi">Wi-Fi 弧</string>
     <string name="drawing_occupant_mobile">移动信号点</string>
     <string name="drawing_occupant_type">网络类型</string>
-    <string name="show_memory_summary">在所选区域显示内存占用百分比（含缓存回收），每 3 秒刷新一次。</string>
+    <string name="show_memory_summary">显示已用内存比例，亮屏时每 3 秒采样；字号与字重跟随电量数字。</string>
     <string name="drawing_occupant_memory">内存占用</string>
     <string name="drawing_master_off">已关闭总开关，预览按你选的样式照画，但状态栏不会显示。</string>
     <string name="drawing_settings_title">「%1$s」的设置</string>

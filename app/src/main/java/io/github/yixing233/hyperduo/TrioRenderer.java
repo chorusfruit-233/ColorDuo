@@ -289,7 +289,7 @@ public final class TrioRenderer {
         return false;
     }
 
-    /** The percentage slider must stop where its assigned ring slots stop growing. */
+    /** Shared battery/RAM typography stops where its assigned ring slots stop growing. */
     public static int maxValueSize(TrioAppearance appearance) {
         if (!appearance.ring) return appearance.capsule
                 ? Prefs.MAX_CAPSULE_VALUE_SIZE : Prefs.MAX_VALUE_SIZE;
@@ -300,14 +300,14 @@ public final class TrioRenderer {
             if (appearance.ringZones[z].length > 0) occupied[z] = appearance.ringZones[z][0];
         }
         int maximum = 0;
-        for (int z = 0; z < 3; z++) {
-            boolean placed = false;
-            for (int part : appearance.ringZones[z]) if (part == Prefs.PART_VALUE) placed = true;
-            if (!placed) continue;
+        for (int z = 0; z < 3; z++) for (int part : appearance.ringZones[z]) {
+            if (part != Prefs.PART_VALUE && part != Prefs.PART_MEMORY) continue;
+            final String wide = part == Prefs.PART_MEMORY ? "100%" : "100";
+            final String pair = part == Prefs.PART_MEMORY ? "88%" : "88";
             maximum = Math.max(maximum, Prefs.MIN_VALUE_SIZE);
             for (int size = Prefs.MAX_RING_VALUE_SIZE; size >= Prefs.MIN_VALUE_SIZE; size--) {
-                if (ringTextSize("100", size, z, appearance.ringStroke, 100, occupied) >= size - 0.01f
-                        && ringTextSize("88", size, z, appearance.ringStroke, 100, occupied) >= size - 0.01f) {
+                if (ringTextSize(wide, size, z, appearance.ringStroke, 100, occupied) >= size - 0.01f
+                        && ringTextSize(pair, size, z, appearance.ringStroke, 100, occupied) >= size - 0.01f) {
                     maximum = Math.max(maximum, size);
                     break;
                 }

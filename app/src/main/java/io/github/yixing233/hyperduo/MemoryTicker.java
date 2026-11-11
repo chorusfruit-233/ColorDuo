@@ -14,6 +14,8 @@ import android.app.ActivityManager;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.PowerManager;
+import android.os.SystemClock;
 
 /**
  * The memory reading, and the repaint that keeps it current.
@@ -56,6 +58,7 @@ final class MemoryTicker {
      * settings change can publish immediately without walking the view tree.
      */
     private static volatile Context sContext;
+    private static long nextSampleAt;
 
     private MemoryTicker() {
     }
@@ -80,17 +83,26 @@ final class MemoryTicker {
     }
 
     /**
-     * Publishes the reading now, without waiting for the next interval.
+     * Refreshes a newly visible reading immediately, otherwise keeps the sampling limit.
      *
      * <p>Called when the settings change: a user who just placed the piece should not
      * watch an empty cell for up to three seconds, which reads as the feature being
      * broken rather than as the ticker not having run yet.
      */
     static void refreshNow() {
-        final Context context = sContext;
-        if (context == null || !usesMemory()) {
+        if (ColorOsReload.retiring) return;
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            MAIN.post(MemoryTicker::refreshNow);
             return;
         }
+        final Context context = sContext;
+        if (context == null || !usesMemory() || !allowsSampling(context)) {
+            nextSampleAt = 0L;
+            return;
+        }
+        final long now = SystemClock.uptimeMillis();
+        if (now < nextSampleAt) return;
+        nextSampleAt = now + INTERVAL_MS;
         publish(sample(context));
     }
 
@@ -100,17 +112,14 @@ final class MemoryTicker {
         if (ColorOsReload.retiring) return;
         // End ColorDuo reload lifecycle.
         try {
-            final Context context = sContext;
-            if (context != null && usesMemory()) {
-                publish(sample(context));
-            }
+            refreshNow();
         } catch (Throwable ignored) {
             // keep ticking
         } finally {
             // In a finally, deliberately: a ticker that died on one bad frame would leave
             // the reading frozen for the life of the process, which is the one failure
             // this class exists to prevent.
-            MAIN.postDelayed(new Runnable() {
+            if (!ColorOsReload.retiring) MAIN.postDelayed(new Runnable() {
                 @Override
                 public void run() {
                     tick();
@@ -128,10 +137,22 @@ final class MemoryTicker {
      */
     private static boolean usesMemory() {
         final TrioAppearance a = TrioConfig.appearance();
-        // Placed AND switched on. A disabled module keeps its stored layout, so the
-        // placement alone would keep sampling and invalidating after the master switch
-        // went off - and those invalidations reach the ColorOS host refresh directly.
-        return a.glyph && a.hasRingPart(Prefs.PART_MEMORY);
+        if (!a.glyph || !a.slotted) return false;
+        // Layouts retain their placements when switching styles. Only the capsule can
+        // display LEFT; a saved left-column part must not poll while drawing a ring.
+        final int zones = a.capsule ? Prefs.ZONE_COUNT : TrioZones.Zone.LEFT.ordinal();
+        for (int z = 0; z < zones; z++)
+            for (int part : a.ringZones[z]) if (part == Prefs.PART_MEMORY) return true;
+        return false;
+    }
+
+    private static boolean allowsSampling(Context context) {
+        try {
+            PowerManager power = context.getSystemService(PowerManager.class);
+            return power != null && power.isInteractive() && !ColorOsHooks.isAodShowing();
+        } catch (RuntimeException ignored) {
+            return false;
+        }
     }
 
     /**
@@ -168,7 +189,7 @@ final class MemoryTicker {
      * bar every three seconds on installs that are not even showing the number.
      */
     private static void publish(int percent) {
-        if (percent < 0 || percent == TrioState.sMemoryPercent) {
+        if (percent == TrioState.sMemoryPercent) {
             return;
         }
         TrioState.sMemoryPercent = percent;

@@ -105,6 +105,7 @@ public final class ColorOsRenderingTest {
         clockHandoff();
         readableDefaults();
         percentageSlider();
+        memoryRendering();
         wifiTypeHandoff();
         pausedGrayscale();
         stackedSimRows();
@@ -982,6 +983,56 @@ public final class ColorOsRenderingTest {
             check(TrioRenderer.drawsClock(state, TrioAppearance.of(settings)) == painted,
                     "native clock handoff matches the painted frame: " + scene);
         }
+    }
+
+    private static void memoryRendering() {
+        int saved = TrioState.sMemoryPercent;
+        try {
+            for (int shape = 0; shape < 3; shape++) for (int zone = 0; zone < (shape == 2 ? 4 : 3); zone++) {
+                TrioSettings settings = TrioSettings.defaults();
+                settings.trioStyle = shape == 2 ? Prefs.STYLE_CAPSULE : Prefs.STYLE_RING;
+                settings.splitMode = shape == 1 ? 1 : 0;
+                settings.showValue = false;
+                settings.glyphScale = 160;
+                settings.ringZones = Prefs.decodeLayout("|||");
+                settings.ringZones[zone] = new int[]{Prefs.PART_MEMORY};
+                TrioState state = new TrioState();
+                state.level = 88;
+                TrioSizing.Metrics size = TrioSizing.measure(TrioAppearance.of(settings), 3f, 200, 480);
+                for (int percent : new int[]{-1, 0, 68, 100}) {
+                    TrioState.sMemoryPercent = percent;
+                    try (Frame frame = new Frame()) {
+                        TrioRenderer.drawSizedState(frame, size.width, size.height, state, settings, size.scale, false);
+                        if (percent < 0) {
+                            check(frame.texts.stream().noneMatch(text -> text.endsWith("%")), "unknown RAM draws no placeholder");
+                        } else {
+                            int index = frame.texts.indexOf(percent + "%");
+                            check(index >= 0, "RAM remains visible with battery percentage off: shape=" + shape + " zone=" + zone);
+                            java.awt.geom.Rectangle2D ink = frame.textBounds.get(index);
+                            check(ink.getMinX() >= -1 && ink.getMinY() >= -1
+                                    && ink.getMaxX() <= size.width + 1 && ink.getMaxY() <= size.height + 1,
+                                    "RAM text stays inside its host: shape=" + shape + " zone=" + zone);
+                        }
+                    }
+                }
+                if (shape == 0 && zone != 1) {
+                    TrioState.sMemoryPercent = 100;
+                    int maximum = TrioRenderer.maxValueSize(TrioAppearance.of(settings));
+                    check(maximum < Prefs.MAX_RING_VALUE_SIZE, "RAM-only layout removes the inactive font-size range");
+                    settings.valueSize = maximum - 1;
+                    float before;
+                    try (Frame frame = new Frame()) {
+                        TrioRenderer.drawState(frame, 480, 400, state, settings);
+                        before = frame.textSize;
+                    }
+                    settings.valueSize = maximum;
+                    try (Frame frame = new Frame()) {
+                        TrioRenderer.drawState(frame, 480, 400, state, settings);
+                        check(frame.textSize > before + 0.1f, "last shared font-size step still enlarges RAM");
+                    }
+                }
+            }
+        } finally { TrioState.sMemoryPercent = saved; }
     }
 
     private static void percentageSlider() {
