@@ -73,6 +73,11 @@ internal enum class TrioSettingsPart(val part: TrioZones.Part?, val labelRes: In
     Value(TrioZones.Part.VALUE, R.string.show_value_title),
     Bolt(TrioZones.Part.BOLT, R.string.show_bolt_title),
     Type(TrioZones.Part.TYPE, R.string.show_mobile_type_title),
+    /**
+     * The RAM reading. Its ink deliberately shares the percentage's size and weight,
+     * so [slidersForEditor] routes this card to those shared rows.
+     */
+    Memory(TrioZones.Part.MEMORY, R.string.drawing_occupant_memory),
     Clock(TrioZones.Part.CLOCK, R.string.drawing_occupant_clock),
     ;
 
@@ -608,11 +613,12 @@ private fun buildGeometrySliders(): List<SliderSpec> {
             write = { r, v -> r.setValueWeight(v) },
             titleRes = { R.string.value_weight_title },
             summaryRes = { R.string.value_weight_summary },
-            // Gated on the percentage switch, deliberately not on drawsBolt() or
-            // any rule that folds this row's own value in: a self-gate would lock
-            // the row shut the moment it was switched off.
-            enabled = { it.glyph && it.value },
-            hints = { a -> listOf(a.glyph to R.string.master_title, a.value to R.string.show_value_title) },
+            // Gated on the percentage switch OR a placed RAM reading, deliberately not on
+            // drawsBolt() or any rule that folds this row's own value in: a self-gate would
+            // lock the row shut the moment it was switched off.
+            enabled = { it.glyph && (it.value || it.hasRingPart(Prefs.PART_MEMORY)) },
+            hints = { a -> listOf(a.glyph to R.string.master_title,
+                (a.value || a.hasRingPart(Prefs.PART_MEMORY)) to R.string.show_value_title) },
         ),
         SliderSpec(
             group = GeometryGroup.Type,
@@ -972,6 +978,9 @@ internal fun slidersForEditor(part: TrioSettingsPart, a: TrioAppearance): List<S
     val rows = when (part) {
         TrioSettingsPart.Structure, TrioSettingsPart.Appearance, TrioSettingsPart.Battery, TrioSettingsPart.Readouts ->
             geometrySliders().filter { it.part == null && it.editorOwner == part }
+        // The RAM ink shares the percentage's typography, so its sheet edits those two
+        // rows rather than offering a second pair that would have to stay in sync.
+        TrioSettingsPart.Memory -> slidersForPart(TrioZones.Part.VALUE)
         else -> part.part?.let(::slidersForPart).orEmpty()
     }
     return rows.filter { spec ->

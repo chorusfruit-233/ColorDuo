@@ -69,6 +69,9 @@
     <string name="drawing_occupant_sim_1">SIM 1 dots</string>
     <string name="drawing_occupant_sim_2">SIM 2 dots</string>
     <string name="drawing_occupant_type">Network type</string>
+    <string name="drawing_occupant_memory">Memory use</string>
+    <string name="show_memory_summary">Show RAM in use, sampled every 3 seconds while awake. Shares the battery percentage’s size and weight.</string>
+    <string name="ring_position_memory">Memory position</string>
     <string name="drawing_master_off">The master switch is off: the preview still draws the style you pick, but the status bar will not.</string>
     <string name="drawing_settings_title">Settings for “%1$s”</string>
     <string name="drawing_settings_none">This part has no size or colour of its own.</string>

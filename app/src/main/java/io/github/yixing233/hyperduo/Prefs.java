@@ -250,10 +250,19 @@ public final class Prefs {
             /** SIM 2's own row of four dots; see {@link #PART_SIM_1}. */
             PART_SIM_2 = 8,
             /** Both physical SIM rows grouped in one opening. */
-            PART_SIM_PAIR = 9;
+            PART_SIM_PAIR = 9,
+            /**
+             * Runtime memory usage, as a percentage — the module's one piece that is not a
+             * status-bar reading.
+             *
+             * <p>A {@code PART_*} rather than a second kind of setting: it is placed, sized
+             * and drawn like every other reading, and giving it a different mechanism would
+             * duplicate the layout, priority and hit-testing rules that already exist.
+             */
+            PART_MEMORY = 10;
 
     /** The highest valid part id. */
-    public static final int PART_MAX = PART_SIM_PAIR;
+    public static final int PART_MAX = PART_MEMORY;
 
     /** How many parts there are, counting {@link #PART_NONE}. */
     public static final int PART_COUNT = PART_MAX + 1;

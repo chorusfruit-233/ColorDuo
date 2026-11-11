@@ -36,7 +36,19 @@ public class ChargeFlowTest {
  static Frame mask(TrioSettings s,int level,boolean flat)throws Exception {
   Frame f=new Frame();f.forceButt=flat;TrioAppearance a=TrioAppearance.of(s);
   Field field=TrioRenderer.class.getDeclaredField("STROKE");field.setAccessible(true);Paint p=(Paint)field.get(null);p.setColor(GREEN);p.setStrokeCap(Paint.Cap.ROUND);p.setStrokeWidth(a.capsule?a.ringStroke*TrioGeometry.CAP_STROKE_RATIO:a.ringStroke);
-  if(a.capsule){Method m=TrioRenderer.class.getDeclaredMethod("drawCapsuleFill",Canvas.class,float.class,float.class,float.class,float.class);m.setAccessible(true);m.invoke(null,f,a.ringStroke*TrioGeometry.CAP_STROKE_RATIO,Math.min(1,level/100f),8f,8f);}
+  if(a.capsule){
+   if(level>=100){
+    // Production draws the full capsule from the outline path (ROUND cap), and only
+    // a partial charge through drawCapsuleFill. Mirror that dispatch here: after the
+    // corner-knot fix the partial fill is a BUTT walk, so using it at 100% would make
+    // the reference narrower than the silhouette the phone actually paints.
+    Method outline=TrioRenderer.class.getDeclaredMethod("buildCapsuleOutline",android.graphics.Path.class,float.class,float.class);
+    outline.setAccessible(true);android.graphics.Path path=new android.graphics.Path();
+    outline.invoke(null,path,8f,8f);f.drawPath(path,p);
+   } else {
+    Method m=TrioRenderer.class.getDeclaredMethod("drawCapsuleFill",Canvas.class,float.class,float.class,float.class,float.class);m.setAccessible(true);m.invoke(null,f,a.ringStroke*TrioGeometry.CAP_STROKE_RATIO,Math.min(1,level/100f),8f,8f);
+   }
+  }
   else {Method m=TrioRenderer.class.getDeclaredMethod("drawBattery",Canvas.class,int.class,int.class,int.class,TrioAppearance.class,float.class,float.class,float.class,float.class);m.setAccessible(true);m.invoke(null,f,level,GREEN,0,a,0f,0f,360f,90f);}
   return f;
  }
@@ -60,7 +72,11 @@ public class ChargeFlowTest {
      if((round.image.getRGB(x,y)>>>24)<220 || (flat.image.getRGB(x,y)>>>24)>16)continue;
      caps++;check((moving.image.getRGB(x,y)>>>24)>128,"rounded endpoint missing highlight: shape="+shape+" direction="+direction+" level="+level+" at "+x+","+y);
     }
-    if(shape!=0 || level!=100)check(caps>0,"fixture exposes the real round-only endpoint pixels");
+    // Round-only endpoint pixels: the ring's gap ends, the split's two ends, and the
+    // capsule only at a full charge (its outline path). A partial capsule fill now ends
+    // in a deliberate BUTT cut, so it exposes no round cap to cover.
+    boolean roundOnlyEndpoints = shape==2 ? level==100 : (shape==1 || level!=100);
+    if(roundOnlyEndpoints)check(caps>0,"fixture exposes the real round-only endpoint pixels");
     confined(moving,round);
    }
    if(shape==1){s.splitCap=0;confined(flow(s,level,.5f),mask(s,level));}
