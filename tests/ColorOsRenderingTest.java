@@ -508,6 +508,11 @@ public final class ColorOsRenderingTest {
                     "a heavier percentage face cannot leave a narrower opening");
             float bolt=renderedOpening(Prefs.PART_BOLT,36,700,100);
             check(bolt<digits && bolt<time,"the bolt uses its own ink width instead of a text notch");
+            float memory=renderedOpening(Prefs.PART_MEMORY,16,700,100);
+            check(memory<TrioGeometry.TEXT_GAP_WIDTH_DEG,
+                    "the RAM reading measures its own ink instead of the fixed text notch: "+memory);
+            check(renderedOpening(Prefs.PART_MEMORY,36,700,100)>memory,
+                    "the RAM opening grows with the shared percentage font size");
             check(renderedOpening(Prefs.PART_BOLT,36,700,60)<bolt
                     && renderedOpening(Prefs.PART_BOLT,36,700,160)>bolt,"bolt scale immediately changes the arc endpoints");
             for(int zone:new int[]{0,2}) for(int part:new int[]{Prefs.PART_VALUE,Prefs.PART_BOLT,Prefs.PART_CLOCK,Prefs.PART_TYPE})
