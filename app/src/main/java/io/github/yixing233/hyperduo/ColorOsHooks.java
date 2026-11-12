@@ -42,7 +42,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
-/** ColorOS 17 adapter, verified against OnePlus SystemUI 17.99.02 (API 37). */
+/** ColorOS 15–17 adapter; native interfaces are checked against the reference SystemUI APKs. */
 final class ColorOsHooks {
     static final String METER_CLASS =
             "com.oplus.systemui.statusbar.pipeline.battery.ui.view.StatBatteryMeterView";
@@ -920,12 +920,17 @@ final class ColorOsHooks {
             return SIGNAL_FLOWS.read(icon, cellularIcon);
         }
 
+        void addFlows(List<Object> flows, boolean signal, boolean networkType) {
+            if (signal) { flows.add(icon); flows.add(cellularIcon); }
+            if (networkType) { flows.add(iconGroup); flows.add(type); flows.add(cellularType); }
+        }
+
         String networkType(String radio) {
             // Empty binder text is a visibility decision, not evidence that the RAT is unknown.
             return ColorOsPolicy.chooseNetworkType(renderedType,
-                    ColorOsPolicy.networkType(value(iconGroup)),
-                    ColorOsPolicy.networkType(value(type)),
-                    ColorOsPolicy.networkType(value(cellularType)), radio);
+                    ColorOsPolicy.networkType(SIGNAL_FLOWS.read(iconGroup, null)),
+                    ColorOsPolicy.networkType(SIGNAL_FLOWS.read(type, null)),
+                    ColorOsPolicy.networkType(SIGNAL_FLOWS.read(cellularType, null)), radio);
         }
     }
 
@@ -1009,10 +1014,14 @@ final class ColorOsHooks {
                 }
             }
             clockContainer = null;
-            int clockId = resourceId("clock_for_fake");
             for (ViewParent p = meter.getParent(); p instanceof View; p = p.getParent()) {
                 if (!phoneBarClass.isInstance(p)) continue;
-                clockContainer = ((View) p).findViewById(clockId);
+                // OS15 has a direct StatClock; OS16/17 wrap it for seamless animation.
+                for (String name : new String[] {"clock_for_fake", "clock"}) {
+                    int clockId = resourceId(name);
+                    clockContainer = clockId == 0 ? null : ((View) p).findViewById(clockId);
+                    if (clockContainer != null) break;
+                }
                 if (clockContainer != null) {
                     nativeVisibility.put(clockContainer, clockContainer.getVisibility());
                     CHILDREN.put(clockContainer, new WeakReference<>(this));
@@ -1264,15 +1273,16 @@ final class ColorOsHooks {
             ColorOsRadio.Sample radio = RADIO_SAMPLER.sample(context, now);
             ColorOsNetworkType.sync(context, radio.subscriptions);
             // Reading StateFlow.value alone does not keep WhileSubscribed models live.
-            // Subscribe only the active SIMs while the module owns their signal display.
+            // OS15/16 also need the icon-group flow live for their network type label.
+            // Collect only active SIMs and only the data the current layout owns.
+            TrioAppearance mobileAppearance = TrioConfig.appearance();
             List<Object> signalFlows = new ArrayList<>();
-            if (TrioConfig.appearance().foldsMobile() && radio.subscriptions != null) {
+            if ((mobileAppearance.foldsMobile() || mobileAppearance.ownsType()) && radio.subscriptions != null) {
                 for (SubscriptionInfo subscription : radio.subscriptions) {
                     if (subscription == null) continue;
                     Mobile mobile = MOBILES.get(subscription.getSubscriptionId());
                     if (mobile != null) {
-                        signalFlows.add(mobile.icon);
-                        signalFlows.add(mobile.cellularIcon);
+                        mobile.addFlows(signalFlows, mobileAppearance.foldsMobile(), mobileAppearance.ownsType());
                     }
                 }
             }
@@ -1390,7 +1400,8 @@ final class ColorOsHooks {
                 if (slot.equals("mobile") || slot.equals("stacked_mobile")) {
                     // Upstream also hands off the RAT label when bars remain native.
                     // Track only these children; never hide the whole radio for a type label.
-                    for (String name : new String[] {"mobile_type_text", "mobile_type_image"}) {
+                    for (String name : new String[] {"mobile_type_text", "mobile_type_image",
+                            "mobile_type", "mobile_type_alone", "mobile_volte"}) {
                         int id = resourceId(name);
                         View type = id == 0 ? null : iconContainer.getChildAt(i).findViewById(id);
                         if (type == null) continue;
@@ -1399,8 +1410,9 @@ final class ColorOsHooks {
                             CHILDREN.put(type, new WeakReference<>(this));
                         }
                         nativeTypes.add(type);
-                        hide(type, appearance.ownsType()
-                                && (!DuoPolicy.hasNotice(state.mobileService) || noticeVisible));
+                        hide(type, name.equals("mobile_volte") ? TrioConfig.get().hideHd
+                                : appearance.ownsType()
+                                    && (!DuoPolicy.hasNotice(state.mobileService) || noticeVisible));
                     }
                 }
             }

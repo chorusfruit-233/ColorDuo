@@ -1,6 +1,6 @@
 # Issue 对应代码检查（2026-10-16）
 
-> 上游历史资料：本文继承自 HyperDuo，内容对应原项目当时的环境与实现。ColorDuo 专注 ColorOS 17；当前说明见 [ColorDuo 文档索引](README.md) 和 [ColorOS 17 开发指南](COLOROS17-DEVELOPMENT.md)。
+> 上游历史资料：本文继承自 HyperDuo，内容对应原项目当时的环境与实现。ColorDuo 面向 ColorOS 15–17（15/16 适配待实机验证）；当前说明见 [ColorDuo 文档索引](README.md) 和 [ColorOS 开发指南](COLOROS17-DEVELOPMENT.md)。
 
 检查基线：`68a8dcc`，叠加检查开始时工作区中已有的绘制分页改动。以下区分代码缺陷、Issue 实机根因和功能请求。代码测试通过只证明受测行为，不等于报告者的设备已复测通过。
 

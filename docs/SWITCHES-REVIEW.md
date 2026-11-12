@@ -1,6 +1,6 @@
 # 样式开关梳理与优化方案
 
-> 上游历史资料：本文继承自 HyperDuo，内容对应原项目当时的环境与实现。ColorDuo 专注 ColorOS 17；当前说明见 [ColorDuo 文档索引](README.md) 和 [ColorOS 17 开发指南](COLOROS17-DEVELOPMENT.md)。
+> 上游历史资料：本文继承自 HyperDuo，内容对应原项目当时的环境与实现。ColorDuo 面向 ColorOS 15–17（15/16 适配待实机验证）；当前说明见 [ColorDuo 文档索引](README.md) 和 [ColorOS 开发指南](COLOROS17-DEVELOPMENT.md)。
 
 本文只做两件事：把当前「哪些开关控制什么、谁又被谁门控」讲清楚，然后给出一个可以分批落地的优化方案。所有结论都标了源码位置，可以直接跳过去核对。
 

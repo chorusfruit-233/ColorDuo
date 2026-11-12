@@ -1,6 +1,6 @@
 # 设置界面信息架构方案
 
-> 上游历史资料：本文继承自 HyperDuo，内容对应原项目当时的环境与实现。ColorDuo 专注 ColorOS 17；当前说明见 [ColorDuo 文档索引](README.md) 和 [ColorOS 17 开发指南](COLOROS17-DEVELOPMENT.md)。
+> 上游历史资料：本文继承自 HyperDuo，内容对应原项目当时的环境与实现。ColorDuo 面向 ColorOS 15–17（15/16 适配待实机验证）；当前说明见 [ColorDuo 文档索引](README.md) 和 [ColorOS 开发指南](COLOROS17-DEVELOPMENT.md)。
 
 > 2026-10-23。针对当前 2 页 / 1705 行的界面结构，提出重新划分。
 > 本文只谈**信息架构与交互**，不含视觉样式（配色、圆角、动效另行讨论）。

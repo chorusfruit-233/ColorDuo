@@ -1,6 +1,6 @@
-# ColorDuo：ColorOS 17 适配与验证
+# ColorDuo：ColorOS 适配与验证
 
-ColorDuo 是完全由 Codex 维护、专注 ColorOS 17 的 HyperDuo fork。本页记录本仓库的系统接入、参考固件证据与验证进展。各 alpha 章节保留对应版本的修复记录；当前安装和配置见 [项目首页](../README.md)、[配置说明](CONFIGURATION.md)，本项目版本历史见 [更新记录](CHANGELOG.md)。
+ColorDuo 是完全由 Codex 维护、面向 ColorOS 15–17 的 HyperDuo fork。本页记录本仓库的系统接入、参考固件证据与验证进展。各 alpha 章节保留对应版本的修复记录；当前安装和配置见 [项目首页](../README.md)、[配置说明](CONFIGURATION.md)，本项目版本历史见 [更新记录](CHANGELOG.md)。
 
 ## 参考固件
 
@@ -12,7 +12,7 @@ ColorDuo 是完全由 Codex 维护、专注 ColorOS 17 的 HyperDuo fork。本�
 
 ## 接入方式
 
-`HyperDuoModule` 按 `StatBatteryMeterView` 是否存在选择 ColorOS 适配器；原有 MIUI 适配作为继承代码保留。ColorDuo 当前的适配与验收范围为 ColorOS 17。
+`HyperDuoModule` 按 `StatBatteryMeterView` 是否存在选择 ColorOS 适配器；原有 MIUI 适配作为继承代码保留。ColorOS 15/16 的差异和实验性适配见 [兼容性说明](COLOROS-COMPATIBILITY.md)；本页的实机固件记录仍针对 ColorOS 17。
 
 | 功能 | 接入点 |
 | --- | --- |

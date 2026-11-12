@@ -64,6 +64,29 @@ class ColorOsSignalFlowsTest {
         } finally { signals.clear() }
     }
 
+    @Test fun legacyNetworkTypeFlowStaysLiveAndReleasesIndependently() = runBlocking {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        val radio = MutableStateFlow("LTE")
+        val group = radio.stateIn(scope, SharingStarted.WhileSubscribed(), "Unknown")
+        val bars = MutableStateFlow(3)
+        val signals = ColorOsSignalFlows { fail(it) }
+        try {
+            signals.sync(listOf(group, bars))
+            awaitCondition { signals.read(group, null) == "LTE" && bars.subscriptionCount.value == 1 }
+            radio.value = "5G_PLUS"
+            awaitCondition { signals.read(group, null) == "5G_PLUS" }
+            signals.sync(listOf(bars))
+            awaitCondition { radio.subscriptionCount.value == 0 }
+            assertNull(signals.read(group, null))
+            assertEquals(3, signals.read(bars, null))
+            signals.sync(listOf(group))
+            awaitCondition { bars.subscriptionCount.value == 0 && signals.read(group, null) == "5G_PLUS" }
+        } finally {
+            signals.clear()
+            scope.cancel()
+        }
+    }
+
     @Test fun onlyCollectedModelsCanOverrideTheTelephonyFallback() = runBlocking {
         val wrapper = MutableStateFlow<Int?>(4)
         val cellular = MutableStateFlow<Int?>(2)

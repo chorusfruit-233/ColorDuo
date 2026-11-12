@@ -1,6 +1,6 @@
 # ColorDuo 开发指南
 
-本项目完全由 Codex 维护，开发目标是 **ColorOS 17**。当前参考一加 13 / PJZ110、Android 17、SystemUI 17.99.02。设备、固件和验收进展见 [适配记录](COLOROS17.md)。
+本项目完全由 Codex 维护，开发目标是 **ColorOS 15–17**，15/16 适配尚待实机验证。当前参考一加 13 / PJZ110、Android 17、SystemUI 17.99.02。设备、固件和验收进展见 [适配记录](COLOROS17.md)。
 
 ## 项目标识
 
@@ -10,12 +10,12 @@
 | 仓库 | `chorusfruit-233/ColorDuo` |
 | 应用 ID | `io.github.chorusfruit_233.colorduo` |
 | 源码 namespace | `io.github.yixing233.hyperduo`，沿用共享源码的命名 |
-| 当前版本 | `0.4.1` / `10062` |
+| 当前开发版本 | `0.4.2-test1` / `10066` |
 | compileSdk / targetSdk / minSdk | 37 / 36 / 29 |
 | 框架 API | modern：libxposed 102；legacy：传统 API 82 |
 | 作用域 | `com.android.systemui` |
 
-源码 namespace 和保留的 MIUI Hook 属于继承代码；本项目的适配目标与测试范围为 ColorOS 17。SDK 构建参数不代表对其他 Android 或系统版本已经完成验证。
+源码 namespace 和保留的 MIUI Hook 属于继承代码；本项目的适配目标为 ColorOS 15–17，验证范围见 [兼容性说明](COLOROS-COMPATIBILITY.md)。SDK 构建参数不代表对其他 Android 或系统版本已经完成验证。
 
 ## 构建
 
@@ -66,6 +66,7 @@ Windows 可使用 `gradlew.bat --no-daemon :app:assembleDebug`。首次构建需
 python3 tests/upstream-parity.py
 python3 tests/duo-policy.py
 sh tests/coloros-policy.sh
+python3 tests/coloros-compat.py
 sh tests/coloros-settings.sh
 python3 tests/coloros-power.py
 python3 tests/coloros-hosts.py
@@ -108,7 +109,7 @@ adb logcat -v time -s LSPosedFramework | rg 'ColorDuo|io\.github\.chorusfruit233
 
 用户配置见 [CONFIGURATION.md](CONFIGURATION.md)，本项目版本记录见 [CHANGELOG.md](CHANGELOG.md)。继承的 [HyperDuo 开发文档](DEVELOPMENT.md)、旧截图、发布说明和验证清单作为历史资料保留，其环境与结论需要与 ColorDuo 当前验证范围区分。
 
-共享代码保留 yixing233 与 HyperDuo 贡献者署名，ColorOS 17 适配完全由 Codex 维护，许可证为 [GPL-3.0-only](../LICENSE)。
+共享代码保留 yixing233 与 HyperDuo 贡献者署名，ColorOS 适配完全由 Codex 维护，许可证为 [GPL-3.0-only](../LICENSE)。
 
 ## 双 API 构建
 

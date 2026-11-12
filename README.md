@@ -1,6 +1,6 @@
 # ColorDuo
 
-面向 **ColorOS 17** 的仿 iPhone Duo 状态栏模块，将电池、Wi-Fi 和移动信号整合为一个可配置的图标。
+面向 **ColorOS 15–17** 的仿 iPhone Duo 状态栏模块，将电池、Wi-Fi 和移动信号整合为一个可配置的图标。
 
 完全由 Codex 维护，fork 自 [HyperDuo](https://github.com/yixing233/HyperDuo)。
 
@@ -14,7 +14,7 @@
 
 ## 使用
 
-需要 root 和 LSPosed。目前以一加 13 的 ColorOS 17 为参考适配。
+需要 root 和 LSPosed。ColorOS 17 以一加 13 为实机参考；15/16 从 `0.4.2-test1` 起提供实验性适配，尚待实机验证。
 
 - **modern**：支持 libxposed API 102 的框架。
 - **legacy**：使用传统 Xposed API 的框架（API 82 起）。
@@ -27,7 +27,7 @@
 
 ## 文档
 
-[适配记录](docs/COLOROS17.md) · [开发指南](docs/COLOROS17-DEVELOPMENT.md) · [文档索引](docs/README.md)
+[兼容性](docs/COLOROS-COMPATIBILITY.md) · [适配记录](docs/COLOROS17.md) · [开发指南](docs/COLOROS17-DEVELOPMENT.md) · [文档索引](docs/README.md)
 
 ## 许可证
 

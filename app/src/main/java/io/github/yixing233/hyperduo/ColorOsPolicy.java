@@ -88,8 +88,21 @@ final class ColorOsPolicy {
         if (text == null) text = model;
         Object prefix = nativeMember(text, "prefix", "getPrefix");
         Object suffix = nativeMember(text, "suffix", "getSuffix");
-        return (prefix instanceof CharSequence ? prefix.toString() : "")
+        String label = (prefix instanceof CharSequence ? prefix.toString() : "")
                 + (suffix instanceof CharSequence ? suffix.toString() : "");
+        if (!label.isEmpty()) return label;
+        // ColorOS 15/16 expose NetworkTypeIconModel, without the OS17 text model.
+        // Its name is a TelephonyIcons identifier, not arbitrary display/debug text.
+        Object name = nativeMember(model, "name", "getName");
+        if (!(name instanceof String)) return "";
+        return switch ((String) name) {
+            case "G", "E", "1X", "3G", "H", "H+", "4G", "4G+", "LTE", "LTE+",
+                    "4G LTE", "4G LTE+", "5Ge", "5G", "5GA" -> (String) name;
+            case "5GBasic", "5GBasic_6Rx", "5GSA" -> "5G";
+            case "5G_PLUS", "5GUWB", "5GUWB_6Rx" -> "5G+";
+            case "5G_PLUS_PLUS_6Rx" -> "5GA";
+            default -> ""; // WFC, disabled data and unknown states fall back to telephony.
+        };
     }
 
     /** Android network/override constants, kept numeric so these rules run without Android. */

@@ -1,6 +1,6 @@
 # 胶囊纳入 main
 
-> 上游历史资料：本文继承自 HyperDuo，内容对应原项目当时的环境与实现。ColorDuo 专注 ColorOS 17；当前说明见 [ColorDuo 文档索引](README.md) 和 [ColorOS 17 开发指南](COLOROS17-DEVELOPMENT.md)。
+> 上游历史资料：本文继承自 HyperDuo，内容对应原项目当时的环境与实现。ColorDuo 面向 ColorOS 15–17（15/16 适配待实机验证）；当前说明见 [ColorDuo 文档索引](README.md) 和 [ColorOS 开发指南](COLOROS17-DEVELOPMENT.md)。
 
 来源：`refactor/drawable-glyph`，源分支头 `8c8f449708f7abc1dddbd44d8de4a11184ec4789`。
 主分支绘制页及前述修复先保存为 `bf87d47`，再合并源分支完整历史。源工作树保持原样。

@@ -75,7 +75,7 @@ def ensure_repository(release_url):
                 "title": TITLE,
                 "body": f"Module: ColorDuo\nApplication ID: `{PACKAGE}`\n\n"
                         f"Source: https://github.com/{SOURCE}\nSigned release: {release_url}\n\n"
-                        "ColorOS 17 module with modern API 102 and legacy API 82 builds. "
+                        "ColorOS 15–17 module (15/16 experimental) with modern API 102 and legacy API 82 builds. "
                         "GPL-3.0-only fork of HyperDuo, maintained entirely by Codex. "
                         "Module README, SUMMARY and a verified signed APK are ready."})
         issue_url = issue["html_url"]

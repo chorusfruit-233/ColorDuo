@@ -1,6 +1,6 @@
 # ColorDuo 配置说明
 
-本页适用于 ColorDuo 当前的 ColorOS 17 版本。安装和作用域设置见 [项目首页](../README.md)，固件与验证范围见 [适配记录](COLOROS17.md)。
+本页适用于 ColorDuo 当前的 ColorOS 适配版本。系统支持及验证范围见 [兼容性说明](COLOROS-COMPATIBILITY.md)。安装和作用域设置见 [项目首页](../README.md)，固件与验证范围见 [适配记录](COLOROS17.md)。
 
 ## 初次设置
 

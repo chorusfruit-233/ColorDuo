@@ -1,8 +1,17 @@
 # ColorDuo 更新记录
 
-本页记录 `chorusfruit-233/ColorDuo` 自身的版本，专注 ColorOS 17。HyperDuo 1.x 发布说明保留在 [release-notes/](release-notes/) 作为上游历史资料。
+本页记录 `chorusfruit-233/ColorDuo` 自身的版本，面向 ColorOS 15–17。HyperDuo 1.x 发布说明保留在 [release-notes/](release-notes/) 作为上游历史资料。
 
 离线检查与构建结果、参考固件数据和真机反馈分别记录，具体边界见 [适配与验证记录](COLOROS17.md)。
+
+## 0.4.2-test1
+
+- 增加 ColorOS 15/16 实验性适配：读取旧版网络类型模型，接管旧制式/HD 子视图，并兼容 ColorOS 15 的原生小时钟。依据 SystemUI 15.99.13、16.99.06 静态核对，尚待对应系统实机验证。
+- 网络类型按当前布局和活动 SIM 订阅原生状态，关闭后释放；继续保留电话服务回退和 ColorOS 17 文字模型优先级。
+- 包含 [#21](https://github.com/chorusfruit-233/ColorDuo/pull/21) 的内存占用部件和胶囊填充修复，以及 [#22](https://github.com/chorusfruit-233/ColorDuo/pull/22) 的组件双轴位移、缓存和充电预览修复；Wi-Fi 弧线保持原有定位。
+- modern / legacy 共享上述功能与回归检查。正式签名测试包可覆盖旧版；安装后重启 SystemUI 或手机。
+
+本轮先验证 ColorOS 17 无回退；15/16 的下拉动画、充电读数和各机型固件差异仍需实机反馈。详情见 [兼容性说明](COLOROS-COMPATIBILITY.md)。
 
 ## 0.4.1
 

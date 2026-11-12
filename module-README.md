@@ -1,8 +1,10 @@
 # ColorDuo
 
-专注 **ColorOS 17** 的仿 iPhone Duo 状态栏模块，完全由 Codex 维护，fork 自 [HyperDuo](https://github.com/yixing233/HyperDuo)。
+面向 **ColorOS 15–17** 的仿 iPhone Duo 状态栏模块，完全由 Codex 维护，fork 自 [HyperDuo](https://github.com/yixing233/HyperDuo)。
 
 支持电池、Wi-Fi、双卡信号和网络类型的组合布局，以及充电功率、温度和自定义配色。
+
+ColorOS 17 以一加 13 为实机参考；15/16 从 `0.4.2-test1` 起为实验性适配，尚待实机验证。
 
 ## 使用
 

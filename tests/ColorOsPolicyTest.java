@@ -41,6 +41,18 @@ public final class ColorOsPolicyTest {
         check(ColorOsPolicy.networkType(new NetworkTypeModel(null)).isEmpty(), "explicit native clearing is retained");
         check(ColorOsPolicy.networkType(null).isEmpty(), "missing model clears the label");
         check(ColorOsPolicy.networkType(new Object()).isEmpty(), "unknown models do not print a debug toString");
+        for (String label : new String[] {"LTE", "LTE+", "4G LTE", "4G+", "5Ge", "5GA"}) {
+            check(label.equals(ColorOsPolicy.networkType(new LegacyIconModel(label))),
+                    "OS15/16 native icon groups preserve their carrier label: " + label);
+        }
+        check("5G".equals(ColorOsPolicy.networkType(new LegacyIconModel("5GBasic_6Rx"))), "basic NR alias");
+        check("5G+".equals(ColorOsPolicy.networkType(new LegacyIconModel("5G_PLUS"))), "enhanced NR alias");
+        check("5G+".equals(ColorOsPolicy.networkType(new LegacyIconModel("5GUWB"))), "UWB NR alias");
+        check("5GA".equals(ColorOsPolicy.networkType(new LegacyIconModel("5G_PLUS_PLUS_6Rx"))), "advanced NR alias");
+        check("LTE+".equals(ColorOsPolicy.networkType(new GetterLegacyIcon())), "old icon group getter fallback");
+        for (String hidden : new String[] {"Unknown", "DataDisabled", "NotDefaultData", "WFC", "CWF", "debug"}) {
+            check(ColorOsPolicy.networkType(new LegacyIconModel(hidden)).isEmpty(), "non-RAT state is not a label");
+        }
         FieldOnlyMobile inlined = new FieldOnlyMobile();
         check(ColorOsPolicy.nativeMember(inlined, "icon", "getIcon") == inlined.icon,
                 "constructor observation can read a flow without any getter call");
@@ -133,6 +145,13 @@ final class Unrelated$Active {
 }
 final class FieldOnlyActive {
     public final int level = 2;
+}
+final class LegacyIconModel {
+    public final String name;
+    LegacyIconModel(String name) { this.name = name; }
+}
+final class GetterLegacyIcon {
+    public String getName() { return "LTE+"; }
 }
 final class NetworkTypeModel {
     private final Object networkTypeText;

@@ -1,6 +1,6 @@
 # ColorDuo 文档
 
-ColorDuo 是完全由 Codex 维护的 HyperDuo fork，当前专注 **ColorOS 17**。本目录同时保留项目现行说明和继承的上游历史资料。
+ColorDuo 是完全由 Codex 维护的 HyperDuo fork，面向 **ColorOS 15–17**（15/16 适配待实机验证）。本目录同时保留项目现行说明和继承的上游历史资料。
 
 ## 当前文档
 
@@ -8,7 +8,8 @@ ColorDuo 是完全由 Codex 维护的 HyperDuo fork，当前专注 **ColorOS 17*
 | --- | --- |
 | [项目首页](../README.md) | 定位、适配范围、安装、下载和问题反馈 |
 | [配置说明](CONFIGURATION.md) | 组件优先顺序、双卡、无 Wi-Fi 切换、预览与环外读数 |
-| [ColorOS 17 开发指南](COLOROS17-DEVELOPMENT.md) | 本仓库构建、源码职责、检查和分发 |
+| [系统兼容性](COLOROS-COMPATIBILITY.md) | ColorOS 15/16/17 差异、APK 证据与验证边界 |
+| [ColorOS 开发指南](COLOROS17-DEVELOPMENT.md) | 本仓库构建、源码职责、检查和分发 |
 | [构建与模块仓发布](PUBLISHING.md) | 工作流、签名、Release 草稿和上架条件 |
 | [适配与验证记录](COLOROS17.md) | 参考固件、SystemUI 接入、单位适配、已知边界与真机验收 |
 | [更新记录](CHANGELOG.md) | ColorDuo 自身的版本记录 |

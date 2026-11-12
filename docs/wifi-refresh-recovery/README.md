@@ -1,6 +1,6 @@
 # Wi-Fi refresh recovery follow-up
 
-> 上游历史资料：本文继承自 HyperDuo，内容对应原项目当时的环境与实现。ColorDuo 专注 ColorOS 17；当前说明见 [ColorDuo 文档索引](../README.md) 和 [ColorOS 17 开发指南](../COLOROS17-DEVELOPMENT.md)。
+> 上游历史资料：本文继承自 HyperDuo，内容对应原项目当时的环境与实现。ColorDuo 面向 ColorOS 15–17（15/16 适配待实机验证）；当前说明见 [ColorDuo 文档索引](../README.md) 和 [ColorOS 开发指南](../COLOROS17-DEVELOPMENT.md)。
 
 Base: upstream main 761fdb1. This is an incremental follow-up to PR #18, not a replacement for the author's tint or text-size changes.
 
