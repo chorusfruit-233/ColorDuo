@@ -309,4 +309,34 @@ class LayoutControlsTest {
         assertEquals(150, s.wifiScale)
         assertTrue(size.enabled(a) && weight.enabled(a))
     }
+
+    @Test fun memoryEditorSharesTypographyWithoutMovingTheBattery() {
+        val s = TrioZones.withPiece(settings(), TrioZones.Zone.CENTRE.ordinal, TrioZones.Part.MEMORY)
+            .apply { showValue = false }
+        val a = TrioAppearance.of(s)
+        val rows = slidersForEditor(TrioSettingsPart.Memory, a)
+        assertEquals(setOf(R.string.value_size_title, R.string.value_weight_title), rows.map { it.titleRes(a) }.toSet())
+        assertTrue(rows.all { it.enabled(a) })
+    }
+
+    @Test fun signalOffsetsFollowActualSlotsAndRectangleFallbacks() {
+        val empty = settings().apply {
+            showMobile = true; showSim1 = true; showSim2 = true
+            ringZones = Prefs.decodeLayout("|||")
+        }
+        fun titles(s: TrioSettings): Set<Int> {
+            val a = TrioAppearance.of(s)
+            return slidersForEditor(TrioSettingsPart.Mobile, a).map { it.titleRes(a) }.toSet()
+        }
+        assertFalse(titles(empty).contains(R.string.sim1_dx_title))
+        assertFalse(titles(empty).contains(R.string.sim2_dy_title))
+        val sim = TrioZones.withPiece(empty, TrioZones.Zone.TOP.ordinal, TrioZones.Part.SIM_1)
+        assertTrue(titles(sim).containsAll(listOf(R.string.sim1_dx_title, R.string.sim1_dy_title)))
+        val rect = empty.copy().apply { trioStyle = Prefs.STYLE_RECT; dualSim = true; showSim1 = false; showSim2 = false }
+        assertTrue(titles(rect).containsAll(listOf(R.string.mobile_dx_title, R.string.mobile_dy_title,
+            R.string.sim1_dx_title, R.string.sim1_dy_title, R.string.sim2_dx_title, R.string.sim2_dy_title)))
+        rect.dualSim = false
+        assertFalse(titles(rect).contains(R.string.sim1_dx_title))
+        assertFalse(titles(rect).contains(R.string.sim2_dy_title))
+    }
 }

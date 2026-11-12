@@ -930,14 +930,9 @@ internal fun visibleParameter(spec: SliderSpec,a: TrioAppearance): Boolean {
     val id=spec.titleRes(a)
     val paired=a.slotted&&!a.signalOutOfRing&&a.hasRingPart(Prefs.PART_SIM_PAIR)
     return when(id) {
-        R.string.mobile_dx_title,R.string.mobile_dy_title -> !paired&&(a.signalOutOfRing||a.hasRingPart(Prefs.PART_MOBILE))
-        R.string.sim1_dx_title,R.string.sim1_dy_title -> !paired&&!a.signalOutOfRing&&a.showSim1
-        R.string.sim2_dx_title,R.string.sim2_dy_title -> !paired&&!a.signalOutOfRing&&a.showSim2
-        R.string.signal_icon_scale_title,R.string.dot_scale_title -> !a.signalOutOfRing
-        R.string.signal_icon_scale_title,R.string.dot_scale_title -> !a.signalOutOfRing
-        R.string.signal_icon_scale_title,R.string.dot_scale_title -> !a.signalOutOfRing
-        R.string.signal_icon_scale_title,R.string.dot_scale_title -> !a.signalOutOfRing
-        R.string.signal_icon_scale_title,R.string.dot_scale_title -> !a.signalOutOfRing
+        R.string.mobile_dx_title,R.string.mobile_dy_title -> !paired && (a.signalOutOfRing || a.rect || a.hasRingPart(Prefs.PART_MOBILE))
+        R.string.sim1_dx_title,R.string.sim1_dy_title -> !paired && !a.signalOutOfRing && (a.rect && a.dualSim || a.drawsSim1())
+        R.string.sim2_dx_title,R.string.sim2_dy_title -> !paired && !a.signalOutOfRing && (a.rect && a.dualSim || a.drawsSim2())
         R.string.signal_icon_scale_title,R.string.dot_scale_title -> !a.signalOutOfRing
         R.string.sim_stack_gap_title -> paired
         R.string.pair_bend_title -> paired&&a.pairShape!=1
@@ -980,7 +975,9 @@ internal fun slidersForEditor(part: TrioSettingsPart, a: TrioAppearance): List<S
             geometrySliders().filter { it.part == null && it.editorOwner == part }
         // The RAM ink shares the percentage's typography, so its sheet edits those two
         // rows rather than offering a second pair that would have to stay in sync.
-        TrioSettingsPart.Memory -> slidersForPart(TrioZones.Part.VALUE)
+        TrioSettingsPart.Memory -> slidersForPart(TrioZones.Part.VALUE).filter {
+            it.titleRes(a) in listOf(R.string.value_size_title, R.string.value_weight_title)
+        }
         else -> part.part?.let(::slidersForPart).orEmpty()
     }
     return rows.filter { spec ->
