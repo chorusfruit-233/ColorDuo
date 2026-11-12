@@ -122,6 +122,12 @@ internal fun contentControlsFor(part: TrioSettingsPart, settings: TrioSettings):
             ContentControl.DataSim -> (a.signalOutOfRing && a.stackedSignal) || a.hasRingPart(Prefs.PART_MOBILE)
             else -> true
         }
+    }.sortedBy { control ->
+        if(part!=TrioSettingsPart.Mobile) 0 else listOf(ContentControl.Mobile,ContentControl.Stacked,
+            ContentControl.SignalLayout,ContentControl.SimPair,ContentControl.Sim1,ContentControl.Sim2,
+            ContentControl.PairSim1,ContentControl.PairSim2,ContentControl.DataSim,
+            ContentControl.PairShape,ContentControl.PairMirror,ContentControl.PairReverse,
+            ContentControl.PairSingle).indexOf(control)
     }
 }
 

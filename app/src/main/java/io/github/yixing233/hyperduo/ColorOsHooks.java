@@ -176,6 +176,7 @@ final class ColorOsHooks {
         } finally {
             HOSTS.clear();
             CHILDREN.clear();
+            Refl.clearCaches();TrioSizing.clearCaches();TrioGeometry.clearCaches();TrioAppearance.clearCaches();
         }
     }
 
@@ -967,8 +968,21 @@ final class ColorOsHooks {
         }
 
         View find(String name) {
-            int id = meter.getResources().getIdentifier(name, "id", "com.android.systemui");
+            int id = resourceId(name);
             return id == 0 ? null : meter.findViewById(id);
+        }
+
+        private Object resourceOwner;
+        private final Map<String,Integer> resourceIds=new HashMap<>();
+        private int resourceId(String name) {
+            Object resources=meter.getResources();
+            if(resourceOwner!=resources){resourceOwner=resources;resourceIds.clear();}
+            Integer cached=resourceIds.get(name);
+            if(cached!=null)return cached;
+            int id=meter.getResources().getIdentifier(name,"id","com.android.systemui");
+            // Do not cache absence: a later resource/binder initialization may reveal it.
+            if(id!=0)resourceIds.put(name,id);
+            return id;
         }
 
         void capture() {
@@ -995,7 +1009,7 @@ final class ColorOsHooks {
                 }
             }
             clockContainer = null;
-            int clockId = meter.getResources().getIdentifier("clock_for_fake", "id", "com.android.systemui");
+            int clockId = resourceId("clock_for_fake");
             for (ViewParent p = meter.getParent(); p instanceof View; p = p.getParent()) {
                 if (!phoneBarClass.isInstance(p)) continue;
                 clockContainer = ((View) p).findViewById(clockId);
@@ -1175,11 +1189,12 @@ final class ColorOsHooks {
         void readState() {
             Object battery = value(Refl.callByName(viewModel, "getBatteryIcon"));
             if (battery == null) battery = Refl.callByName(meter, "getBatteryIcon");
-            state.level = integer(value(batteryLevelFlow), integer(Refl.callByName(battery, "getPowerLevel"), -1));
+            Object batteryLevelValue=value(batteryLevelFlow);
+            state.level=batteryLevelValue instanceof Number?((Number)batteryLevelValue).intValue():integer(Refl.callByName(battery,"getPowerLevel"),-1);
             state.useTint = true;
             Object color = value(Refl.callByName(viewModel, "getBatteryColor"));
-            state.tintColor = integer(Refl.callByName(color, "getSingleToneColor"),
-                    integer(Refl.callByName(battery, "getTintColor"), 0xFFFFFFFF));
+            Object tone=Refl.callByName(color,"getSingleToneColor");
+            state.tintColor=tone instanceof Number?((Number)tone).intValue():integer(Refl.callByName(battery,"getTintColor"),0xFFFFFFFF);
             Object charge = value(chargeFlow);
             if (charge == null && viewModel != null) {
                 charge = Refl.get(Refl.field(viewModel.getClass(), "chargeState"), viewModel);
@@ -1376,7 +1391,7 @@ final class ColorOsHooks {
                     // Upstream also hands off the RAT label when bars remain native.
                     // Track only these children; never hide the whole radio for a type label.
                     for (String name : new String[] {"mobile_type_text", "mobile_type_image"}) {
-                        int id = meter.getResources().getIdentifier(name, "id", "com.android.systemui");
+                        int id = resourceId(name);
                         View type = id == 0 ? null : iconContainer.getChildAt(i).findViewById(id);
                         if (type == null) continue;
                         if (!nativeVisibility.containsKey(type)) {
@@ -1419,6 +1434,7 @@ final class ColorOsHooks {
             try { apply(); } catch (Throwable error) { fail(error); }
         }
         @Override public void onViewDetachedFromWindow(View view) {
+            resourceIds.clear();resourceOwner=null;
             restore();
             releaseNativeTypes();
             iconContainer = null;

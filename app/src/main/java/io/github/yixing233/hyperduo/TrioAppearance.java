@@ -248,7 +248,83 @@ public final class TrioAppearance {
     public final boolean showWifiStandard;
     public final int wifiStandardScale;
     public final int wifiStandardWeight;
+    public float horizontalOffset(int part) {
+        switch(part) {
+            case Prefs.PART_WIFI:return wifiDx;
+            case Prefs.PART_MOBILE:return mobileDx;
+            case Prefs.PART_SIM_1:return sim1Dx;
+            case Prefs.PART_SIM_2:return sim2Dx;
+            case Prefs.PART_VALUE:return valueDx;
+            case Prefs.PART_BOLT:return boltDx;
+            case Prefs.PART_TYPE:return typeDx;
+            case Prefs.PART_CLOCK:return clockDx;
+            default:return 0; // Stacked SIMs already have pairX.
+        }
+    }
+
+    public float verticalOffset(int part) {
+        switch(part) {
+            case Prefs.PART_WIFI:return wifiDy;
+            case Prefs.PART_MOBILE:return mobileDy;
+            case Prefs.PART_SIM_1:return sim1Dy;
+            case Prefs.PART_SIM_2:return sim2Dy;
+            case Prefs.PART_VALUE:return valueDy;
+            case Prefs.PART_BOLT:return boltDy;
+            case Prefs.PART_TYPE:return typeDy;
+            case Prefs.PART_CLOCK:return clockDy;
+            default:return 0; // Stacked SIMs already have pairX.
+        }
+    }
+
+    public float horizontalReserve() {
+        float reach=0;
+        reach=Math.max(reach,Math.abs(wifiDx));
+        reach=Math.max(reach,Math.abs(mobileDx));
+        reach=Math.max(reach,Math.abs(sim1Dx));
+        reach=Math.max(reach,Math.abs(sim2Dx));
+        reach=Math.max(reach,Math.abs(valueDx));
+        reach=Math.max(reach,Math.abs(boltDx));
+        reach=Math.max(reach,Math.abs(typeDx));
+        reach=Math.max(reach,Math.abs(clockDx));
+        reach=Math.max(reach,Math.abs(batteryDx));
+        return reach;
+    }
+
+    public float verticalReserve() {
+        float reach=0;
+        reach=Math.max(reach,Math.abs(wifiDy));
+        reach=Math.max(reach,Math.abs(mobileDy));
+        reach=Math.max(reach,Math.abs(sim1Dy));
+        reach=Math.max(reach,Math.abs(sim2Dy));
+        reach=Math.max(reach,Math.abs(valueDy));
+        reach=Math.max(reach,Math.abs(boltDy));
+        reach=Math.max(reach,Math.abs(typeDy));
+        reach=Math.max(reach,Math.abs(clockDy));
+        reach=Math.max(reach,Math.abs(batteryDy));
+        return reach;
+    }
+
     public final int wifiStandardDx;
+    public final int wifiDx;
+    public final int wifiDy;
+    public final int mobileDx;
+    public final int mobileDy;
+    public final int sim1Dx;
+    public final int sim1Dy;
+    public final int sim2Dx;
+    public final int sim2Dy;
+    public final int valueDx;
+    public final int valueDy;
+    public final int boltDx;
+    public final int boltDy;
+    public final int typeDx;
+    public final int typeDy;
+    public final int clockDx;
+    public final int clockDy;
+    public final int batteryDx;
+    public final int batteryDy;
+    public final int perfDx;
+    public final int perfDy;
     public final int wifiStandardDy;
     /**
      * The network type steps aside while Wi-Fi is up; see {@link Prefs#KEY_TYPE_HIDE_ON_WIFI}.
@@ -405,6 +481,26 @@ public final class TrioAppearance {
         wifiStandardScale = Prefs.clamp(c.wifiStandardScale, Prefs.MIN_WIFI_STANDARD_SCALE, Prefs.MAX_WIFI_STANDARD_SCALE);
         wifiStandardWeight = Prefs.clamp(c.wifiStandardWeight, Prefs.MIN_WIFI_STANDARD_WEIGHT, Prefs.MAX_WIFI_STANDARD_WEIGHT);
         wifiStandardDx = Prefs.clamp(c.wifiStandardDx, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        wifiDx = Prefs.clamp(c.wifiDx, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        wifiDy = Prefs.clamp(c.wifiDy, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        mobileDx = Prefs.clamp(c.mobileDx, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        mobileDy = Prefs.clamp(c.mobileDy, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        sim1Dx = Prefs.clamp(c.sim1Dx, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        sim1Dy = Prefs.clamp(c.sim1Dy, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        sim2Dx = Prefs.clamp(c.sim2Dx, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        sim2Dy = Prefs.clamp(c.sim2Dy, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        valueDx = Prefs.clamp(c.valueDx, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        valueDy = Prefs.clamp(c.valueDy, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        boltDx = Prefs.clamp(c.boltDx, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        boltDy = Prefs.clamp(c.boltDy, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        typeDx = Prefs.clamp(c.typeDx, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        typeDy = Prefs.clamp(c.typeDy, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        clockDx = Prefs.clamp(c.clockDx, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        clockDy = Prefs.clamp(c.clockDy, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        batteryDx = Prefs.clamp(c.batteryDx, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        batteryDy = Prefs.clamp(c.batteryDy, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        perfDx = Prefs.clamp(c.perfDx, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        perfDy = Prefs.clamp(c.perfDy, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
         wifiStandardDy = Prefs.clamp(c.wifiStandardDy, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
         dotScale = c.dotScale;
         splitMode = Prefs.clamp(c.splitMode, Prefs.MIN_SPLIT_MODE, Prefs.MAX_SPLIT_MODE);
@@ -438,8 +534,25 @@ public final class TrioAppearance {
     }
 
     /** The appearance of {@code cfg}, or of the shipped defaults when it is null. */
-    public static TrioAppearance of(TrioSettings cfg) {
-        return new TrioAppearance(cfg == null ? TrioSettings.defaults() : cfg);
+    private static final TrioSettings DEFAULT_SETTINGS=TrioSettings.defaults();
+    private static final TrioSettings[] SNAPSHOTS=new TrioSettings[4];
+    private static final TrioAppearance[] APPEARANCES=new TrioAppearance[4];
+    private static int nextAppearance;
+
+    public static synchronized TrioAppearance of(TrioSettings cfg) {
+        TrioSettings source=cfg==null?DEFAULT_SETTINGS:cfg;
+        for(int i=0;i<SNAPSHOTS.length;i++)
+            if(SNAPSHOTS[i]!=null&&SNAPSHOTS[i].equals(source))return APPEARANCES[i];
+        // Snapshot mutable preview inputs too; identity alone would return stale sliders/layouts.
+        TrioSettings snapshot=source.copy();
+        TrioAppearance result=new TrioAppearance(snapshot);
+        SNAPSHOTS[nextAppearance]=snapshot;APPEARANCES[nextAppearance]=result;
+        nextAppearance=(nextAppearance+1)%SNAPSHOTS.length;
+        return result;
+    }
+
+    static synchronized void clearCaches() {
+        java.util.Arrays.fill(SNAPSHOTS,null);java.util.Arrays.fill(APPEARANCES,null);nextAppearance=0;
     }
 
     /** Whether a layout position owns the charging bolt, even while unplugged. */

@@ -101,6 +101,7 @@ public final class TrioPreviewView extends View {
         physicalState.level=level;
         physicalState.charging=charging;
         physicalState.quickCharging=quickCharging;
+        physicalState.chargingSpeed=chargingSpeed;
         physicalState.chargingPaused=chargingPaused;
         physicalState.powerSave=powerSave;physicalState.low=low;
         physicalState.wifiPresent=wifiLevel>=0;physicalState.wifiLevel=wifiLevel;
@@ -635,8 +636,8 @@ public final class TrioPreviewView extends View {
         // against the density, then the reference aspect. The setting is not a
         // ratio of the icon box here any more than it is on the status bar, so
         // a smaller reading really does show up smaller in this cell.
-        final int hostHeight = TrioRenderer.outSignalHeight(a.outSignalSize, density);
-        final int hostWidth = TrioRenderer.outSignalWidth(hostHeight);
+        final int hostHeight = TrioRenderer.outSignalHeight(a.outSignalSize, density,a);
+        final int hostWidth = TrioRenderer.outSignalWidth(hostHeight,a);
         if (hostWidth <= 0) {
             return;
         }

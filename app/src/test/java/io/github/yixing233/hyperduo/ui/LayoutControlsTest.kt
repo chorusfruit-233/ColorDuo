@@ -237,23 +237,66 @@ class LayoutControlsTest {
         a = TrioAppearance.of(paired)
         val controls = contentControlsFor(TrioSettingsPart.Mobile,paired)
         val rows = slidersForEditor(TrioSettingsPart.Mobile,a)
-        assertEquals(listOf(AdvancedGroup.DualSim), advancedGroupsFor(rows,controls,a))
+        assertEquals(listOf(AdvancedGroup.Position), advancedGroupsFor(rows,controls,a))
         for (control in listOf(ContentControl.PairMirror,ContentControl.PairReverse,ContentControl.PairSingle)) {
             assertTrue(controls.contains(control))
-            assertEquals(AdvancedGroup.DualSim, advancedGroup(control))
+            assertEquals(AdvancedGroup.Position, advancedGroup(control))
         }
-        assertTrue(rows.filter { isAdvancedSlider(it,a) }.all { advancedGroup(it,a)==AdvancedGroup.DualSim })
+        assertTrue(rows.filter { isAdvancedSlider(it,a) }.all { advancedGroup(it,a) in listOf(AdvancedGroup.Position) })
         val capsule = settings(Prefs.STYLE_CAPSULE); a = TrioAppearance.of(capsule)
         assertEquals(listOf(AdvancedGroup.Capsule), advancedGroupsFor(
             slidersForEditor(TrioSettingsPart.Structure,a), emptyList(),a))
         val network = TrioZones.withPiece(settings(),TrioZones.Zone.CENTRE.ordinal,TrioZones.Part.TYPE)
         a = TrioAppearance.of(network)
-        assertEquals(listOf(AdvancedGroup.NetworkType), advancedGroupsFor(
+        assertEquals(listOf(AdvancedGroup.Position), advancedGroupsFor(
             slidersForEditor(TrioSettingsPart.Type,a), contentControlsFor(TrioSettingsPart.Type,network),a))
         val independent = settings(); a = TrioAppearance.of(independent)
         assertTrue(advancedGroupsFor(slidersForEditor(TrioSettingsPart.Mobile,a),
             contentControlsFor(TrioSettingsPart.Mobile,independent),a).isEmpty())
+        val placed=TrioZones.withPiece(independent,TrioZones.Zone.TOP.ordinal,TrioZones.Part.MOBILE)
+        a=TrioAppearance.of(placed)
+        assertEquals(listOf(AdvancedGroup.Position),advancedGroupsFor(slidersForEditor(TrioSettingsPart.Mobile,a),
+            contentControlsFor(TrioSettingsPart.Mobile,placed),a))
     }
+    @Test fun componentOffsetsAndExistingProtocolOffsetsAreAdvancedOnly() {
+        val a = TrioAppearance.of(settings())
+        val titles = listOf(R.string.wifi_dx_title,R.string.wifi_dy_title,R.string.mobile_dx_title,R.string.mobile_dy_title,R.string.sim1_dx_title,R.string.sim1_dy_title,
+            R.string.sim2_dx_title,R.string.sim2_dy_title,R.string.value_dx_title,R.string.value_dy_title,R.string.bolt_dx_title,R.string.bolt_dy_title,R.string.type_dx_title,R.string.type_dy_title,
+            R.string.clock_dx_title,R.string.clock_dy_title,R.string.battery_dx_title,R.string.battery_dy_title,R.string.perf_dx_title,R.string.perf_dy_title,
+            R.string.wifi_standard_dx_title,R.string.wifi_standard_dy_title)
+        for (title in titles) {
+            val row=geometrySliders().single { it.titleRes(a)==title }
+            assertTrue(isAdvancedSlider(row,a))
+            assertEquals(AdvancedGroup.Position,advancedGroup(row,a))
+            assertEquals(-40,row.min);assertEquals(40,row.max)
+        }
+        for (part in listOf(TrioSettingsPart.Wifi,TrioSettingsPart.Mobile,TrioSettingsPart.Value,
+            TrioSettingsPart.Bolt,TrioSettingsPart.Type,TrioSettingsPart.Clock,
+            TrioSettingsPart.Battery,TrioSettingsPart.Readouts)) {
+            assertTrue(slidersForEditor(part,a).any { advancedGroup(it,a)==AdvancedGroup.Position })
+        }
+    }
+
+    @Test fun wifiAdvancedParametersAreGroupedAndOrderedByObject() {
+        val a=TrioAppearance.of(settings())
+        val rows=slidersForEditor(TrioSettingsPart.Wifi,a)+slidersForEditor(TrioSettingsPart.Type,a)
+        assertTrue(rows.all { isAdvancedSlider(it,a)&&advancedGroup(it,a)==AdvancedGroup.Position })
+        val sections=rows.sortedBy { parameterOrder(it,a) }.map { parameterHeading(it,a) }.distinct()
+        assertEquals(listOf(R.string.parameters_wifi,R.string.parameters_wifi_standard,R.string.parameters_network_type),sections)
+        val wifi=rows.filter { parameterHeading(it,a)==R.string.parameters_wifi }.sortedBy { parameterOrder(it,a) }
+        assertEquals(listOf(R.string.wifi_scale_title,R.string.arc_stroke_title,R.string.wifi_dx_title,R.string.wifi_dy_title),wifi.map { it.titleRes(a) })
+    }
+
+    @Test fun signalPositionControlsFollowTheSelectedArrangement() {
+        val paired=TrioZones.withPiece(settings(),TrioZones.Zone.CENTRE.ordinal,TrioZones.Part.SIM_PAIR)
+        val a=TrioAppearance.of(paired)
+        val rows=slidersForEditor(TrioSettingsPart.Mobile,a)
+        assertFalse(rows.any { it.titleRes(a) in listOf(R.string.mobile_dx_title,R.string.mobile_dy_title,R.string.sim1_dx_title,R.string.sim1_dy_title,R.string.sim2_dx_title,R.string.sim2_dy_title) })
+        assertTrue(rows.any { it.titleRes(a)==R.string.pair_y_title })
+        val flat=TrioAppearance.of(paired.copy().apply { pairShape=1 })
+        assertFalse(slidersForEditor(TrioSettingsPart.Mobile,flat).any { it.titleRes(flat)==R.string.pair_bend_title })
+    }
+
     @Test fun wifiStandardSizeAndWeightAreIndependentFromTheWholeIcon() {
         val s = settings().apply { wifiScale = 150; wifiStandardScale = 225; wifiStandardWeight = 900 }
         val a = TrioAppearance.of(s)
@@ -265,5 +308,35 @@ class LayoutControlsTest {
         assertEquals(225, size.read(s)); assertEquals(900, weight.read(s))
         assertEquals(150, s.wifiScale)
         assertTrue(size.enabled(a) && weight.enabled(a))
+    }
+
+    @Test fun memoryEditorSharesTypographyWithoutMovingTheBattery() {
+        val s = TrioZones.withPiece(settings(), TrioZones.Zone.CENTRE.ordinal, TrioZones.Part.MEMORY)
+            .apply { showValue = false }
+        val a = TrioAppearance.of(s)
+        val rows = slidersForEditor(TrioSettingsPart.Memory, a)
+        assertEquals(setOf(R.string.value_size_title, R.string.value_weight_title), rows.map { it.titleRes(a) }.toSet())
+        assertTrue(rows.all { it.enabled(a) })
+    }
+
+    @Test fun signalOffsetsFollowActualSlotsAndRectangleFallbacks() {
+        val empty = settings().apply {
+            showMobile = true; showSim1 = true; showSim2 = true
+            ringZones = Prefs.decodeLayout("|||")
+        }
+        fun titles(s: TrioSettings): Set<Int> {
+            val a = TrioAppearance.of(s)
+            return slidersForEditor(TrioSettingsPart.Mobile, a).map { it.titleRes(a) }.toSet()
+        }
+        assertFalse(titles(empty).contains(R.string.sim1_dx_title))
+        assertFalse(titles(empty).contains(R.string.sim2_dy_title))
+        val sim = TrioZones.withPiece(empty, TrioZones.Zone.TOP.ordinal, TrioZones.Part.SIM_1)
+        assertTrue(titles(sim).containsAll(listOf(R.string.sim1_dx_title, R.string.sim1_dy_title)))
+        val rect = empty.copy().apply { trioStyle = Prefs.STYLE_RECT; dualSim = true; showSim1 = false; showSim2 = false }
+        assertTrue(titles(rect).containsAll(listOf(R.string.mobile_dx_title, R.string.mobile_dy_title,
+            R.string.sim1_dx_title, R.string.sim1_dy_title, R.string.sim2_dx_title, R.string.sim2_dy_title)))
+        rect.dualSim = false
+        assertFalse(titles(rect).contains(R.string.sim1_dx_title))
+        assertFalse(titles(rect).contains(R.string.sim2_dy_title))
     }
 }

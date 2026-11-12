@@ -8,7 +8,51 @@ import java.util.Arrays;
 
 /** Executes real settings transport, ownership and rendering with the existing desktop shims. */
 public final class ColorOsSettingsTest {
+    private static void cacheInvalidation() {
+        TrioSettings settings=TrioSettings.defaults();
+        TrioAppearance first=TrioAppearance.of(settings);
+        check(first==TrioAppearance.of(settings),"unchanged settings reuse appearance");
+        check(first==TrioAppearance.of(settings.copy()),"equivalent snapshots share appearance");
+        settings.wifiDy=12;
+        TrioAppearance moved=TrioAppearance.of(settings);
+        check(moved!=first&&moved.wifiDy==12&&first.wifiDy==0,"in-place preview edits invalidate cache without changing prior snapshots");
+        settings.ringZones[0]=new int[]{Prefs.PART_CLOCK};
+        TrioAppearance placed=TrioAppearance.of(settings);
+        check(placed!=moved,"nested layout edits invalidate cached appearance");
+        TrioSizing.Bounds bounds=TrioSizing.bounds(placed);
+        check(bounds==TrioSizing.bounds(placed),"stable geometry reuses host bounds");
+        TrioGeometry.SplitRing shape=TrioGeometry.splitRing(placed);
+        check(shape==TrioGeometry.splitRing(placed),"stable appearance reuses sampled ellipse");
+        settings.splitLeftBend++;
+        TrioAppearance changed=TrioAppearance.of(settings);
+        check(shape!=TrioGeometry.splitRing(changed),"ellipse controls invalidate sampled geometry");
+        TrioSizing.clearCaches();check(bounds!=TrioSizing.bounds(placed),"bounds cache can be explicitly retired");
+        TrioGeometry.clearCaches();check(shape!=TrioGeometry.splitRing(placed),"geometry cache can be explicitly retired");
+        TrioAppearance.clearCaches();check(placed!=TrioAppearance.of(settings),"appearance cache can be explicitly retired");
+    }
+
+    private static void componentOffsetSettings() {
+        String[] fields={"wifiDx","wifiDy","mobileDx","mobileDy","sim1Dx","sim1Dy","sim2Dx","sim2Dy","valueDx","valueDy","boltDx","boltDy","typeDx","typeDy","clockDx","clockDy","batteryDx","batteryDy","perfDx","perfDy"};
+        String[] keys={Prefs.KEY_WIFI_DX,Prefs.KEY_WIFI_DY,Prefs.KEY_MOBILE_DX,Prefs.KEY_MOBILE_DY,Prefs.KEY_SIM1_DX,Prefs.KEY_SIM1_DY,Prefs.KEY_SIM2_DX,Prefs.KEY_SIM2_DY,Prefs.KEY_VALUE_DX,Prefs.KEY_VALUE_DY,Prefs.KEY_BOLT_DX,Prefs.KEY_BOLT_DY,Prefs.KEY_TYPE_DX,Prefs.KEY_TYPE_DY,Prefs.KEY_CLOCK_DX,Prefs.KEY_CLOCK_DY,Prefs.KEY_BATTERY_DX,Prefs.KEY_BATTERY_DY,Prefs.KEY_PERF_DX,Prefs.KEY_PERF_DY};
+        try {
+            for(int i=0;i<fields.length;i++) {
+                java.lang.reflect.Field field=TrioSettings.class.getField(fields[i]);
+                TrioSettings fresh=TrioSettings.defaults();check(field.getInt(fresh)==0,"component offset upgrade default");
+                field.setInt(fresh,-17);
+                check(field.getInt(fresh.copy())==-17,"offset survives copy");
+                check(field.getInt(TrioSettings.fromBundle(fresh.toBundle()))==-17,"offset survives full reload");
+                TrioSettings live=TrioSettings.defaults();check(live.applyKeyFrom(fresh,keys[i])&&field.getInt(live)==-17,"offset live update");
+                check(!fresh.equals(TrioSettings.defaults()),"offset participates in change detection");
+                check(TrioAppearance.class.getField(fields[i]).getInt(TrioAppearance.of(fresh))==-17,"offset reaches renderer");
+                Bundle invalid=new Bundle();invalid.putInt(keys[i],999);
+                check(field.getInt(TrioSettings.fromBundle(invalid))==40,"offset clamps to supported range");
+            }
+        } catch(ReflectiveOperationException e) {throw new AssertionError(e);}
+    }
+
     public static void main(String[] args) {
+        componentOffsetSettings();
+        cacheInvalidation();
         wifiStandardSettings();
         wifiStandardOffsetSettings();
         hdVisibilitySettings();
