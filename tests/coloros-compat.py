@@ -21,6 +21,7 @@ host_methods = "\n".join(block(r"^        (?:void|boolean) " + name + r"\([^\n]*
                          for name in ("capture", "syncSlots", "updateSlots", "releaseNativeTypes"))
 host_methods += "\n" + block(r"^        void hide\(View view, boolean hidden\) \{.*?^        \}")
 write_visibility = block(r"^    private static void writeVisibility\([^\n]*\) \{.*?^    \}")
+refresh_hosts = block(r"^    private static void refreshHosts\(\) \{.*?^    \}")
 mobile = block(r"^    private static final class Mobile \{.*?^    \}")
 harness = r'''
 package io.github.yixing233.hyperduo;
@@ -84,6 +85,7 @@ class CompatTest {
     }
     static final Class<?> phoneBarClass=PhoneStatusBarView.class;
     static final Map<View,WeakReference<Host>> CHILDREN=new IdentityHashMap<>();
+    static final Map<View,WeakReference<Host>> HOSTS=new IdentityHashMap<>();
     static Host childOwner(View view){var ref=CHILDREN.get(view);return ref==null?null:ref.get();}
     static final List<String> IDS=new ArrayList<>(List.of("unused"));
     static int resource(String name){if(!IDS.contains(name))IDS.add(name);return IDS.indexOf(name);}
@@ -97,13 +99,20 @@ class CompatTest {
     static class HookRuntime {
         static class Call {Object receiver;Object[] args;Call(Object r,Object[] a){receiver=r;args=a;} }
     }
-    static class TrioHooks {static final int LOG_INFO=4;static void log(int i,String s){} }
-    static class Config { boolean hideHd; }
-    static class TrioConfig {static final Config config=new Config();static Config get(){return config;}static boolean debugLog(){return false;} }
+    static class TrioHooks {static final int LOG_INFO=4,LOG_WARN=5;static void log(int i,String s){} }
+    static class Config { boolean hideHd,enabled=true; }
+    static class TrioConfig {
+        static final Config config=new Config();static final TrioAppearance appearance=new TrioAppearance();
+        static Config get(){return config;}static TrioAppearance appearance(){return appearance;}
+        static boolean debugLog(){return false;}
+    }
+    static class ClockTicker {static void refreshNow(){} }
+    static class MemoryTicker {static void refreshNow(){} }
+    static class ColorOsReload {static boolean retiring;}
     static class TrioAppearance {
-        boolean type;
+        boolean type,bars;
         boolean ownsType(){return type;}
-        boolean foldsMobile(){return false;}
+        boolean foldsMobile(){return bars;}
         boolean ownsWifi(){return false;}
     }
     static class State {int wifiLevel=-1,sims=1;DuoPolicy.Radio mobileService=DuoPolicy.Radio.AVAILABLE;}
@@ -116,22 +125,26 @@ class CompatTest {
         ImageView image;ViewGroup iconContainer;Drawable nativeDrawable;LinearLayout.LayoutParams nativeParams;
         ImageView.ScaleType nativeScaleType;View clockContainer;Extra extra;String lastWifiHandoff;
         boolean active=true,moduleWriting;
+        int nativeDepth;
         Host(ViewGroup meter){this.meter=meter;}
         int resourceId(String name){return resource(name);}
         View find(String name){return meter.findViewById(resource(name));}
         void releaseSlots(){updateSlots(Collections.emptySet());}
         void sync(TrioAppearance a){moduleWriting=true;try{syncSlots(a);}finally{moduleWriting=false;}}
         void release(){moduleWriting=true;try{releaseNativeTypes();releaseSlots();}finally{moduleWriting=false;}}
+        void apply(){} void traceLayout(){} void fail(Throwable error){throw new AssertionError(error);}
         // HOST_METHODS
     }
     static class Flow {Object value;Flow(Object value){this.value=value;}}
     static class Flows {
         Set<Object> active=Collections.newSetFromMap(new IdentityHashMap<>());
+        void sync(Collection<?> wanted){active.clear();for(Object flow:wanted)if(flow!=null)active.add(flow);}
         Object read(Object a,Object b){return a!=null&&active.contains(a)?((Flow)a).value:b!=null&&active.contains(b)?((Flow)b).value:null;}
     }
     static final Flows SIGNAL_FLOWS=new Flows();
     // MOBILE_CLASS
     // WRITE_VISIBILITY
+    // REFRESH_HOSTS
     public static void main(String[] args){
         // Layout shapes from the supplied SystemUI APKs; each row owns a separate tree.
         for(int version:new int[]{15,16,17}) {
@@ -174,6 +187,9 @@ class CompatTest {
         check("4G".equals(mobile.networkType("4G")),"uncollected legacy model uses the live radio fallback");
         SIGNAL_FLOWS.active.addAll(wanted);
         check("LTE+".equals(mobile.networkType("4G")),"collected OS15/16 icon group supplies the native RAT");
+        TrioConfig.appearance.type=true;
+        refreshHosts();
+        check("LTE+".equals(mobile.networkType("4G")),"periodic host refresh retains a type-only subscription");
         ((Flow)mobile.iconGroup).value=new LegacyIconModel("5G_PLUS");
         check("5G+".equals(mobile.networkType("4G")),"native RAT changes do not retain the initial value");
         ((Flow)mobile.iconGroup).value=new LegacyIconModel("Unknown");
@@ -184,12 +200,22 @@ class CompatTest {
         check(wanted.contains(mobile.icon)&&!wanted.contains(mobile.iconGroup),"signal-only layout leaves RAT collection alone");
         wanted.clear();mobile.addFlows(wanted,false,false);
         check(wanted.isEmpty(),"inactive layout requests no native streams");
+        TrioConfig.appearance.type=false;
+        refreshHosts();
+        check(SIGNAL_FLOWS.active.isEmpty(),"removing the last mobile component releases collection");
+        SIGNAL_FLOWS.sync(List.of(mobile.icon));TrioConfig.appearance.bars=true;
+        refreshHosts();
+        check(SIGNAL_FLOWS.active.contains(mobile.icon),"signal-only refresh retains native bars");
+        TrioConfig.config.enabled=false;
+        refreshHosts();
+        check(SIGNAL_FLOWS.active.isEmpty(),"master disable immediately releases all mobile collection");
         System.out.println("ColorOS 15/16/17 native ownership and network models: "+checks+" checks passed");
     }
     static class LegacyIconModel {final String name;LegacyIconModel(String name){this.name=name;}}
 }'''
 harness = harness.replace("// HOST_METHODS", host_methods).replace("// MOBILE_CLASS", mobile)
 harness = harness.replace("// WRITE_VISIBILITY", write_visibility)
+harness = harness.replace("// REFRESH_HOSTS", refresh_hosts)
 with tempfile.TemporaryDirectory(prefix="colorduo-compat-") as directory:
     root = Path(directory)
     test = root / "CompatTest.java"

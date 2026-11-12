@@ -828,7 +828,8 @@ final class ColorOsHooks {
 
     private static void refreshHosts() {
         if (ColorOsReload.retiring) return;
-        if (!TrioConfig.get().enabled || !TrioConfig.appearance().foldsMobile()) {
+        TrioAppearance appearance = TrioConfig.appearance();
+        if (!TrioConfig.get().enabled || (!appearance.foldsMobile() && !appearance.ownsType())) {
             SIGNAL_FLOWS.sync(Collections.emptyList());
         }
         ClockTicker.refreshNow();
