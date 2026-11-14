@@ -5,6 +5,7 @@ import argparse
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -268,3 +269,5 @@ with tempfile.TemporaryDirectory(prefix="colorduo-hosts-") as directory:
                              str(ROOT/"tests/ColorOsLayoutTest.java"),str(ROOT/"tests/shims/android/view/Gravity.java"),str(fixture)],check=True)
     for test in ("ColorOsLayoutTest","ColorOsHostTest"):
         subprocess.run(["java","-cp",directory,"io.github.yixing233.hyperduo."+test],check=True)
+
+subprocess.run([sys.executable, str(ROOT / "tests/coloros-watchdog.py")], check=True)

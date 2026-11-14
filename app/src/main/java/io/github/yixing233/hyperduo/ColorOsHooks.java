@@ -79,6 +79,7 @@ final class ColorOsHooks {
     private static boolean refreshQueued;
     private static boolean tickerStarted;
     private static boolean hostWatchdogQueued;
+    private static long hostWatchdogInterval;
     private static final Runnable HOST_WATCHDOG=()->{
         hostWatchdogQueued=false;
         if(ColorOsReload.retiring)return;
@@ -89,7 +90,17 @@ final class ColorOsHooks {
         if(!PowerSampling.active(context)) {
             MAIN.removeCallbacks(HOST_WATCHDOG);hostWatchdogQueued=false;return;
         }
-        if(!hostWatchdogQueued){hostWatchdogQueued=true;MAIN.postDelayed(HOST_WATCHDOG,10000L);}
+        // Native signal StateFlows stay collected while their views are hidden, but
+        // their emissions do not notify us. Preserve the one-second fallback for
+        // owned mobile readings; other layouts only need the slow host recovery.
+        TrioAppearance appearance = TrioConfig.appearance();
+        long interval = appearance.foldsMobile() || appearance.ownsType() ? 1000L : 10000L;
+        if (!hostWatchdogQueued || hostWatchdogInterval != interval) {
+            MAIN.removeCallbacks(HOST_WATCHDOG);
+            hostWatchdogQueued = true;
+            hostWatchdogInterval = interval;
+            MAIN.postDelayed(HOST_WATCHDOG, interval);
+        }
     }
 
     private static Class<?> meterClass;
