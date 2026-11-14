@@ -82,7 +82,7 @@ final class ColorOsHooks {
     private static final Runnable HOST_WATCHDOG=()->{
         hostWatchdogQueued=false;
         if(ColorOsReload.retiring)return;
-        if(PowerSampling.active(context))refreshHosts();
+        if(PowerSampling.active(ColorOsHooks.context))refreshHosts();
         syncHostWatchdog();
     };
     private static void syncHostWatchdog() {
