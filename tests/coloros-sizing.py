@@ -47,7 +47,9 @@ public class View implements ViewParent {
     public float getAlpha(){return alpha;} public float getTransitionAlpha(){return transitionAlpha;}
     public float getScaleX(){return scaleX;} public float getScaleY(){return scaleY;}
     public float getTranslationX(){return 0;} public boolean isLayoutRequested(){return false;}
-    public int getTop(){return top;} public float getTranslationY(){return 0;} public int getScrollY(){return 0;}
+    public float translationY;
+    public int getTop(){return top;} public float getTranslationY(){return translationY;} public int getScrollY(){return 0;}
+    public float getPivotY(){return height/2f;}
     public static class MeasureSpec {
         public static final int UNSPECIFIED=0, EXACTLY=0x40000000, AT_MOST=0x80000000;
         public static int getMode(int s){return s&0xc0000000;}
@@ -262,6 +264,39 @@ public final class ColorOsSizingTest {
         notificationOwner.measure(notificationBattery,notificationImage,TrioAppearance.of(s));
         check(notificationRow.params.height==40,"unrelated generic header containers keep their original bounds");
         notificationOwner.release();
+        // Issue #23: an 88px source is natively centered in a 70px transition row.
+        // Growing that row to 88px removes its -9px offset and moves the replay down.
+        PhoneStatusBarView loggedBar=new PhoneStatusBarView();loggedBar.parent=shade;
+        loggedBar.height=143;loggedBar.width=1272;loggedBar.paddingTop=39;loggedBar.paddingBottom=16;
+        ViewGroup loggedSource=child(loggedBar);loggedSource.height=88;loggedSource.top=39;loggedSource.id=7;
+        ViewGroup loggedMeter=child(loggedSource);loggedMeter.resources.metrics.density=3;
+        View loggedImage=icon(loggedMeter,3);loggedImage.height=60;loggedImage.top=14;loggedImage.y=53;
+        ViewGroup loggedRoot=child(shade);loggedRoot.id=4;loggedRoot.height=70;loggedRoot.width=1272;
+        loggedRoot.params.height=70;loggedRoot.y=48;
+        loggedRoot.setClipBounds(new android.graphics.Rect(0,0,1272,70));
+        ViewGroup loggedHolder=child(loggedRoot);loggedHolder.height=70;
+        ViewGroup loggedFrame=child(loggedHolder);loggedFrame.height=88;loggedFrame.params.height=88;loggedFrame.top=-9;
+        ColorOsSizing loggedOwner=new ColorOsSizing();
+        ColorOsSizing.trackMirror(loggedFrame,loggedSource);
+        for(int scale:new int[]{100,150,300}) {
+            s.glyphScale=scale;
+            TrioSizing.Metrics size=loggedOwner.measure(loggedMeter,loggedImage,TrioAppearance.of(s));
+            check(loggedRoot.params.height==70 && loggedHolder.minimumHeight==0,
+                  "the 70px transition row keeps its native geometry at every glyph scale");
+            check(loggedFrame.params.height==88 && loggedFrame.minimumHeight==0,
+                  "the 88px source frame keeps native centering without allocation overrides");
+            float realTop=loggedImage.y+(loggedImage.height-size.height)/2f;
+            float mirrorTop=loggedRoot.y+(loggedRoot.params.height-loggedFrame.params.height)/2f
+                    +loggedImage.top+(loggedImage.height-size.height)/2f;
+            check(realTop==mirrorTop,"control-center handoff has no vertical jump for the reported geometry");
+            android.graphics.Rect clip=loggedRoot.getClipBounds();
+            check(clip.top<=mirrorTop-loggedRoot.y && clip.bottom>=mirrorTop-loggedRoot.y+size.height,
+                  "the unchanged animation row allows the complete glyph above and below its bounds");
+        }
+        loggedOwner.release();
+        check(loggedRoot.clipChildren && loggedRoot.getClipBounds().top==0 && loggedRoot.getClipBounds().bottom==70,
+              "release restores the native transition clipping");
+        ColorOsSizing.clearMirrors();
         // A seamless frame replays the main row with no battery descendant of its own.
         PhoneStatusBarView replaySourceBar=new PhoneStatusBarView();
         replaySourceBar.parent=shade;replaySourceBar.height=48;replaySourceBar.width=420;
@@ -272,49 +307,87 @@ public final class ColorOsSizingTest {
         View replayImage=icon(replayBattery,1);replayImage.height=16;replayImage.top=2;
         ViewGroup replayRoot=child(shade);replayRoot.id=3;replayRoot.height=34;
         replayRoot.width=420;replayRoot.params.height=34;
-        ViewGroup replayHolder=child(replayRoot);replayHolder.params.height=-2;
-        ViewGroup replayFrame=child(replayHolder);replayFrame.height=20;replayFrame.params.height=20;
+        ViewGroup replayHolder=child(replayRoot);replayHolder.params.height=-2;replayHolder.height=34;
+        ViewGroup replayFrame=child(replayHolder);replayFrame.height=20;replayFrame.params.height=20;replayFrame.top=7;
+        replayFrame.setClipBounds(new android.graphics.Rect(0,0,60,20));
+        replayHolder.setClipBounds(new android.graphics.Rect(0,0,60,34));
+        replayRoot.setClipBounds(new android.graphics.Rect(0,0,60,34));
         ColorOsSizing replayOwner=new ColorOsSizing();s.glyphScale=150;
         check(ColorOsSizing.trackMirror(replayFrame,replaySource),"a seamless binding installs its listener once");
         check(!ColorOsSizing.trackMirror(replayFrame,replaySource),"native reset does not duplicate the mirror listener");
         replayOwner.measure(replayBattery,replayImage,TrioAppearance.of(s));
-        check(replayFrame.params.height==30 && replayHolder.minimumHeight>=30,
-              "the first animation frame reserves glyph ink without reparenting the real battery");
-        check(ColorOsSizing.mirrorOffset(replayFrame)==5,"negative source ink is moved inside the expanded replay frame");
+        check(replayFrame.params.height==20 && replayHolder.minimumHeight==0,
+              "the first animation frame leaves the native height and center intact");
+        check(replayFrame.getClipBounds().top==-5 && replayFrame.getClipBounds().bottom==25,
+              "negative and positive source ink are admitted without translating the source");
+        check(!replayFrame.clipChildren && !replayHolder.clipChildren && !replayRoot.clipChildren,
+              "the seamless path allows overflow through the outer animation row");
         check(replaySourceBar.params.height==-2 && replaySource.minimumHeight==0,
               "mirror allocation does not resize the real fixed status bar");
         int cached=View.MeasureSpec.makeMeasureSpec(20,View.MeasureSpec.EXACTLY);
         int retained=ColorOsSizing.retainMeasureSpec(replayFrame,cached);
-        check(View.MeasureSpec.getSize(retained)==30 && View.MeasureSpec.getMode(retained)==View.MeasureSpec.EXACTLY,
-              "a cached first-frame exact measure cannot shrink the replay allocation");
+        check(retained==cached,"cached native replay measurements retain the original animation geometry");
         int enough=View.MeasureSpec.makeMeasureSpec(40,View.MeasureSpec.AT_MOST);
         check(ColorOsSizing.retainMeasureSpec(replayFrame,enough)==enough,"sufficient parent measure constraints are unchanged");
         check(ColorOsSizing.retainMeasureSpec(replaySourceBar,cached)==cached,"unowned status-window measurement is unchanged");
         replayFrame.setLayoutParams(new ViewGroup.LayoutParams(-1,20));
-        check(replayFrame.params.height==30,"native replay resets keep the owned height before drawing");
-        java.awt.image.BufferedImage replayPixels=new java.awt.image.BufferedImage(60,30,java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        check(replayFrame.params.height==20,"native replay layout writes remain authoritative");
+        replayFrame.setClipBounds(new android.graphics.Rect(0,0,60,20));
+        check(replayFrame.getClipBounds().top==-5 && replayFrame.getClipBounds().bottom==25,
+              "native full-height clip writes retain both ends of overflowing ink");
+        replayFrame.setClipBounds(new android.graphics.Rect(0,3,60,17));
+        check(replayFrame.getClipBounds().top==3 && replayFrame.getClipBounds().bottom==17,
+              "intentional partial animation clips remain native");
+        replayFrame.setClipBounds(new android.graphics.Rect(0,0,60,20));
+        java.awt.image.BufferedImage replayPixels=new java.awt.image.BufferedImage(60,34,java.awt.image.BufferedImage.TYPE_INT_ARGB);
         java.awt.Graphics2D graphics=replayPixels.createGraphics();
-        graphics.translate(0,ColorOsSizing.mirrorOffset(replayFrame));
+        graphics.translate(0,replayFrame.top);
+        android.graphics.Rect replayClip=replayFrame.getClipBounds();
+        graphics.clipRect(replayClip.left,replayClip.top,replayClip.right-replayClip.left,replayClip.bottom-replayClip.top);
         graphics.setColor(java.awt.Color.WHITE);graphics.fillRect(10,-5,40,30);graphics.dispose();
         int paintedRows=0;
-        for(int rowIndex=0;rowIndex<30;rowIndex++) if((replayPixels.getRGB(20,rowIndex)>>>24)!=0) paintedRows++;
-        check(paintedRows==30,"top and bottom ink survive replay inside the frame's own pixel bounds");
+        for(int rowIndex=0;rowIndex<34;rowIndex++) if((replayPixels.getRGB(20,rowIndex)>>>24)!=0) paintedRows++;
+        check(paintedRows==30,"all rows survive a replay centered at the original native position");
+        replayFrame.scaleY=1.5f;
+        replayOwner.measure(replayBattery,replayImage,TrioAppearance.of(s));
+        check(replayRoot.getClipBounds().top==-6 && replayRoot.getClipBounds().bottom==40,
+              "parent clips include scaled overflow around the native frame pivot");
+        replayFrame.scaleY=1;replayFrame.top=10;
+        replayOwner.measure(replayBattery,replayImage,TrioAppearance.of(s));
+        check(replayRoot.getClipBounds().top==0 && replayRoot.getClipBounds().bottom==35,
+              "native layout movement remaps overflow without accumulating the prior clip");
+        replayFrame.top=7;
+        replayOwner.measure(replayBattery,replayImage,TrioAppearance.of(s));
+        check(replayRoot.getClipBounds().bottom==34,"returning to the native center restores its clip extent");
+        s.glyphScale=100;
+        replayOwner.measure(replayBattery,replayImage,TrioAppearance.of(s));
+        check(replayFrame.getClipBounds().top==0 && replayFrame.getClipBounds().bottom==20,
+              "shrinking the glyph releases unnecessary overflow");
+        s.glyphScale=150;
+        replayOwner.measure(replayBattery,replayImage,TrioAppearance.of(s));
         ColorOsSizing.mirrorAttached(replayFrame,false);
         replayOwner.measure(replayBattery,replayImage,TrioAppearance.of(s));
-        check(replayFrame.params.height==20 && ColorOsSizing.mirrorOffset(replayFrame)==0,
-              "detaching a replay restores its height and offset immediately");
+        check(replayFrame.params.height==20 && replayFrame.clipChildren && replayFrame.getClipBounds().top==0,
+              "detaching a replay restores native clipping immediately");
         ColorOsSizing.mirrorAttached(replayFrame,true);
         replayOwner.measure(replayBattery,replayImage,TrioAppearance.of(s));
-        check(replayFrame.params.height==30,"reattachment reserves the first frame synchronously");
+        check(replayFrame.params.height==20 && replayFrame.getClipBounds().top==-5,
+              "reattachment restores first-frame overflow without changing geometry");
         ColorOsSizing.trackMirror(replayFrame,new View());
         replayOwner.measure(replayBattery,replayImage,TrioAppearance.of(s));
-        check(replayFrame.params.height==20 && ColorOsSizing.mirrorOffset(replayFrame)==0,
+        check(replayFrame.params.height==20 && replayFrame.clipChildren && replayFrame.getClipBounds().top==0,
               "rebinding to an unrelated native source releases all old ownership");
         ColorOsSizing.trackMirror(replayFrame,replaySource);
         replayOwner.measure(replayBattery,replayImage,TrioAppearance.of(s));
+        ColorOsSizing otherReplayOwner=new ColorOsSizing();
+        otherReplayOwner.measure(replayBattery,replayImage,TrioAppearance.of(s));
         replayOwner.release();
-        check(replayFrame.params.height==20 && replayHolder.minimumHeight==0 && ColorOsSizing.mirrorOffset(replayFrame)==0,
-              "disabling restores the real and replay trees together");
+        check(!replayFrame.clipChildren && replayFrame.getClipBounds().top==-5,
+              "one owner cannot remove overflow still required by another");
+        otherReplayOwner.release();
+        check(replayFrame.params.height==20 && replayHolder.minimumHeight==0 && replayFrame.clipChildren
+                && replayFrame.getClipBounds().top==0 && replayFrame.getClipBounds().bottom==20,
+              "disabling the last owner restores the real and replay trees together");
         check(ColorOsSizing.retainMeasureSpec(replayFrame,cached)==cached,"released replay measurement is fully native");
         ColorOsSizing.clearMirrors();
         check(ColorOsSizing.trackedMirrors().isEmpty(),"retirement can remove every tracked replay listener");

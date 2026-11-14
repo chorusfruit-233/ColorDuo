@@ -76,6 +76,9 @@ final class ColorOsHooks {
             refreshMirrorSizes();
         }
     };
+    private static final View.OnLayoutChangeListener MIRROR_LAYOUT=(view,left,top,right,bottom,oldLeft,oldTop,oldRight,oldBottom)->{
+        if(top!=oldTop || bottom!=oldBottom) refreshMirrorSizes();
+    };
     private static boolean refreshQueued;
     private static boolean tickerStarted;
     private static boolean hostWatchdogQueued;
@@ -459,8 +462,10 @@ final class ColorOsHooks {
                     count += after(module,method,call -> {
                         ViewGroup frame=(ViewGroup)call.receiver;
                         Object source=Refl.callByName(frame,"getMView");
-                        if(ColorOsSizing.trackMirror(frame,source instanceof View?(View)source:null))
+                        if(ColorOsSizing.trackMirror(frame,source instanceof View?(View)source:null)) {
                             frame.addOnAttachStateChangeListener(MIRROR_ATTACH);
+                            frame.addOnLayoutChangeListener(MIRROR_LAYOUT);
+                        }
                         refreshMirrorSizes();
                     });
                 }
@@ -661,8 +666,6 @@ final class ColorOsHooks {
 
     private static final class MirrorCall {
         ViewGroup previous;
-        Canvas canvas;
-        int save;
         boolean trace;
     }
 
@@ -672,21 +675,12 @@ final class ColorOsHooks {
         call.data = state;
         state.trace = TrioConfig.debugLog();
         if (state.trace) state.previous = ColorOsDiagnostics.enterMirror(frame);
-        float offset = ColorOsSizing.mirrorOffset(frame);
-        if (offset != 0) {
-            Canvas canvas = (Canvas) call.args[0];
-            state.save = canvas.save();
-            state.canvas = canvas;
-            canvas.translate(0, offset);
-        }
     }
 
     private static void afterMirror(HookRuntime.Call call) {
         if (!(call.data instanceof MirrorCall)) return;
         MirrorCall state = (MirrorCall) call.data;
-        try {
-            if (state.canvas != null) state.canvas.restoreToCount(state.save);
-        } finally { if (state.trace) ColorOsDiagnostics.leaveMirror(state.previous); }
+        if (state.trace) ColorOsDiagnostics.leaveMirror(state.previous);
     }
 
     private static void writeDrawable(HookRuntime.Call call) {
@@ -845,8 +839,10 @@ final class ColorOsHooks {
     }
 
     private static void stopMirrors() {
-        for(ViewGroup frame:ColorOsSizing.trackedMirrors())
+        for(ViewGroup frame:ColorOsSizing.trackedMirrors()) {
             frame.removeOnAttachStateChangeListener(MIRROR_ATTACH);
+            frame.removeOnLayoutChangeListener(MIRROR_LAYOUT);
+        }
         ColorOsSizing.clearMirrors();
     }
 

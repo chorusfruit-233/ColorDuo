@@ -76,7 +76,7 @@ class BindingTest {
         }
     }
     static class ViewGroup extends View {
-        ImageView child;float mirrorOffset;
+        ImageView child;
         static class LayoutParams {int width,height;LayoutParams(int w,int h){width=w;height=h;}}
     }
     static class LinearLayout {
@@ -112,7 +112,6 @@ class BindingTest {
         static void leaveMirror(ViewGroup previous){current=previous;}
     }
     static class ColorOsSizing {
-        static float mirrorOffset(ViewGroup view){return view.mirrorOffset;}
         static ViewGroup.LayoutParams retainLayoutParams(View view,ViewGroup.LayoutParams params){return params;}
     }
     static final Map<View,Host> owners=new IdentityHashMap<>();
@@ -203,20 +202,21 @@ class BindingTest {
         h.enabled=false;h.apply();check(replacement.drawable==replacementNative,"new child retains its own restoration snapshot");
         ImageView other=new ImageView();Drawable otherNative=new Drawable();other.setImageDrawable(otherNative);
         check(other.drawable==otherNative,"unowned image views are untouched");
-        ViewGroup mirror=new ViewGroup();mirror.mirrorOffset=5;
+        ViewGroup mirror=new ViewGroup();
         Canvas canvas=new Canvas();canvas.y=3;Object expectedResult=new Object();
         Object mirrorResult=drawMirror(new XposedInterface.Chain(mirror,a->{
-            check(canvas.y==8,"native replay receives the exact reserved vertical inset");return expectedResult;
+            check(canvas.y==3,"native replay keeps its original vertical position at handoff");return expectedResult;
         },canvas));
-        check(mirrorResult==expectedResult && canvas.y==3,"native replay preserves return values and restores the canvas");
+        check(mirrorResult==expectedResult && canvas.y==3,"native replay preserves return values and the canvas transform");
+        check(canvas.saves==0,"overflow clipping does not add a canvas inset or save layer");
         try {drawMirror(new XposedInterface.Chain(mirror,a->{throw new IllegalArgumentException("draw");},canvas));
             throw new AssertionError("native draw failure was swallowed");}
-        catch(IllegalArgumentException expected){check(canvas.y==3,"failed native replay always restores the canvas transform");}
-        mirror.mirrorOffset=0;int saves=canvas.saves;
-        drawMirror(new XposedInterface.Chain(mirror,a->{check(canvas.y==3,"unowned replay draws at its original position");return null;},canvas));
-        check(canvas.saves==saves,"unowned replay does not alter canvas state");
+        catch(IllegalArgumentException expected){check(canvas.y==3,"failed native replay leaves the canvas transform untouched");}
         TrioConfig.debug=true;ViewGroup previousMirror=new ViewGroup();ColorOsDiagnostics.current=previousMirror;
-        drawMirror(new XposedInterface.Chain(mirror,a->{check(ColorOsDiagnostics.current==mirror,"zero-offset replay keeps its diagnostic source context");return null;},canvas));
+        drawMirror(new XposedInterface.Chain(mirror,a->{
+            check(ColorOsDiagnostics.current==mirror,"native replay keeps its diagnostic source context");
+            check(canvas.y==3 && canvas.saves==0,"diagnostic replay does not change animation geometry");return null;
+        },canvas));
         check(ColorOsDiagnostics.current==previousMirror,"nested diagnostic source context is restored");
         try {drawMirror(new XposedInterface.Chain(mirror,a->{throw new IllegalStateException("audit");},canvas));}
         catch(IllegalStateException expected){check(ColorOsDiagnostics.current==previousMirror,"failed native draw restores diagnostic source context");}

@@ -31,21 +31,13 @@ final class ColorOsSizing {
     private static final class Mirror {
         WeakReference<View> source=new WeakReference<>(null);
         boolean attached;
-        final Map<ColorOsSizing,Ink> owners=new WeakHashMap<>();
-        int top() { int top=0;for(Ink ink:owners.values()) top=Math.min(top,ink.top);return top; }
-        int height(View source) {
-            int bottom=source.getHeight();
-            for(Ink ink:owners.values()) bottom=Math.max(bottom,ink.bottom);
-            return bottom-top();
-        }
     }
 
-    /** Return true only once, so the caller can install one reversible attach listener. */
+    /** Return true only once, so the caller can install reversible lifecycle listeners. */
     static boolean trackMirror(ViewGroup frame,View source) {
         Mirror mirror=MIRRORS.get(frame);
         boolean fresh=mirror==null;
         if(fresh) { mirror=new Mirror();MIRRORS.put(frame,mirror); }
-        if(mirror.source.get()!=source) mirror.owners.clear();
         mirror.source=new WeakReference<>(source);
         mirror.attached=frame.isAttachedToWindow();
         return fresh;
@@ -54,11 +46,6 @@ final class ColorOsSizing {
     static void mirrorAttached(ViewGroup frame,boolean attached) {
         Mirror mirror=MIRRORS.get(frame);
         if(mirror!=null) mirror.attached=attached;
-    }
-
-    static float mirrorOffset(ViewGroup frame) {
-        Mirror mirror=MIRRORS.get(frame);
-        return mirror==null || !mirror.attached?0:-mirror.top();
     }
 
     java.util.List<ViewGroup> mirrorFrames() { return new ArrayList<>(mirrors); }
@@ -163,6 +150,7 @@ final class ColorOsSizing {
         int nativeClipHeight;
         boolean writing;
         final Map<ColorOsSizing,Boolean> owners=new WeakHashMap<>();
+        final Map<ColorOsSizing,Ink> overflow=new WeakHashMap<>();
         ClipState(ViewGroup view) {
             children=view.getClipChildren();padding=view.getClipToPadding();
             nativeClip=copy(view.getClipBounds());writtenClip=copy(nativeClip);nativeClipHeight=view.getHeight();
@@ -174,18 +162,27 @@ final class ColorOsSizing {
             boolean clipChildren=relax?false:children,clipPadding=relax?false:padding;
             if(view.getClipChildren()!=clipChildren) view.setClipChildren(clipChildren);
             if(view.getClipToPadding()!=clipPadding) view.setClipToPadding(clipPadding);
-            Rect target=copy(nativeClip);
-            // A full-height cached clip must follow the resized header; partial animation clips stay native.
-            if(target!=null && target.top<=0 && target.bottom>=nativeClipHeight) {
-                int height=Math.max(view.getHeight(),view.getMinimumHeight());
-                if(view.getLayoutParams()!=null) height=Math.max(height,view.getLayoutParams().height);
-                target.bottom=Math.max(target.bottom,height);
-            }
+            Rect target=expandedClip(view);
             writtenClip=copy(target);
             if(!same(latest,target)) {
                 writing=true;
                 try { view.setClipBounds(target); } finally { writing=false; }
             }
+        }
+        Rect expandedClip(ViewGroup view) {
+            Rect target=copy(nativeClip);
+            // Preserve deliberate partial animation clips. A full-height clip can
+            // include overflow without changing the animation's measured bounds.
+            if(target!=null && target.top<=0 && target.bottom>=nativeClipHeight) {
+                int height=Math.max(view.getHeight(),view.getMinimumHeight());
+                if(view.getLayoutParams()!=null) height=Math.max(height,view.getLayoutParams().height);
+                target.bottom=Math.max(target.bottom,height);
+                for(Ink ink:overflow.values()) {
+                    target.top=Math.min(target.top,ink.top);
+                    target.bottom=Math.max(target.bottom,ink.bottom);
+                }
+            }
+            return target;
         }
     }
 
@@ -226,6 +223,7 @@ final class ColorOsSizing {
         TrioSizing.Metrics metrics=TrioSizing.measure(appearance,density,maxHeight,maxWidth);
         Set<ViewGroup> requiredHeights=Collections.newSetFromMap(new IdentityHashMap<>());
         Map<ViewGroup,Boolean> clips=new IdentityHashMap<>();
+        Map<ViewGroup,Ink> overflow=new IdentityHashMap<>();
         if(found.expandable) reservePath((ViewGroup)image.getParent(),surface,
                 metrics.height+image.getPaddingTop()+image.getPaddingBottom()+margins(image),requiredHeights);
         if(surface!=null && (found.expandable || metrics.height>Math.round(20f*density)))
@@ -237,9 +235,12 @@ final class ColorOsSizing {
             Ink ink=source==null || !mirror.attached?null:sourceInk(image,source,metrics.height);
             Surface target=surface(frame);
             if(ink==null || !target.expandable) continue;
-            mirror.owners.put(this,ink);requiredMirrors.add(frame);mirrors.add(frame);
-            reservePath(frame,target.view,mirror.height(source),requiredHeights);
-            clipPath(frame,target,clips);
+            requiredMirrors.add(frame);mirrors.add(frame);
+            // Seamless frames are centered and animated using the native row's
+            // dimensions. Growing an 88px source's 70px row shifts the clone by
+            // 9px at handoff. Keep all replay layout/measure inputs native and
+            // allow the source's ink to overflow those bounds instead.
+            clipMirrorPath(frame,target.view,ink,clips,overflow);
         }
         for(ViewGroup frame:mirrors.toArray(new ViewGroup[0]))
             if(!requiredMirrors.contains(frame)) releaseMirror(frame);
@@ -251,7 +252,10 @@ final class ColorOsSizing {
             ViewGroup group=entry.getKey();
             ClipState state=CLIPS.get(group);
             if(state==null) { state=new ClipState(group);CLIPS.put(group,state); }
-            state.owners.put(this,entry.getValue());held.add(group);state.apply(group);
+            state.owners.put(this,entry.getValue());
+            if(overflow.containsKey(group)) state.overflow.put(this,overflow.get(group));
+            else state.overflow.remove(this);
+            held.add(group);state.apply(group);
         }
         return metrics;
     }
@@ -265,6 +269,24 @@ final class ColorOsSizing {
             view=(View)view.getParent();
         }
         return new Ink(Math.min(0,(int)Math.floor(top)),Math.max(source.getHeight(),(int)Math.ceil(top+height)));
+    }
+
+    private static void clipMirrorPath(ViewGroup frame,ViewGroup surface,Ink ink,
+                                       Map<ViewGroup,Boolean> clips,Map<ViewGroup,Ink> overflow) {
+        float top=ink.top,bottom=ink.bottom;
+        for(ViewGroup group=frame;group!=null;) {
+            clips.put(group,true);
+            Ink previous=overflow.get(group);
+            int first=(int)Math.floor(top),last=(int)Math.ceil(bottom);
+            overflow.put(group,new Ink(previous==null?first:Math.min(first,previous.top),
+                    previous==null?last:Math.max(last,previous.bottom)));
+            if(group==surface || !(group.getParent() instanceof ViewGroup)) break;
+            ViewGroup parent=(ViewGroup)group.getParent();
+            float pivot=group.getPivotY(),scale=group.getScaleY();
+            float offset=group.getTop()+group.getTranslationY()-parent.getScrollY();
+            float a=pivot+(top-pivot)*scale+offset,b=pivot+(bottom-pivot)*scale+offset;
+            top=Math.min(a,b);bottom=Math.max(a,b);group=parent;
+        }
     }
 
     private void reservePath(ViewGroup first,ViewGroup surface,int required,Set<ViewGroup> groups) {
@@ -285,7 +307,7 @@ final class ColorOsSizing {
         if(surface.expandable) clips.put(surface.view,false);
     }
 
-    /** Native seamless frames can pass a cached small spec even after LayoutParams grew. */
+    /** Expanded headers can receive a cached small spec even after LayoutParams grew. */
     static int retainMeasureSpec(View view,int requested) {
         HeightState state=HEIGHTS.get(view);
         if(state==null || state.owners.isEmpty()) return requested;
@@ -340,12 +362,7 @@ final class ColorOsSizing {
             nativeRequest.top=state.nativeClip.top;nativeRequest.bottom=state.nativeClip.bottom;
         }
         state.nativeClip=nativeRequest;state.nativeClipHeight=nativeClipHeight((ViewGroup)view);
-        Rect target=copy(nativeRequest);
-        if(target!=null && target.top<=0 && target.bottom>=state.nativeClipHeight) {
-            int height=Math.max(view.getHeight(),view.getMinimumHeight());
-            if(view.getLayoutParams()!=null) height=Math.max(height,view.getLayoutParams().height);
-            target.bottom=Math.max(target.bottom,height);
-        }
+        Rect target=state.expandedClip((ViewGroup)view);
         state.writtenClip=copy(target);
         return target;
     }
@@ -414,7 +431,7 @@ final class ColorOsSizing {
         held.remove(group);
         ClipState state=CLIPS.get(group);
         if(state==null) return;
-        state.owners.remove(this);
+        state.owners.remove(this);state.overflow.remove(this);
         if(state.owners.isEmpty()) {
             Rect current=group.getClipBounds();
             if(!same(current,state.writtenClip)) state.nativeClip=copy(current);
@@ -426,8 +443,6 @@ final class ColorOsSizing {
 
     private void releaseMirror(ViewGroup frame) {
         mirrors.remove(frame);
-        Mirror mirror=MIRRORS.get(frame);
-        if(mirror!=null) mirror.owners.remove(this);
     }
 
     private static Rect copy(Rect r) { return r==null?null:new Rect(r.left,r.top,r.right,r.bottom); }
