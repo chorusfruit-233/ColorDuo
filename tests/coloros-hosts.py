@@ -22,6 +22,8 @@ def method(name):
 
 
 methods = "\n".join(method(name) for name in ("applyInternal", "resize", "restoreBatteryInternal", "syncExtra"))
+render_snapshot=(SOURCE / "TrioRenderState.java").read_text()
+render_snapshot=render_snapshot[render_snapshot.index("final class TrioRenderState"):].replace("final class TrioRenderState", "static final class TrioRenderState",1).replace("TrioState", "State")
 harness = r'''
 package io.github.yixing233.hyperduo;
 import java.util.*;
@@ -73,7 +75,19 @@ public final class ColorOsHostTest {
         void setScaleType(ScaleType value){scale=value;}
     }
     static class Glyph extends Drawable { void invalidateSelf(){} }
-    static class State { int level=65,wifiLevel=3;boolean wifiPresent=true,clock,charging=true,chargingPaused; }
+    enum ChargeSpeed {NORMAL,QUICK,FLASH,SUPER}
+    static class DuoPolicy {enum Radio {UNKNOWN,AVAILABLE}}
+    static class Doze {boolean allowsAnimation(ImageView image){return true;}}
+    static final Doze doze=new Doze();
+    static class State {
+        int level=65,wifiLevel=3,mobileLevel=4,dataSlot;
+        boolean wifiPresent=true,clock,charging=true,chargingPaused,quickCharging,powerSave,low;
+        int[] slotLevels={4,2};ChargeSpeed chargingSpeed=ChargeSpeed.NORMAL;DuoPolicy.Radio mobileService=DuoPolicy.Radio.AVAILABLE;
+        String mobileType="5G",wifiStandard="6";static String sClockText="12:00";static int sMemoryPercent=50;
+        int foreground(){return 0xffffffff;}
+    }
+@RENDER_SNAPSHOT@
+
     static class TrioRenderer {
         static boolean drawsClock(State state,TrioAppearance appearance){return state.clock;}
     }
@@ -153,6 +167,7 @@ public final class ColorOsHostTest {
         View clockContainer=new View();
         int nativeDepth,ownedWidth,ownedHeight;
         float ownedScale;
+        TrioRenderState lastPaint;
         final ColorOsSizing sizing=new ColorOsSizing();
         String lastSizeNote;
         boolean active,failed,logged,moduleWriting;
@@ -244,6 +259,7 @@ public final class ColorOsHostTest {
     }
 }
 '''.replace("@METHODS@", methods)
+harness=harness.replace("@RENDER_SNAPSHOT@",render_snapshot)
 with tempfile.TemporaryDirectory(prefix="colorduo-hosts-") as directory:
     fixture=Path(directory)/"ColorOsHostTest.java"
     fixture.write_text(harness)
