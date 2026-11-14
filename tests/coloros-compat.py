@@ -107,6 +107,7 @@ class CompatTest {
         static boolean debugLog(){return false;}
     }
     static class ClockTicker {static void refreshNow(){} }
+    static class BatteryPresence {static void refreshNow(){}}
     static class MemoryTicker {static void refreshNow(){} }
     static class ColorOsReload {static boolean retiring;}
     static class TrioAppearance {

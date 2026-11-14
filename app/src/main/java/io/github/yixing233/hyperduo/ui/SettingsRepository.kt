@@ -300,6 +300,7 @@ class SettingsRepository(context: Context) {
     fun setShowWifiStandard(value: Boolean) = writeBoolean(Prefs.KEY_SHOW_WIFI_STANDARD, value)
     fun setWifiStandardScale(value: Int) = writeInt(Prefs.KEY_WIFI_STANDARD_SCALE, value)
     fun setWifiStandardWeight(value: Int) = writeInt(Prefs.KEY_WIFI_STANDARD_WEIGHT, value)
+    fun setMemoryIntervalSeconds(value: Int) = writeInt(Prefs.KEY_MEMORY_INTERVAL_SECONDS, Prefs.memoryIntervalSeconds(value))
     fun setWifiStandardDx(value: Int) = writeInt(Prefs.KEY_WIFI_STANDARD_DX, value)
     fun setWifiDx(value: Int) = writeInt(Prefs.KEY_WIFI_DX, value)
     fun setWifiDy(value: Int) = writeInt(Prefs.KEY_WIFI_DY, value)

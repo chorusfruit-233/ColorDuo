@@ -22,6 +22,7 @@ final class ColorOsReadings extends ViewGroup {
     private final TrioHooks.OutTypeLabel type;
     private final int[] levels = new int[2];
     private TrioAppearance appearance;
+    private int lastForeground;
     private boolean radioNotice;
     private boolean radioNoticeVisible;
 
@@ -52,7 +53,9 @@ final class ColorOsReadings extends ViewGroup {
     }
 
     void update(TrioAppearance appearance) {
+        boolean layoutChanged=this.appearance!=appearance;
         this.appearance = appearance;
+        int previousBars=levels[0],previousDots=levels[1];
         // These are the same selection and drawing functions used by the upstream preview
         // and hooks, including a SIM in slot 2 alone and the data-SIM-only option.
         TrioRenderer.outSignalLevels(appearance.dataSimOnly, state.mobileLevel,
@@ -60,7 +63,7 @@ final class ColorOsReadings extends ViewGroup {
         if (levels[0] < 0) levels[0] = 0;
         boolean registering = state.mobileService == DuoPolicy.Radio.REGISTERING;
         signal.setVisibility(appearance.stackedOut() && !registering ? VISIBLE : GONE);
-        signal.invalidate();
+        if(layoutChanged||previousBars!=levels[0]||previousDots!=levels[1]||lastForeground!=state.foreground())signal.invalidate();
 
         perf.syncOffset();type.syncOffset();
         String performance = TrioHooks.perfText(appearance);
@@ -74,7 +77,8 @@ final class ColorOsReadings extends ViewGroup {
             perf.weight = appearance.perfTypeWeight();
             perf.fontGeneration = generation;
         }
-        perf.setLineSpacing(0f, TrioHooks.perfLineSpacing(perf, performance, this));
+        float spacing=TrioHooks.perfLineSpacing(perf,performance,this);
+        if(perf.getLineSpacingMultiplier()!=spacing)perf.setLineSpacing(0f,spacing);
 
         radioNotice = appearance.foldsMobile() && DuoPolicy.hasNotice(state.mobileService);
         String network = registering ? "" : radioNotice ? ColorOsLabels.radioNotice(getContext(), state.mobileService)
@@ -90,11 +94,13 @@ final class ColorOsReadings extends ViewGroup {
             type.appliedWeight = appearance.typeWeight;
             type.fontGeneration = generation;
         }
-        perf.setTextColor(state.foreground());
-        type.setTextColor(state.foreground());
+        int foreground=state.foreground();
+        if(perf.getCurrentTextColor()!=foreground)perf.setTextColor(foreground);
+        if(type.getCurrentTextColor()!=foreground)type.setTextColor(foreground);
+        lastForeground=foreground;
         setVisibility(signal.getVisibility() == VISIBLE || perf.getVisibility() == VISIBLE
                 || type.getVisibility() == VISIBLE ? VISIBLE : GONE);
-        requestLayout();
+        if(layoutChanged)requestLayout();
     }
 
     private View[] orderedViews() {

@@ -18,6 +18,7 @@ import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 
 /**
  * Event-driven battery state for the status-bar performance readouts: the
@@ -46,6 +47,35 @@ final class BatteryPresence {
     static { ColorOsReload.watch(MAIN); }
     // End ColorDuo reload lifecycle.
     private static Runnable pendingRefresh;
+    private static Context samplingContext;
+    private static long nextSampleAt,scheduledAt=-1,lastInterval;
+    private static int lastDemand=-1;
+    private static final Runnable WATCHDOG=()->{scheduledAt=-1;refreshNow();};
+    static void pause(){schedule(-1);nextSampleAt=0;}
+    private static void schedule(long at) {
+        if(scheduledAt==at)return;
+        MAIN.removeCallbacks(WATCHDOG);scheduledAt=at;
+        if(at>=0)MAIN.postDelayed(WATCHDOG,Math.max(0,at-SystemClock.uptimeMillis()));
+    }
+    static void refreshNow() {
+        if(ColorOsReload.retiring)return;
+        if(Looper.myLooper()!=Looper.getMainLooper()){MAIN.post(BatteryPresence::refreshNow);return;}
+        Context context=samplingContext;
+        if(!PowerSampling.active(context)) {
+            schedule(-1);nextSampleAt=0;lastDemand=-1;
+            if(pendingRefresh!=null){MAIN.removeCallbacks(pendingRefresh);pendingRefresh=null;}
+            return;
+        }
+        TrioAppearance a=TrioConfig.appearance();
+        boolean readouts=a.perfPower&&TrioState.sChargingAttached
+                ||a.perfTemp&&(!a.perfTempChargingOnly||TrioState.sChargingAttached);
+        long interval=readouts?3000L:15000L;
+        int demand=(a.perfPower?1:0)|(a.perfTemp?2:0)|(a.perfTempChargingOnly?4:0);
+        if(interval!=lastInterval||demand!=lastDemand){nextSampleAt=0;lastInterval=interval;lastDemand=demand;}
+        long now=SystemClock.uptimeMillis();
+        if(now>=nextSampleAt){nextSampleAt=now+interval;refresh(context);}
+        schedule(nextSampleAt);
+    }
 
     private BatteryPresence() {}
 
@@ -54,20 +84,10 @@ final class BatteryPresence {
         if (ColorOsReload.retiring) return;
         // End ColorDuo reload lifecycle.
         if (!watchdogStarted) {
-            watchdogStarted = true;
-            // ROM broadcast delivery is not always reliable, and the temperature
-            // and the current both drift while the panel is idle. A bounded
-            // low-frequency recheck also recovers from transient query failures;
-            // never put framework IPC in the per-frame drawing path.
-            MAIN.post(new Runnable() {
-                @Override public void run() {
-                    // ColorDuo reload lifecycle.
-                    if (ColorOsReload.retiring) return;
-                    // End ColorDuo reload lifecycle.
-                    refresh(context);
-                    MAIN.postDelayed(this, 3000L);
-                }
-            });
+            watchdogStarted=true;
+            Context app=context.getApplicationContext();samplingContext=app==null?context:app;
+            PowerSampling.watch(samplingContext,BatteryPresence::refreshNow);
+            MAIN.post(BatteryPresence::refreshNow);
         }
         if (registered) return;
         final IntentFilter filter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
@@ -107,14 +127,14 @@ final class BatteryPresence {
     // a burst of deliveries.
     private static void scheduleRefresh(final Context context) {
         // ColorDuo reload lifecycle.
-        if (ColorOsReload.retiring) return;
+        if (ColorOsReload.retiring || !PowerSampling.active(context)) return;
         // End ColorDuo reload lifecycle.
         MAIN.post(new Runnable() {
             @Override public void run() {
-                refresh(context);
+                if(!PowerSampling.active(context))return;
                 if (pendingRefresh != null) MAIN.removeCallbacks(pendingRefresh);
                 pendingRefresh = new Runnable() {
-                    @Override public void run() { refresh(context); }
+                    @Override public void run() { pendingRefresh=null;nextSampleAt=0;refreshNow(); }
                 };
                 MAIN.postDelayed(pendingRefresh, 1000L);
             }
@@ -125,6 +145,7 @@ final class BatteryPresence {
         // ColorDuo reload lifecycle.
         if (ColorOsReload.retiring) return;
         // End ColorDuo reload lifecycle.
+        if(!TrioConfig.get().enabled)return;
         if (ColorOsHooks.dispatchBatteryRefresh(() -> refresh(context))) return;
         try {
             final Intent battery = context.registerReceiver(null,
@@ -152,16 +173,20 @@ final class BatteryPresence {
             final int whole = (temperature == Integer.MIN_VALUE)
                     ? TrioState.TEMP_UNKNOWN
                     : Math.round(temperature / 10f);
-            int current = currentNow(context);
+            TrioAppearance appearance=TrioConfig.appearance();
+            boolean visible=PowerSampling.active(context);
+            boolean powerWanted=visible&&appearance.perfPower&&readoutActive;
+            int current=powerWanted?currentNow(context):Integer.MIN_VALUE;
             int powerVoltage = voltage;
             // Normalize ROM input units and pack voltage before the shared calculation.
-            if (ColorOsHooks.isInstalled()) {
+            if (powerWanted && ColorOsHooks.isInstalled()) {
                 ColorOsBattery.Sample sample = ColorOsHooks.batterySample(current, voltage);
                 current = sample.currentMicroAmps;
                 powerVoltage = sample.voltageMilliVolts;
             }
             final float watts = wattsOf(current, powerVoltage);
-            publish(readoutActive, watts, whole);
+            boolean tempWanted=visible&&appearance.perfTemp&&(!appearance.perfTempChargingOnly||readoutActive);
+            publish(readoutActive, watts, tempWanted?whole:TrioState.TEMP_UNKNOWN);
         } catch (RuntimeException ignored) {
             // Permissions/ROM differences must not crash SystemUI.
         }
@@ -220,20 +245,9 @@ final class BatteryPresence {
     private static void publish(boolean attached, float watts, int temperature) {
         if (ColorOsHooks.dispatchBatteryPublish(() -> publish(attached, watts, temperature))) return;
         final boolean beforeAttached = TrioState.sChargingAttached;
-        final float beforeWatts = TrioState.sChargePowerW;
-        final int beforeTemperature = TrioState.sBatteryTempC;
-        TrioState.sChargingAttached = attached;
-        TrioState.sChargePowerW = watts;
-        TrioState.sBatteryTempC = temperature;
-        // Float.compare rather than != because the watts may be POWER_UNKNOWN,
-        // and NaN != NaN is true: a plain comparison would call every frame a
-        // change on a device that cannot report power, and repaint the status
-        // bar once every few seconds for nothing. Float.compare orders NaN
-        // against itself as equal, which is what "did the reading move" means.
-        if (beforeAttached != attached
-                || Float.compare(beforeWatts, TrioState.sChargePowerW) != 0
-                || beforeTemperature != TrioState.sBatteryTempC) {
-            TrioHooks.invalidateHosts();
-        }
+        final TrioAppearance appearance=TrioConfig.appearance();
+        final String before=TrioHooks.perfText(appearance);
+        TrioState.sChargingAttached=attached;TrioState.sChargePowerW=watts;TrioState.sBatteryTempC=temperature;
+        if(beforeAttached!=attached||!before.equals(TrioHooks.perfText(appearance)))TrioHooks.invalidateHosts();
     }
 }

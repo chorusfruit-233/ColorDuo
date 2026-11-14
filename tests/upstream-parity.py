@@ -11,6 +11,7 @@ SOURCE = "app/src/main/java/io/github/yixing233/hyperduo/"
 # These files implement ROM/framework integration or the fork's update address.
 PLATFORM_FILES = {"HyperDuoModule.java", "TrioConfig.java", "HyperDuoApp.kt", "WifiPresence.java", "ui/UpdateController.kt"}
 DUO_FILES = {
+    "BatteryPresence.java",      # Demand-driven polling and rendered-value notifications, covered by power regressions.
     "Refl.java",                 # Bounded metadata caches; semantics covered by ReflCacheTest.
     "TrioZones.java",             # Paired SIM placement and exclusivity, tested with rendered rows.
     "Prefs.java", "TrioSettings.java", "ui/SettingsRepository.kt", "ui/ContentControls.kt", # Paused grayscale setting and transport.

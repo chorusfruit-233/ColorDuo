@@ -8,6 +8,25 @@ import java.util.Arrays;
 
 /** Executes real settings transport, ownership and rendering with the existing desktop shims. */
 public final class ColorOsSettingsTest {
+    private static void powerSavingSnapshots() {
+        for(int seconds:new int[]{3,5,10}) {
+            TrioSettings settings=TrioSettings.defaults();settings.memoryIntervalSeconds=seconds;
+            check(settings.copy().memoryIntervalSeconds==seconds,"memory interval survives copy");
+            check(TrioSettings.fromBundle(settings.toBundle()).memoryIntervalSeconds==seconds,"memory interval survives reload");
+            TrioSettings live=TrioSettings.defaults();check(live.applyKeyFrom(settings,Prefs.KEY_MEMORY_INTERVAL_SECONDS)&&live.memoryIntervalSeconds==seconds,"memory interval live update");
+        }
+        TrioSettings settings=TrioSettings.defaults();TrioAppearance appearance=TrioAppearance.of(settings);
+        TrioState state=new TrioState();TrioRenderState snapshot=new TrioRenderState(state,appearance,40,40,1,true);
+        check(snapshot.matches(state,appearance,40,40,1,true),"unchanged draw inputs can skip repaint");
+        state.wifiLevel++;check(!snapshot.matches(state,appearance,40,40,1,true),"signal change repaints");state.wifiLevel--;
+        check(!snapshot.matches(state,appearance,40,40,1,false),"screen and AOD animation state repaints");
+        state.chargingSpeed=ChargeSpeed.SUPER;check(!snapshot.matches(state,appearance,40,40,1,true),"charger tier repaints");state.chargingSpeed=ChargeSpeed.NORMAL;
+        String clock=TrioState.sClockText;TrioState.sClockText="00:01";
+        check(!snapshot.matches(state,appearance,40,40,1,true),"minute boundary repaints");TrioState.sClockText=clock;
+        int memory=TrioState.sMemoryPercent;TrioState.sMemoryPercent=42;
+        check(!snapshot.matches(state,appearance,40,40,1,true),"memory reading repaints");TrioState.sMemoryPercent=memory;
+    }
+
     private static void cacheInvalidation() {
         TrioSettings settings=TrioSettings.defaults();
         TrioAppearance first=TrioAppearance.of(settings);
@@ -53,6 +72,7 @@ public final class ColorOsSettingsTest {
     public static void main(String[] args) {
         componentOffsetSettings();
         cacheInvalidation();
+        powerSavingSnapshots();
         wifiStandardSettings();
         wifiStandardOffsetSettings();
         hdVisibilitySettings();

@@ -101,6 +101,7 @@ internal enum class ContentControl(val owner: TrioSettingsPart) {
     Power(TrioSettingsPart.Readouts),
     Temperature(TrioSettingsPart.Readouts),
     ChargingTemp(TrioSettingsPart.Readouts),
+    MemoryInterval(TrioSettingsPart.Memory),
     Clock(TrioSettingsPart.Clock),
 }
 
@@ -270,6 +271,10 @@ internal fun ContentControlRow(
         ContentControl.SplitMode -> ContentChoice(settings.splitMode, R.string.split_mode_title, null, listOf(R.string.layout_classic, R.string.layout_split), master) { v -> update { it.setSplitMode(v) } }
         ContentControl.SplitLink -> ContentChoice(settings.splitLink, R.string.split_link_title, null, listOf(R.string.option_off, R.string.option_on), master) { v -> update { it.setSplitLink(v) } }
         ContentControl.SplitCap -> ContentChoice(settings.splitCap, R.string.split_cap_title, null, listOf(R.string.option_off, R.string.option_on), master) { v -> update { it.setSplitCap(v) } }
+        ContentControl.MemoryInterval -> ContentChoice(listOf(3,5,10).indexOf(settings.memoryIntervalSeconds).coerceAtLeast(0),
+            R.string.memory_interval_title,null,listOf(R.string.memory_interval_3,R.string.memory_interval_5,R.string.memory_interval_10),master) { v ->
+            update { it.setMemoryIntervalSeconds(listOf(3,5,10)[v]) }
+        }
         ContentControl.PairShape -> ContentChoice(settings.pairShape, R.string.pair_shape_title, null, listOf(R.string.dots_curved, R.string.dots_flat), master) { v -> update { it.setPairShape(v) } }
         ContentControl.PairMirror -> ContentChoice(settings.pairMirror, R.string.pair_mirror_title, R.string.pair_mirror_summary, listOf(R.string.option_off, R.string.option_on), master) { v -> update { it.setPairMirror(v) } }
         ContentControl.PairReverse -> ContentChoice(settings.pairReverse, R.string.pair_reverse_title, null, listOf(R.string.option_off, R.string.option_on), master) { v -> update { it.setPairReverse(v) } }

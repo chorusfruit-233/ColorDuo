@@ -76,7 +76,9 @@ public final class ColorOsPowerTest {
             return true;
         }
     }
+    static class TrioConfig {static TrioAppearance config=new TrioAppearance();static TrioAppearance appearance(){return config;}}
     static class TrioHooks {
+        static String perfText(TrioAppearance a){return ColorOsPowerTest.perfText(a);}
         static int invalidations;
         static void invalidateHosts() { invalidations++; }
     }
@@ -333,6 +335,11 @@ public final class ColorOsPowerTest {
                 && TrioHooks.invalidations == 1, "the production publisher applies the snapshot on the UI side");
         publish(true, 5.9f, 32);
         check(TrioHooks.invalidations == 1, "an unchanged sample does not cause another redraw");
+        publish(true,5.90001f,32);check(TrioHooks.invalidations==1,"sub-display power noise does not repaint");
+        TrioConfig.config.perfPower=false;
+        publish(true,12.0f,34);check(TrioHooks.invalidations==1,"hidden power and temperature do not repaint");
+        publish(false,Float.NaN,34);check(TrioHooks.invalidations==2,"charger detach still repaints independently of readouts");
+
         System.out.println("ColorOS current units, series-cell detection, pack-voltage selection and upstream rendering passed");
     }
 }
