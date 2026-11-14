@@ -10,6 +10,12 @@ import org.junit.Test
 
 /** Execute the same row selectors and slider specs that the Compose sheets use. */
 class LayoutControlsTest {
+    @Test fun memoryRefreshIntervalHasItsOwnComponentControl() {
+        val controls=contentControlsFor(TrioSettingsPart.Memory,settings())
+        assertTrue(controls.contains(ContentControl.MemoryInterval))
+        assertEquals(3,settings().memoryIntervalSeconds)
+    }
+
     private fun settings(style: Int = Prefs.STYLE_RING) = TrioSettings.defaults().apply {
         trioStyle = style
         enabled = true

@@ -465,4 +465,8 @@
     <string name="parameters_sim1">SIM 1</string>
     <string name="parameters_sim2">SIM 2</string>
     <string name="parameters_pair">Stacked SIMs</string>
+    <string name="memory_interval_title">Memory refresh interval</string>
+    <string name="memory_interval_3">3 seconds</string>
+    <string name="memory_interval_5">5 seconds</string>
+    <string name="memory_interval_10">10 seconds</string>
 </resources>

@@ -225,6 +225,7 @@ public final class TrioSettings {
     public int wifiStandardScale;
     public int wifiStandardWeight;
     public int wifiStandardDx;
+    public int memoryIntervalSeconds;
     public int wifiDx;
     public int wifiDy;
     public int mobileDx;
@@ -447,6 +448,7 @@ public final class TrioSettings {
         s.wifiStandardScale = Prefs.DEF_WIFI_STANDARD_SCALE;
         s.wifiStandardWeight = Prefs.DEF_WIFI_STANDARD_WEIGHT;
         s.wifiStandardDx = Prefs.DEF_WIFI_STANDARD_OFFSET;
+        s.memoryIntervalSeconds = 3;
         s.wifiDx = Prefs.DEF_WIFI_STANDARD_OFFSET;
         s.wifiDy = Prefs.DEF_WIFI_STANDARD_OFFSET;
         s.mobileDx = Prefs.DEF_WIFI_STANDARD_OFFSET;
@@ -701,6 +703,7 @@ public final class TrioSettings {
         s.wifiStandardScale = Prefs.clamp(p.getInt(Prefs.KEY_WIFI_STANDARD_SCALE, Prefs.DEF_WIFI_STANDARD_SCALE), Prefs.MIN_WIFI_STANDARD_SCALE, Prefs.MAX_WIFI_STANDARD_SCALE);
         s.wifiStandardWeight = Prefs.clamp(p.getInt(Prefs.KEY_WIFI_STANDARD_WEIGHT, Prefs.DEF_WIFI_STANDARD_WEIGHT), Prefs.MIN_WIFI_STANDARD_WEIGHT, Prefs.MAX_WIFI_STANDARD_WEIGHT);
         s.wifiStandardDx = Prefs.clamp(p.getInt(Prefs.KEY_WIFI_STANDARD_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        s.memoryIntervalSeconds=Prefs.memoryIntervalSeconds(p.getInt(Prefs.KEY_MEMORY_INTERVAL_SECONDS,3));
         s.wifiDx = Prefs.clamp(p.getInt(Prefs.KEY_WIFI_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
         s.wifiDy = Prefs.clamp(p.getInt(Prefs.KEY_WIFI_DY, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
         s.mobileDx = Prefs.clamp(p.getInt(Prefs.KEY_MOBILE_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
@@ -1121,6 +1124,7 @@ public final class TrioSettings {
         s.wifiStandardScale = wifiStandardScale;
         s.wifiStandardWeight = wifiStandardWeight;
         s.wifiStandardDx = wifiStandardDx;
+        s.memoryIntervalSeconds = memoryIntervalSeconds;
         s.wifiDx = wifiDx;
         s.wifiDy = wifiDy;
         s.mobileDx = mobileDx;
@@ -1281,6 +1285,7 @@ public final class TrioSettings {
             case Prefs.KEY_WIFI_STANDARD_SCALE: wifiStandardScale = src.wifiStandardScale; return true;
             case Prefs.KEY_WIFI_STANDARD_WEIGHT: wifiStandardWeight = src.wifiStandardWeight; return true;
             case Prefs.KEY_WIFI_STANDARD_DX: wifiStandardDx = src.wifiStandardDx; return true;
+            case Prefs.KEY_MEMORY_INTERVAL_SECONDS: memoryIntervalSeconds = src.memoryIntervalSeconds; return true;
             case Prefs.KEY_WIFI_DX: wifiDx = src.wifiDx; return true;
             case Prefs.KEY_WIFI_DY: wifiDy = src.wifiDy; return true;
             case Prefs.KEY_MOBILE_DX: mobileDx = src.mobileDx; return true;
@@ -1497,6 +1502,7 @@ public final class TrioSettings {
         s.wifiStandardScale = Prefs.clamp(bundle.getInt(Prefs.KEY_WIFI_STANDARD_SCALE, Prefs.DEF_WIFI_STANDARD_SCALE), Prefs.MIN_WIFI_STANDARD_SCALE, Prefs.MAX_WIFI_STANDARD_SCALE);
         s.wifiStandardWeight = Prefs.clamp(bundle.getInt(Prefs.KEY_WIFI_STANDARD_WEIGHT, Prefs.DEF_WIFI_STANDARD_WEIGHT), Prefs.MIN_WIFI_STANDARD_WEIGHT, Prefs.MAX_WIFI_STANDARD_WEIGHT);
         s.wifiStandardDx = Prefs.clamp(bundle.getInt(Prefs.KEY_WIFI_STANDARD_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
+        s.memoryIntervalSeconds=Prefs.memoryIntervalSeconds(bundle.getInt(Prefs.KEY_MEMORY_INTERVAL_SECONDS,3));
         s.wifiDx = Prefs.clamp(bundle.getInt(Prefs.KEY_WIFI_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
         s.wifiDy = Prefs.clamp(bundle.getInt(Prefs.KEY_WIFI_DY, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
         s.mobileDx = Prefs.clamp(bundle.getInt(Prefs.KEY_MOBILE_DX, Prefs.DEF_WIFI_STANDARD_OFFSET), Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
@@ -1679,6 +1685,7 @@ public final class TrioSettings {
         b.putInt(Prefs.KEY_WIFI_STANDARD_SCALE, wifiStandardScale);
         b.putInt(Prefs.KEY_WIFI_STANDARD_WEIGHT, wifiStandardWeight);
         b.putInt(Prefs.KEY_WIFI_STANDARD_DX, wifiStandardDx);
+        b.putInt(Prefs.KEY_MEMORY_INTERVAL_SECONDS, memoryIntervalSeconds);
         b.putInt(Prefs.KEY_WIFI_DX, wifiDx);
         b.putInt(Prefs.KEY_WIFI_DY, wifiDy);
         b.putInt(Prefs.KEY_MOBILE_DX, mobileDx);
@@ -1868,6 +1875,7 @@ public final class TrioSettings {
                 && wifiStandardScale == s.wifiStandardScale
                 && wifiStandardWeight == s.wifiStandardWeight
                 && wifiStandardDx == s.wifiStandardDx
+                && memoryIntervalSeconds == s.memoryIntervalSeconds
                 && wifiDx == s.wifiDx
                 && wifiDy == s.wifiDy
                 && mobileDx == s.mobileDx

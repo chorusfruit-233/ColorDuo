@@ -103,7 +103,7 @@ public final class MemoryTickerTest {
                 break;
             case "retired":
                 ColorOsReload.retiring = true;
-                ColorOsReload.watched.removeCallbacksAndMessages(null);
+                ColorOsReload.stop();
                 MemoryTicker.refreshNow();
                 MemoryTicker.start(context);
                 Handler.advance(3000);
@@ -134,6 +134,24 @@ public final class MemoryTickerTest {
                 Handler.advance(3000);
                 check(context.memory.calls == 1, "unknown power state avoids background sampling");
                 break;
+            case "screen-event":
+                context.power.interactive=false;context.send(android.content.Intent.ACTION_SCREEN_OFF);Handler.advance(0);
+                check(Handler.tasks.isEmpty(),"screen off cancels every sampling callback");
+                Handler.advance(30000);check(context.memory.calls==1,"no screen-off polling IPC");
+                context.power.interactive=true;context.send(android.content.Intent.ACTION_SCREEN_ON);Handler.advance(0);
+                check(context.memory.calls==2,"screen-on event samples immediately");break;
+            case "config-event":
+                settings.enabled=false;TrioConfig.changed();Handler.advance(0);
+                check(Handler.tasks.isEmpty(),"module disabled leaves no sampler callbacks");
+                settings.enabled=true;TrioConfig.changed();Handler.advance(0);
+                check(context.memory.calls==2,"reenable event restores sampling immediately");break;
+            case "interval":
+                settings.memoryIntervalSeconds=5;TrioConfig.changed();Handler.advance(0);
+                int calls=context.memory.calls;Handler.advance(4999);check(context.memory.calls==calls,"five-second interval is respected");
+                Handler.advance(1);check(context.memory.calls==calls+1,"five-second deadline fires");
+                settings.memoryIntervalSeconds=10;TrioConfig.changed();Handler.advance(0);
+                calls=context.memory.calls;Handler.advance(9999);check(context.memory.calls==calls,"ten-second interval is respected");
+                Handler.advance(1);check(context.memory.calls==calls+1,"ten-second deadline fires");break;
             default: throw new AssertionError("unknown scene");
         }
         System.out.println(args[0] + ": " + checks + " checks passed");

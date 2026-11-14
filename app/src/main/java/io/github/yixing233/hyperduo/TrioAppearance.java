@@ -305,6 +305,7 @@ public final class TrioAppearance {
     }
 
     public final int wifiStandardDx;
+    public final int memoryIntervalSeconds;
     public final int wifiDx;
     public final int wifiDy;
     public final int mobileDx;
@@ -480,6 +481,7 @@ public final class TrioAppearance {
         showWifiStandard = c.showWifiStandard;
         wifiStandardScale = Prefs.clamp(c.wifiStandardScale, Prefs.MIN_WIFI_STANDARD_SCALE, Prefs.MAX_WIFI_STANDARD_SCALE);
         wifiStandardWeight = Prefs.clamp(c.wifiStandardWeight, Prefs.MIN_WIFI_STANDARD_WEIGHT, Prefs.MAX_WIFI_STANDARD_WEIGHT);
+        memoryIntervalSeconds=Prefs.memoryIntervalSeconds(c.memoryIntervalSeconds);
         wifiStandardDx = Prefs.clamp(c.wifiStandardDx, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
         wifiDx = Prefs.clamp(c.wifiDx, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);
         wifiDy = Prefs.clamp(c.wifiDy, Prefs.MIN_WIFI_STANDARD_OFFSET, Prefs.MAX_WIFI_STANDARD_OFFSET);

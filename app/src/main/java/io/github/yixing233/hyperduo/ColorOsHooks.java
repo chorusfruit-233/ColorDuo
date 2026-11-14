@@ -78,6 +78,31 @@ final class ColorOsHooks {
     };
     private static boolean refreshQueued;
     private static boolean tickerStarted;
+    private static boolean hostWatchdogQueued;
+    private static long hostWatchdogInterval;
+    private static final Runnable HOST_WATCHDOG=()->{
+        hostWatchdogQueued=false;
+        if(ColorOsReload.retiring)return;
+        if(PowerSampling.active(ColorOsHooks.context))refreshHosts();
+        syncHostWatchdog();
+    };
+    private static void syncHostWatchdog() {
+        if(!PowerSampling.active(context)) {
+            MAIN.removeCallbacks(HOST_WATCHDOG);hostWatchdogQueued=false;return;
+        }
+        // Native signal StateFlows stay collected while their views are hidden, but
+        // their emissions do not notify us. Preserve the one-second fallback for
+        // owned mobile readings; other layouts only need the slow host recovery.
+        TrioAppearance appearance = TrioConfig.appearance();
+        long interval = appearance.foldsMobile() || appearance.ownsType() ? 1000L : 10000L;
+        if (!hostWatchdogQueued || hostWatchdogInterval != interval) {
+            MAIN.removeCallbacks(HOST_WATCHDOG);
+            hostWatchdogQueued = true;
+            hostWatchdogInterval = interval;
+            MAIN.postDelayed(HOST_WATCHDOG, interval);
+        }
+    }
+
     private static Class<?> meterClass;
     private static Class<?> phoneBarClass;
     private static Class<?> statusIconsClass;
@@ -174,6 +199,7 @@ final class ColorOsHooks {
             stopMirrors();
             MAIN.removeCallbacksAndMessages(null);
         } finally {
+            synchronized(ColorOsHooks.class){refreshQueued=false;hostWatchdogQueued=false;}
             HOSTS.clear();
             CHILDREN.clear();
             Refl.clearCaches();TrioSizing.clearCaches();TrioGeometry.clearCaches();TrioAppearance.clearCaches();
@@ -379,7 +405,7 @@ final class ColorOsHooks {
         TrioConfig.addListener(ColorOsHooks::invalidateHosts);
 
         int count = 0;
-        count += doze.install(module, ColorOsHooks::invalidateHosts);
+        count += doze.install(module, ()->{PowerSampling.changed();invalidateHosts();});
         // OEM/R8 builds can inline binder helpers. Filter framework writes by our exact child
         // instances too, so an inlined style update cannot leave a stale restoration snapshot.
         count += around(module, Refl.method(ImageView.class, "setImageDrawable", Drawable.class), ColorOsHooks::writeDrawable, ColorOsHooks::afterDrawable);
@@ -792,15 +818,13 @@ final class ColorOsHooks {
     }
 
     static void invalidateHosts() {
-        if (ColorOsReload.retiring) return;
-        MAIN.post(() -> {
-            if (ColorOsReload.retiring) return;
-            if (refreshQueued) return;
-            refreshQueued = true;
-            MAIN.post(() -> {
-                refreshQueued = false;
-                refreshHosts();
-            });
+        synchronized(ColorOsHooks.class) {
+            if(ColorOsReload.retiring||refreshQueued)return;
+            refreshQueued=true;
+        }
+        MAIN.post(()->{
+            synchronized(ColorOsHooks.class){refreshQueued=false;}
+            if(!ColorOsReload.retiring)refreshHostsFromEvent();
         });
     }
 
@@ -826,14 +850,23 @@ final class ColorOsHooks {
         ColorOsSizing.clearMirrors();
     }
 
+    private static void refreshHostsFromEvent() {
+        for(WeakReference<Host> reference:new ArrayList<>(HOSTS.values())) {
+            Host host=reference.get();if(host!=null)host.nextSignalSample=0;
+        }
+        refreshHosts();
+    }
+
     private static void refreshHosts() {
         if (ColorOsReload.retiring) return;
         TrioAppearance appearance = TrioConfig.appearance();
         if (!TrioConfig.get().enabled || (!appearance.foldsMobile() && !appearance.ownsType())) {
             SIGNAL_FLOWS.sync(Collections.emptyList());
         }
+        // Minute-boundary ClockTicker handles time; full-host updates must not reformat it each second.
         ClockTicker.refreshNow();
         MemoryTicker.refreshNow();
+        BatteryPresence.refreshNow();
         for (WeakReference<Host> reference : new ArrayList<>(HOSTS.values())) {
             Host host = reference.get();
             if (host == null || host.nativeDepth != 0) continue;
@@ -853,16 +886,8 @@ final class ColorOsHooks {
         if (tickerStarted) return;
         tickerStarted = true;
         ColorOsReload.watch(SIGNAL_FLOWS::pause, SIGNAL_FLOWS::resume);
-        MAIN.post(new Runnable() {
-            @Override public void run() {
-                if (ColorOsReload.retiring) return;
-                boolean interactive = true;
-                PowerManager power = context.getSystemService(PowerManager.class);
-                if (power != null) interactive = power.isInteractive();
-                if (interactive && TrioConfig.get().enabled) refreshHosts();
-                MAIN.postDelayed(this, interactive ? 1000L : 5000L);
-            }
-        });
+        PowerSampling.watch(context,ColorOsHooks::syncHostWatchdog);
+        syncHostWatchdog();
     }
 
     private static Object value(Object flow) { return Refl.callByName(flow, "getValue"); }
@@ -1031,6 +1056,7 @@ final class ColorOsHooks {
             }
         }
 
+        private TrioRenderState lastPaint;
         void apply() {
             if (ColorOsReload.retiring) return;
             boolean previous = moduleWriting;
@@ -1074,7 +1100,11 @@ final class ColorOsHooks {
             hide(clockContainer, TrioRenderer.drawsClock(state, appearance));
             syncExtra(appearance);
             syncSlots(appearance);
-            glyph.invalidateSelf();
+            boolean animate=doze!=null&&doze.allowsAnimation(image);
+            if(lastPaint==null||!lastPaint.matches(state,appearance,ownedWidth,ownedHeight,ownedScale,animate)) {
+                lastPaint=new TrioRenderState(state,appearance,ownedWidth,ownedHeight,ownedScale,animate);
+                glyph.invalidateSelf();
+            }
             if (!logged) {
                 logged = true;
                 View row = ColorOsLayout.rowFor(meter, VIEW_TREE);
@@ -1092,11 +1122,8 @@ final class ColorOsHooks {
             boolean previous=moduleWriting;
             moduleWriting=true;
             try {
-                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(nativeParams);
                 TrioSizing.Metrics dimensions = sizing.measure(meter,image,appearance);
-                params.height = dimensions.height;
-                params.width = dimensions.width;
-                params.gravity = android.view.Gravity.CENTER_VERTICAL;
+
                 ownedScale = dimensions.scale;
                 if (TrioConfig.debugLog()) {
                     String note = "ColorOS size: requested=" + TrioConfig.get().glyphScale
@@ -1108,9 +1135,10 @@ final class ColorOsHooks {
                         TrioHooks.log(TrioHooks.LOG_INFO,note);
                     }
                 }
-                ownedWidth = params.width;
-                ownedHeight = params.height;
-                if (image.getLayoutParams().width != params.width || image.getLayoutParams().height != params.height) {
+                ownedWidth=dimensions.width;ownedHeight=dimensions.height;
+                if(image.getLayoutParams().width!=ownedWidth||image.getLayoutParams().height!=ownedHeight) {
+                    LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(nativeParams);
+                    params.width=ownedWidth;params.height=ownedHeight;params.gravity=android.view.Gravity.CENTER_VERTICAL;
                     image.setLayoutParams(params);
                 }
             } finally { moduleWriting=previous; }
@@ -1186,6 +1214,7 @@ final class ColorOsHooks {
         }
 
         void restore() {
+            lastPaint=null;
             restoreBattery();
             releaseSlots();
         }

@@ -464,4 +464,8 @@
     <string name="parameters_sim1">SIM 1</string>
     <string name="parameters_sim2">SIM 2</string>
     <string name="parameters_pair">双卡堆叠</string>
+    <string name="memory_interval_title">内存刷新间隔</string>
+    <string name="memory_interval_3">3 秒</string>
+    <string name="memory_interval_5">5 秒</string>
+    <string name="memory_interval_10">10 秒</string>
 </resources>

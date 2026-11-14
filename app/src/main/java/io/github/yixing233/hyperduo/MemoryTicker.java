@@ -45,7 +45,7 @@ final class MemoryTicker {
      * a faster sample mostly re-reads the same number, while a slower one lets a heavy
      * app's footprint appear long after it was opened.
      */
-    private static final long INTERVAL_MS = 3_000L;
+    private static final long INTERVAL_MS = 3_000L; // Upgrade default; user may select 5 or 10 seconds.
 
     private static boolean started;
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
@@ -58,7 +58,14 @@ final class MemoryTicker {
      * settings change can publish immediately without walking the view tree.
      */
     private static volatile Context sContext;
-    private static long nextSampleAt;
+    private static long nextSampleAt,scheduledAt=-1,lastInterval;
+    private static final Runnable TICK=()->{scheduledAt=-1;tick();};
+    static void pause(){schedule(-1);nextSampleAt=0;}
+    private static void schedule(long at) {
+        if(scheduledAt==at)return;
+        MAIN.removeCallbacks(TICK);scheduledAt=at;
+        if(at>=0)MAIN.postDelayed(TICK,Math.max(0,at-SystemClock.uptimeMillis()));
+    }
 
     private MemoryTicker() {
     }
@@ -74,6 +81,7 @@ final class MemoryTicker {
         started = true;
         final Context app = context.getApplicationContext();
         sContext = (app != null) ? app : context;
+        PowerSampling.watch(sContext,MemoryTicker::refreshNow);
         MAIN.post(new Runnable() {
             @Override
             public void run() {
@@ -97,34 +105,21 @@ final class MemoryTicker {
         }
         final Context context = sContext;
         if (context == null || !usesMemory() || !allowsSampling(context)) {
-            nextSampleAt = 0L;
+            nextSampleAt = 0L;schedule(-1);
             return;
         }
         final long now = SystemClock.uptimeMillis();
-        if (now < nextSampleAt) return;
-        nextSampleAt = now + INTERVAL_MS;
-        publish(sample(context));
+        long interval=TrioConfig.appearance().memoryIntervalSeconds*1000L;
+        if(interval!=lastInterval){nextSampleAt=0;lastInterval=interval;}
+        if(now>=nextSampleAt){nextSampleAt=now+interval;publish(sample(context));}
+        schedule(nextSampleAt);
     }
 
     /** One sample, then re-post. */
     private static void tick() {
-        // ColorDuo reload lifecycle.
-        if (ColorOsReload.retiring) return;
-        // End ColorDuo reload lifecycle.
-        try {
-            refreshNow();
-        } catch (Throwable ignored) {
-            // keep ticking
-        } finally {
-            // In a finally, deliberately: a ticker that died on one bad frame would leave
-            // the reading frozen for the life of the process, which is the one failure
-            // this class exists to prevent.
-            if (!ColorOsReload.retiring) MAIN.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    tick();
-                }
-            }, INTERVAL_MS);
+        if(ColorOsReload.retiring)return;
+        try{refreshNow();}catch(Throwable unavailable){
+            if(usesMemory()&&PowerSampling.active(sContext))schedule(SystemClock.uptimeMillis()+INTERVAL_MS);
         }
     }
 
@@ -146,14 +141,7 @@ final class MemoryTicker {
         return false;
     }
 
-    private static boolean allowsSampling(Context context) {
-        try {
-            PowerManager power = context.getSystemService(PowerManager.class);
-            return power != null && power.isInteractive() && !ColorOsHooks.isAodShowing();
-        } catch (RuntimeException ignored) {
-            return false;
-        }
-    }
+    private static boolean allowsSampling(Context context) {return PowerSampling.active(context);}
 
     /**
      * Memory in use, as a percentage, or {@link TrioState#MEMORY_UNKNOWN}.

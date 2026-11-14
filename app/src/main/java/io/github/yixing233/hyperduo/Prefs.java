@@ -1134,6 +1134,8 @@ public final class Prefs {
     public static final String KEY_SHOW_WIFI_STANDARD = "show_wifi_standard";
     public static final String KEY_WIFI_STANDARD_SCALE = "wifi_standard_scale";
     public static final String KEY_WIFI_STANDARD_WEIGHT = "wifi_standard_weight";
+    public static final String KEY_MEMORY_INTERVAL_SECONDS="memory_interval_seconds";
+    public static int memoryIntervalSeconds(int value){return value==5||value==10?value:3;}
     public static final String KEY_WIFI_STANDARD_DX = "wifi_standard_dx";
     public static final String KEY_WIFI_DX = "wifi_dx";
     public static final String KEY_WIFI_DY = "wifi_dy";
