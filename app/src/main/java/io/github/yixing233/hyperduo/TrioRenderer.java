@@ -1052,11 +1052,17 @@ public final class TrioRenderer {
         // user asks for is not capped by width reserved for a string that is not on screen.
         drawCapsuleCell(canvas, stroke, TrioZones.Zone.TOP, cap, level, boltColor,
                 wifiLevel, mobileType, fg, a, wifiStandard);
-        drawCapsuleCell(canvas, stroke, TrioZones.Zone.CENTRE, cap, level, boltColor,
-                wifiLevel, mobileType, fg, a, wifiStandard);
+        if (a.capsuleColumns == 2)
+            drawCapsuleCell(canvas, stroke, TrioZones.Zone.CENTRE, cap, level, boltColor,
+                    wifiLevel, mobileType, fg, a, wifiStandard);
         drawCapsuleCell(canvas, stroke, TrioZones.Zone.BOTTOM, cap, level, boltColor,
                 wifiLevel, mobileType, fg, a, wifiStandard);
 
+        if (a.capsuleColumns == 3) {
+            drawCapsuleColumns(canvas, stroke, cap, level, boltColor, wifiLevel,
+                    mobileType, slotLevels, fg, a, wifiStandard, radioMuted);
+            return;
+        }
         if (!radioMuted && cap.dotParts[TrioZones.Zone.CENTRE.ordinal()] == Prefs.PART_SIM_PAIR) {
             drawPair(canvas, slotLevels, TrioGeometry.capPairCx(stroke,a) + a.capsuleRightDx,
                     TrioGeometry.capInteriorCy(stroke) + a.capsuleRightDy,
@@ -1068,6 +1074,46 @@ public final class TrioRenderer {
         // piece (the arcs) from being covered by the interior's own ink.
         drawCapsuleLeft(canvas, stroke, cap, level, boltColor, wifiLevel, mobileLevel,
                 slotLevels, mobileType, fg, a, wifiStandard);
+    }
+
+    /** Three independently editable body cells, with stable bounds for every component. */
+    private static void drawCapsuleColumns(Canvas c, float stroke, TrioAppearance.Capsule cap,
+            int level, int boltColor, int wifiLevel, String type, int[] slotLevels, int fg,
+            TrioAppearance a, String standard, boolean radioMuted) {
+        float width = TrioGeometry.capColumnWidth(stroke);
+        for (int column = 0; column < 3; column++) {
+            int zone = column == 0 ? TrioZones.Zone.LEFT.ordinal()
+                    : column == 1 ? TrioZones.Zone.MIDDLE.ordinal() : TrioZones.Zone.CENTRE.ordinal();
+            int part = cap.parts[zone];
+            float dx = column == 0 ? a.capsuleLeftDx : column == 2 ? a.capsuleRightDx : 0;
+            float dy = column == 0 ? a.capsuleLeftDy : column == 2 ? a.capsuleRightDy : 0;
+            float cx = TrioGeometry.capColumnCentre(stroke, column) + dx;
+            float cy = TrioGeometry.capInteriorCy(stroke) + dy;
+            if (cap.dotParts[zone] == Prefs.PART_SIM_PAIR && !radioMuted) {
+                float scale = Math.min(1f, width / (2f * TrioGeometry.capPairHalfWidth(a)));
+                int save = c.save();
+                c.translate(cx, cy);c.scale(scale, scale);
+                drawPair(c, slotLevels, 0, 0, 4f * a.dotScaleFactor(), fg, a);
+                c.restoreToCount(save);
+            }
+            switch (part) {
+                case Prefs.PART_CLOCK:
+                    drawCapsuleTime(c, stroke, fg, a, cx, cy, -1, SlotAlign.CENTRE, width);break;
+                case Prefs.PART_VALUE:
+                    drawCapsuleValue(c, stroke, level, fg, a, cx, cy, -1, SlotAlign.CENTRE, width);break;
+                case Prefs.PART_MEMORY:
+                    drawCapsuleMemory(c, stroke, fg, a, cx, cy, -1, SlotAlign.CENTRE, width);break;
+                case Prefs.PART_TYPE:
+                    drawCapsuleType(c, stroke, type, fg, a, cx, cy, -1, width,
+                            bodyTypeSize(a), SlotAlign.CENTRE);break;
+                case Prefs.PART_WIFI:
+                    drawCapsuleWifi(c, stroke, wifiLevel, fg, a, cx, cy, standard, false,
+                            width, cx + width / 2);break;
+                case Prefs.PART_BOLT:
+                    drawCapsuleBolt(c, stroke, boltColor, a, cx, cy, width);break;
+                default:break;
+            }
+        }
     }
 
     /**
@@ -1112,7 +1158,8 @@ public final class TrioRenderer {
         // Dot rows are not offered in this column: drawCapsuleDots paints the two OPENINGS,
         // whose y come from the outline geometry. A row here would need its own baseline.
         // LEFT on every branch: this cell reads from its inner edge, nudge or no nudge.
-        final float leftWidth = capsuleLeftWidth(cap,stroke,a);
+        final float leftWidth = Math.min(capsuleLeftWidth(cap,stroke,a),
+                capsuleSecondsWidth(cap, stroke, level, type, a, true));
         switch (part) {
             case Prefs.PART_CLOCK:
                 drawCapsuleTime(c, stroke, fg, a, cx, cy, -1f, SlotAlign.LEFT, leftWidth);
@@ -1192,6 +1239,8 @@ public final class TrioRenderer {
                 cy = TrioGeometry.capInteriorCy(stroke) + a.capsuleRightDy;
                 break;
         }
+        float textWidth = opening ? capsuleSlotWidth(band, openingRoom(band, stroke), stroke, false)
+                : capsuleSecondsWidth(cap, stroke, level, type, a, false);
         switch (part) {
             case Prefs.PART_BOLT:
                 drawCapsuleBolt(c, stroke, boltColor, a, cx, cy);
@@ -1203,21 +1252,21 @@ public final class TrioRenderer {
             // sit against. The right cell of the BODY is the one that leans right.
             case Prefs.PART_VALUE:
                 drawCapsuleValue(c, stroke, level, fg, a, cx, cy, openingRoom(band, stroke),
-                        opening ? SlotAlign.CENTRE : SlotAlign.RIGHT);
+                        opening ? SlotAlign.CENTRE : SlotAlign.RIGHT, textWidth);
                 break;
             case Prefs.PART_TYPE:
                 drawCapsuleType(c, stroke, type, fg, a, cx, cy, openingRoom(band, stroke),
-                        capsuleSlotWidth(band, openingRoom(band, stroke), stroke, false),
+                        Math.min(textWidth, capsuleSlotWidth(band, openingRoom(band, stroke), stroke, false)),
                         a.typeSize, opening ? SlotAlign.CENTRE : SlotAlign.RIGHT);
                 break;
             case Prefs.PART_CLOCK:
                 drawCapsuleTime(c, stroke, fg, a, cx, cy, openingRoom(band, stroke),
-                        opening ? SlotAlign.CENTRE : SlotAlign.RIGHT);
+                        opening ? SlotAlign.CENTRE : SlotAlign.RIGHT, textWidth);
                 break;
             case Prefs.PART_MEMORY:
                 drawCapsuleMemory(c, stroke, fg, a, cx, cy, openingRoom(band, stroke),
                         opening ? SlotAlign.CENTRE : SlotAlign.RIGHT,
-                        capsuleSlotWidth(band, openingRoom(band, stroke), stroke, false));
+                        Math.min(textWidth, capsuleSlotWidth(band, openingRoom(band, stroke), stroke, false)));
                 break;
             default:
                 break;
@@ -1555,6 +1604,46 @@ public final class TrioRenderer {
         return automatic;
     }
 
+    /** Extra clock digits share only overflowing width; anchors and the user's size ratio stay fixed. */
+    private static float capsuleSecondsWidth(TrioAppearance.Capsule cap, float stroke,
+            int level, String type, TrioAppearance a, boolean left) {
+        int lp = cap.parts[TrioZones.Zone.LEFT.ordinal()];
+        int rp = cap.parts[TrioZones.Zone.CENTRE.ordinal()];
+        if (!a.clockSeconds || a.capsuleColumns != 2
+                || lp != Prefs.PART_CLOCK && rp != Prefs.PART_CLOCK
+                || lp == Prefs.PART_NONE || rp == Prefs.PART_NONE)
+            return Float.POSITIVE_INFINITY;
+        float lw = capsuleReadingWidth(lp, stroke, level, type, a, true);
+        float rw = capsuleReadingWidth(rp, stroke, level, type, a, false);
+        float room = TrioGeometry.capReadingTrackWidth(stroke);
+        if (lw + rw <= room) return Float.POSITIVE_INFINITY;
+        boolean leftIcon = lp == Prefs.PART_WIFI || lp == Prefs.PART_BOLT;
+        boolean rightIcon = rp == Prefs.PART_WIFI || rp == Prefs.PART_BOLT;
+        if (leftIcon || rightIcon) return Math.max(1, room - (leftIcon ? lw : rw));
+        return Math.max(1, room * (left ? lw : rw) / (lw + rw));
+    }
+
+    private static float capsuleReadingWidth(int part, float stroke, int level, String type,
+            TrioAppearance a, boolean left) {
+        if (part == Prefs.PART_WIFI || part == Prefs.PART_BOLT) {
+            float half = part == Prefs.PART_WIFI
+                    ? (TrioGeometry.W_INK_W + Math.max(0, a.arcStroke - TrioGeometry.W_STROKE))
+                        * capsuleWifiScale(stroke, a, Float.POSITIVE_INFINITY) / 2
+                    : TrioGeometry.BOLT_INK_W * TrioGeometry.capBoltScale(stroke) * a.boltScaleFactor() / 2;
+            return half + (left ? TrioGeometry.capLeftIconCx(stroke, part) - TrioGeometry.capTextLeft(stroke)
+                    : TrioGeometry.capTextRight(stroke) - TrioGeometry.capRightIconCx(stroke, part));
+        }
+        String text = part == Prefs.PART_CLOCK ? TrioState.sClockText
+                : part == Prefs.PART_VALUE ? String.valueOf(level)
+                : part == Prefs.PART_MEMORY ? memoryText() : type;
+        int setting = part == Prefs.PART_CLOCK ? a.clockSize
+                : part == Prefs.PART_TYPE ? bodyTypeSize(a) : a.valueSize;
+        applyWeight(part == Prefs.PART_CLOCK ? a.clockWeight
+                : part == Prefs.PART_TYPE ? a.typeWeight : a.valueWeight);
+        float size = Math.min(setting * TrioGeometry.CAP_TEXT_SCALE, effectiveHeightLimit(-1, stroke));
+        return measureType(text == null ? "" : text, size, part == Prefs.PART_TYPE ? a.typeSuffixScale : 100);
+    }
+
     /** The time of day, in a capsule cell centred on {@code (cx, cy)}. */
     private static float capsuleLeftWidth(TrioAppearance.Capsule cap,float stroke,TrioAppearance a) {
         if (cap.dotParts[TrioZones.Zone.CENTRE.ordinal()] != Prefs.PART_SIM_PAIR)
@@ -1736,12 +1825,25 @@ public final class TrioRenderer {
     /** Wi-Fi arcs keep their cell centre; the optional standard uses independent space. */
     private static void drawCapsuleWifi(Canvas c, float stroke, int level, int fg,
                                         TrioAppearance a, float cx, float cy, String wifiStandard, boolean opening) {
+        drawCapsuleWifi(c, stroke, level, fg, a, cx, cy, wifiStandard, opening,
+                Float.POSITIVE_INFINITY, TrioGeometry.capReadingEdge(stroke, false));
+    }
+
+    private static float capsuleWifiScale(float stroke, TrioAppearance a, float width) {
+        float extra = Math.max(0, a.arcStroke - TrioGeometry.W_STROKE);
+        return Math.min(TrioGeometry.capWifiScale(stroke) * a.wifiScaleFactor(),
+                width / (TrioGeometry.W_INK_W + extra));
+    }
+
+    private static void drawCapsuleWifi(Canvas c, float stroke, int level, int fg,
+            TrioAppearance a, float cx, float cy, String wifiStandard, boolean opening,
+            float width, float rightEdge) {
         final int offsetSave=c.save();c.translate(a.wifiDx,a.wifiDy);
         try {
         // The user's size multiplies the fit, and the placement below is recomputed from the
         // product: offset = centre - reference * scale only stays centred while the scale it
         // was derived from is the scale being drawn.
-        final float scale = TrioGeometry.capWifiScale(stroke) * a.wifiScaleFactor();
+        final float scale = capsuleWifiScale(stroke, a, width);
         final int save = c.save();
         // The caller hands over the CENTRE this cell wants, so the group is placed by
         // subtracting its own ink centre - not by rewriting the right-hand slot's offset.
@@ -1752,7 +1854,7 @@ public final class TrioRenderer {
                 cy - TrioGeometry.W_INK_CY * scale);
         c.scale(scale, scale);
         float right = opening ? WIFI_BADGE_RIGHT
-                : (TrioGeometry.capReadingEdge(stroke,false)-cx-1f)/scale;
+                : (rightEdge-cx-1f)/scale;
         float bottom = ((opening ? TrioGeometry.CAP_INK_BOTTOM
                 : TrioGeometry.capInteriorBottom(stroke))-cy-1f)/scale;
         drawWifiArcs(c,level,fg,a,wifiStandard,Float.POSITIVE_INFINITY,0f,right,bottom);
@@ -1770,10 +1872,16 @@ public final class TrioRenderer {
      */
     private static void drawCapsuleBolt(Canvas c, float stroke, int color, TrioAppearance a,
                                         float cx, float cy) {
+        drawCapsuleBolt(c, stroke, color, a, cx, cy, Float.POSITIVE_INFINITY);
+    }
+
+    private static void drawCapsuleBolt(Canvas c, float stroke, int color, TrioAppearance a,
+                                        float cx, float cy, float width) {
         final int offsetSave=c.save();c.translate(a.boltDx,a.boltDy);
         try {
         final float factor = a.boltScaleFactor();
-        final float scale = TrioGeometry.capBoltScale(stroke) * factor;
+        final float scale = Math.min(TrioGeometry.capBoltScale(stroke) * factor,
+                width / TrioGeometry.BOLT_INK_W);
         final int save = c.save();
         c.translate(cx - TrioGeometry.BOLT_CX_REF * scale,
                 cy - TrioGeometry.BOLT_INK_CY * scale);
@@ -2295,9 +2403,20 @@ public final class TrioRenderer {
                         TrioGeometry.capRightIconCx(stroke,Prefs.PART_WIFI)+a.capsuleRightDx;
                 float cy=opening?TrioGeometry.capOpeningCy(z==0,stroke):
                         TrioGeometry.capInteriorCy(stroke)+(z==3?a.capsuleLeftDy:a.capsuleRightDy);
-                includeWifiBadge(box,a,cx,cy,scale,Float.POSITIVE_INFINITY,0,
-                        opening?WIFI_BADGE_RIGHT:(TrioGeometry.capReadingEdge(stroke,false)-cx-1f)/scale,
-                        ((opening?TrioGeometry.CAP_INK_BOTTOM:TrioGeometry.capInteriorBottom(stroke))-cy-1f)/scale);
+                float cellScale = scale, rightEdge = TrioGeometry.capReadingEdge(stroke,false);
+                if (a.capsuleColumns == 3 && !opening) {
+                    int column = z == 3 ? 0 : z == Prefs.ZONE_CAPSULE_MIDDLE ? 1 : 2;
+                    float dx = column == 0 ? a.capsuleLeftDx : column == 2 ? a.capsuleRightDx : 0;
+                    float dy = column == 0 ? a.capsuleLeftDy : column == 2 ? a.capsuleRightDy : 0;
+                    float width = TrioGeometry.capColumnWidth(stroke);
+                    cx = TrioGeometry.capColumnCentre(stroke,column) + dx;
+                    cy = TrioGeometry.capInteriorCy(stroke) + dy;
+                    cellScale = capsuleWifiScale(stroke,a,width);
+                    rightEdge = cx + width / 2;
+                }
+                includeWifiBadge(box,a,cx,cy,cellScale,Float.POSITIVE_INFINITY,0,
+                        opening?WIFI_BADGE_RIGHT:(rightEdge-cx-1f)/cellScale,
+                        ((opening?TrioGeometry.CAP_INK_BOTTOM:TrioGeometry.capInteriorBottom(stroke))-cy-1f)/cellScale);
             }
         } else if(a.rect(100,false,3,"5G",2).wifi) {
             float scale=TrioGeometry.RECT_WIFI_SCALE*a.wifiScaleFactor();

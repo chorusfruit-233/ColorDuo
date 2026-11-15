@@ -170,6 +170,7 @@ public final class TrioSettings {
      */
     public int clockSize;
     public int clockWeight;
+    public boolean clockSeconds;
     /**
      * Size and weight of the centred network type ("5G", "5GA"). Independent of
      * {@link #valueSize}/{@link #valueWeight}: the type is a label of its own,
@@ -371,6 +372,7 @@ public final class TrioSettings {
     public int capsuleRightDy;
     /** Extra straight-run length; see {@link Prefs#KEY_CAPSULE_LENGTH}. */
     public int capsuleLength;
+    public int capsuleColumns;
 
     /** Only used by the settings app: the hooked side reads this via {@code TrioConfig}. */
     public boolean debugLog;
@@ -405,6 +407,7 @@ public final class TrioSettings {
         s.capsuleRightDx = Prefs.DEF_CAPSULE_NUDGE;
         s.capsuleRightDy = Prefs.DEF_CAPSULE_NUDGE;
         s.capsuleLength = Prefs.DEF_CAPSULE_LENGTH;
+        s.capsuleColumns = Prefs.DEF_CAPSULE_COLUMNS;
 
         s.roleColors = Prefs.DEF_ROLE_COLORS;
         s.criticalOnDark = Prefs.DEF_COLOR_CRITICAL_ON_DARK;
@@ -435,6 +438,7 @@ public final class TrioSettings {
         s.valueWeight = Prefs.DEF_VALUE_WEIGHT;
         s.clockSize = Prefs.DEF_CLOCK_SIZE;
         s.clockWeight = Prefs.DEF_CLOCK_WEIGHT;
+        s.clockSeconds = Prefs.DEF_CLOCK_SECONDS;
         s.typeSize = Prefs.DEF_TYPE_SIZE;
         s.outTypeSize = Prefs.DEF_OUT_TYPE_SIZE_DP;
         s.outSignalSize = Prefs.DEF_OUT_SIGNAL_SIZE;
@@ -625,6 +629,7 @@ public final class TrioSettings {
         s.capsuleLength = Prefs.clamp(p.getInt(Prefs.KEY_CAPSULE_LENGTH,
                 Prefs.DEF_CAPSULE_LENGTH), Prefs.MIN_CAPSULE_LENGTH,
                 Prefs.MAX_CAPSULE_LENGTH);
+        s.capsuleColumns = Prefs.clamp(p.getInt(Prefs.KEY_CAPSULE_COLUMNS, Prefs.DEF_CAPSULE_COLUMNS), 2, 3);
         s.roleColors = p.getBoolean(Prefs.KEY_ROLE_COLORS, Prefs.DEF_ROLE_COLORS);
         s.criticalOnDark = p.getInt(Prefs.KEY_COLOR_CRITICAL_ON_DARK, Prefs.DEF_COLOR_CRITICAL_ON_DARK);
         s.criticalOnLight = p.getInt(Prefs.KEY_COLOR_CRITICAL_ON_LIGHT, Prefs.DEF_COLOR_CRITICAL_ON_LIGHT);
@@ -674,6 +679,7 @@ public final class TrioSettings {
         s.clockWeight = Prefs.clamp(
                 p.getInt(Prefs.KEY_CLOCK_WEIGHT, s.valueWeight),
                 Prefs.MIN_CLOCK_WEIGHT, Prefs.MAX_CLOCK_WEIGHT);
+        s.clockSeconds = p.getBoolean(Prefs.KEY_CLOCK_SECONDS, Prefs.DEF_CLOCK_SECONDS);
         s.typeSize = Prefs.clamp(
                 p.getInt(Prefs.KEY_TYPE_SIZE, Prefs.DEF_TYPE_SIZE),
                 Prefs.MIN_TYPE_SIZE, Prefs.maxTypeSize(s.trioStyle));
@@ -1081,6 +1087,7 @@ public final class TrioSettings {
         s.capsuleRightDx = capsuleRightDx;
         s.capsuleRightDy = capsuleRightDy;
         s.capsuleLength = capsuleLength;
+        s.capsuleColumns = capsuleColumns;
 
         s.roleColors = roleColors;
         s.criticalOnDark = criticalOnDark;
@@ -1111,6 +1118,7 @@ public final class TrioSettings {
         s.valueWeight = valueWeight;
         s.clockSize = clockSize;
         s.clockWeight = clockWeight;
+        s.clockSeconds = clockSeconds;
         s.typeSize = typeSize;
         s.outTypeSize = outTypeSize;
         s.outSignalSize = outSignalSize;
@@ -1244,6 +1252,7 @@ public final class TrioSettings {
             case Prefs.KEY_CAPSULE_RIGHT_DX: capsuleRightDx = src.capsuleRightDx; return true;
             case Prefs.KEY_CAPSULE_RIGHT_DY: capsuleRightDy = src.capsuleRightDy; return true;
             case Prefs.KEY_CAPSULE_LENGTH: capsuleLength = src.capsuleLength; return true;
+            case Prefs.KEY_CAPSULE_COLUMNS: capsuleColumns = src.capsuleColumns; return true;
             case Prefs.KEY_ROLE_COLORS: roleColors = src.roleColors; return true;
             case Prefs.KEY_COLOR_CRITICAL_ON_DARK: criticalOnDark = src.criticalOnDark; return true;
             case Prefs.KEY_COLOR_CRITICAL_ON_LIGHT: criticalOnLight = src.criticalOnLight; return true;
@@ -1272,6 +1281,7 @@ public final class TrioSettings {
             case Prefs.KEY_VALUE_WEIGHT: valueWeight = src.valueWeight; return true;
             case Prefs.KEY_CLOCK_SIZE: clockSize = src.clockSize; return true;
             case Prefs.KEY_CLOCK_WEIGHT: clockWeight = src.clockWeight; return true;
+            case Prefs.KEY_CLOCK_SECONDS: clockSeconds = src.clockSeconds; return true;
             case Prefs.KEY_TYPE_SIZE: typeSize = src.typeSize; return true;
             case Prefs.KEY_OUT_TYPE_SIZE_DP: outTypeSize = src.outTypeSize; return true;
             case Prefs.KEY_OUT_SIGNAL_SIZE: outSignalSize = src.outSignalSize; return true;
@@ -1425,6 +1435,7 @@ public final class TrioSettings {
         s.capsuleLength = Prefs.clamp(bundle.getInt(Prefs.KEY_CAPSULE_LENGTH,
                 Prefs.DEF_CAPSULE_LENGTH), Prefs.MIN_CAPSULE_LENGTH,
                 Prefs.MAX_CAPSULE_LENGTH);
+        s.capsuleColumns = Prefs.clamp(bundle.getInt(Prefs.KEY_CAPSULE_COLUMNS, Prefs.DEF_CAPSULE_COLUMNS), 2, 3);
         s.roleColors = bundle.getBoolean(Prefs.KEY_ROLE_COLORS, Prefs.DEF_ROLE_COLORS);
         s.criticalOnDark = bundle.getInt(Prefs.KEY_COLOR_CRITICAL_ON_DARK, Prefs.DEF_COLOR_CRITICAL_ON_DARK);
         s.criticalOnLight = bundle.getInt(Prefs.KEY_COLOR_CRITICAL_ON_LIGHT, Prefs.DEF_COLOR_CRITICAL_ON_LIGHT);
@@ -1471,6 +1482,7 @@ public final class TrioSettings {
         s.clockWeight = Prefs.clamp(
                 bundle.getInt(Prefs.KEY_CLOCK_WEIGHT, s.valueWeight),
                 Prefs.MIN_CLOCK_WEIGHT, Prefs.MAX_CLOCK_WEIGHT);
+        s.clockSeconds = bundle.getBoolean(Prefs.KEY_CLOCK_SECONDS, Prefs.DEF_CLOCK_SECONDS);
         s.typeSize = Prefs.clamp(
                 bundle.getInt(Prefs.KEY_TYPE_SIZE, Prefs.DEF_TYPE_SIZE),
                 Prefs.MIN_TYPE_SIZE, Prefs.maxTypeSize(s.trioStyle));
@@ -1642,6 +1654,7 @@ public final class TrioSettings {
         b.putInt(Prefs.KEY_CAPSULE_RIGHT_DX, capsuleRightDx);
         b.putInt(Prefs.KEY_CAPSULE_RIGHT_DY, capsuleRightDy);
         b.putInt(Prefs.KEY_CAPSULE_LENGTH, capsuleLength);
+        b.putInt(Prefs.KEY_CAPSULE_COLUMNS, capsuleColumns);
 
         b.putBoolean(Prefs.KEY_ROLE_COLORS, roleColors);
         b.putInt(Prefs.KEY_COLOR_CRITICAL_ON_DARK, criticalOnDark);
@@ -1672,6 +1685,7 @@ public final class TrioSettings {
         b.putInt(Prefs.KEY_VALUE_WEIGHT, valueWeight);
         b.putInt(Prefs.KEY_CLOCK_SIZE, clockSize);
         b.putInt(Prefs.KEY_CLOCK_WEIGHT, clockWeight);
+        b.putBoolean(Prefs.KEY_CLOCK_SECONDS, clockSeconds);
         b.putInt(Prefs.KEY_TYPE_SIZE, typeSize);
         b.putInt(Prefs.KEY_OUT_TYPE_SIZE_DP, outTypeSize);
         b.putInt(Prefs.KEY_OUT_SIGNAL_SIZE, outSignalSize);
@@ -1834,6 +1848,7 @@ public final class TrioSettings {
                 && capsuleRightDx == s.capsuleRightDx
                 && capsuleRightDy == s.capsuleRightDy
                 && capsuleLength == s.capsuleLength
+                && capsuleColumns == s.capsuleColumns
                 && roleColors == s.roleColors
                 && criticalOnDark == s.criticalOnDark
                 && criticalOnLight == s.criticalOnLight
@@ -1862,6 +1877,7 @@ public final class TrioSettings {
                 && valueWeight == s.valueWeight
                 && clockSize == s.clockSize
                 && clockWeight == s.clockWeight
+                && clockSeconds == s.clockSeconds
                 && typeSize == s.typeSize
                 && outTypeSize == s.outTypeSize
                 && outSignalSize == s.outSignalSize

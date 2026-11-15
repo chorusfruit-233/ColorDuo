@@ -1665,6 +1665,18 @@ final class TrioGeometry {
         return capReadingsWidth(stroke);
     }
 
+    /** Stable thirds shared by drawing, fitting and hit testing in three-column mode. */
+    static float capColumnEdge(float stroke, int edge) {
+        return capTextLeft(stroke) + (capTextRight(stroke) - capTextLeft(stroke)) * edge / 3f;
+    }
+    static float capColumnCentre(float stroke, int column) {
+        return (capColumnEdge(stroke, column) + capColumnEdge(stroke, column + 1)) * 0.5f;
+    }
+    static float capColumnWidth(float stroke) {
+        return Math.max(1f, (capTextRight(stroke) - capTextLeft(stroke)) / 3f - CAP_TEXT_GAP);
+    }
+
+
     /**
      * The x where a cell's reading starts, given its own drawn width.
      *

@@ -903,6 +903,7 @@ internal fun CapsuleContainerRows(
     }
     val a = remember(settings) { TrioAppearance.of(settings) }
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        ContentControlRow(ContentControl.CapsuleColumns, settings, update)
         var expanded by rememberSaveable(a.style) { mutableStateOf(false) }
         ArrowPreference(title = stringResource(R.string.advanced_capsule),
             summary = stringResource(if (expanded) R.string.advanced_hide else R.string.advanced_show),

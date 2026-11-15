@@ -314,7 +314,7 @@
 
     <!-- Capsule interior cell nudges, in design units. -->
     <string name="capsule_container_title">Capsule shape</string>
-    <string name="capsule_container_summary">Length, and where each cell sits.</string>
+    <string name="capsule_container_summary">Length, columns and interior positions.</string>
     <string name="capsule_length_title">Capsule length</string>
     <string name="capsule_length_summary">Default %1$d, range %2$d–%3$d. Changes the capsule width while keeping its height and caps.</string>
     <string name="capsule_nudge_left_dx_title">Left cell horizontal</string>
@@ -469,4 +469,9 @@
     <string name="memory_interval_3">3 seconds</string>
     <string name="memory_interval_5">5 seconds</string>
     <string name="memory_interval_10">10 seconds</string>
+    <string name="clock_seconds_title">Show seconds</string>
+    <string name="clock_seconds_summary">Show seconds while awake; show hours and minutes on the always-on display.</string>
+    <string name="capsule_columns_title">Interior columns</string>
+    <string name="capsule_columns_two">Two (left / right)</string>
+    <string name="capsule_columns_three">Three (left / middle / right)</string>
 </resources>

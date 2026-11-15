@@ -188,16 +188,7 @@ class SettingsRepository(context: Context) {
             listOf(io.github.yixing233.hyperduo.TrioZones.Zone.TOP,
                 io.github.yixing233.hyperduo.TrioZones.Zone.CENTRE,
                 io.github.yixing233.hyperduo.TrioZones.Zone.BOTTOM)
-        } else if (current.trioStyle == Prefs.STYLE_CAPSULE) {
-            listOf(io.github.yixing233.hyperduo.TrioZones.Zone.TOP,
-                io.github.yixing233.hyperduo.TrioZones.Zone.LEFT,
-                io.github.yixing233.hyperduo.TrioZones.Zone.CENTRE,
-                io.github.yixing233.hyperduo.TrioZones.Zone.BOTTOM)
-        } else {
-            listOf(io.github.yixing233.hyperduo.TrioZones.Zone.TOP,
-                io.github.yixing233.hyperduo.TrioZones.Zone.CENTRE,
-                io.github.yixing233.hyperduo.TrioZones.Zone.BOTTOM)
-        }
+        } else io.github.yixing233.hyperduo.TrioZones.zonesFor(current).toList()
         if (position in 1..slots.size) {
             applyRingAssignment(
                 io.github.yixing233.hyperduo.TrioZones.withPiece(
@@ -240,16 +231,7 @@ class SettingsRepository(context: Context) {
      */
     fun setWifiPosition(position: Int) {
         val current = TrioSettings.from(preferences(), density)
-        val slots = if (current.trioStyle == Prefs.STYLE_CAPSULE) {
-            listOf(io.github.yixing233.hyperduo.TrioZones.Zone.TOP,
-                io.github.yixing233.hyperduo.TrioZones.Zone.LEFT,
-                io.github.yixing233.hyperduo.TrioZones.Zone.CENTRE,
-                io.github.yixing233.hyperduo.TrioZones.Zone.BOTTOM)
-        } else {
-            listOf(io.github.yixing233.hyperduo.TrioZones.Zone.TOP,
-                io.github.yixing233.hyperduo.TrioZones.Zone.CENTRE,
-                io.github.yixing233.hyperduo.TrioZones.Zone.BOTTOM)
-        }
+        val slots = io.github.yixing233.hyperduo.TrioZones.zonesFor(current).toList()
         if (position in 1..slots.size) {
             val next = io.github.yixing233.hyperduo.TrioZones.withPiece(
                 current, slots[position - 1].ordinal,
@@ -469,6 +451,7 @@ class SettingsRepository(context: Context) {
     fun setValueWeight(value: Int) = writeInt(Prefs.KEY_VALUE_WEIGHT, value)
     fun setClockSize(value: Int) = writeInt(Prefs.KEY_CLOCK_SIZE, value)
     fun setClockWeight(value: Int) = writeInt(Prefs.KEY_CLOCK_WEIGHT, value)
+    fun setClockSeconds(value: Boolean) = writeBoolean(Prefs.KEY_CLOCK_SECONDS, value)
     fun setTypeSize(value: Int) = writeInt(Prefs.KEY_TYPE_SIZE, value)
     fun setOutTypeSize(value: Int) = writeInt(Prefs.KEY_OUT_TYPE_SIZE_DP, value)
     fun setOutSignalSize(value: Int) = writeInt(Prefs.KEY_OUT_SIGNAL_SIZE, value)
@@ -490,6 +473,7 @@ class SettingsRepository(context: Context) {
     fun setCapsuleRightDy(value: Int) = writeInt(Prefs.KEY_CAPSULE_RIGHT_DY, value)
     /** Extra straight-run length; see [Prefs.KEY_CAPSULE_LENGTH]. */
     fun setCapsuleLength(value: Int) = writeInt(Prefs.KEY_CAPSULE_LENGTH, value)
+    fun setCapsuleColumns(value: Int) = writeInt(Prefs.KEY_CAPSULE_COLUMNS, value.coerceIn(2, 3))
 
     // ---------------------------------------------------------------- advanced
 

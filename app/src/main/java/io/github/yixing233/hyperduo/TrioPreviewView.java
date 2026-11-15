@@ -184,9 +184,8 @@ public final class TrioPreviewView extends View {
         // its battery and SIM readings are synthetic. SystemUI uses ClockTicker.
         if ((this.settings.trioStyle == Prefs.STYLE_CAPSULE
                 || this.settings.trioStyle == Prefs.STYLE_RING
-                && TrioAppearance.of(this.settings).hasRingPart(Prefs.PART_CLOCK))
-                && TrioState.sClockText.isEmpty()) {
-            TrioState.sClockText = "19:41";
+                && TrioAppearance.of(this.settings).hasRingPart(Prefs.PART_CLOCK))) {
+            TrioState.sClockText = this.settings.clockSeconds ? "19:41:30" : "19:41";
         }
         // The same synthetic reading for memory: this process has no MemoryTicker, and
         // the preview exists to show what a placed piece looks like, not to report the
@@ -386,6 +385,8 @@ public final class TrioPreviewView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
+        // Previews share the settings process but can render different saved layouts.
+        TrioState.sClockText = settings.clockSeconds ? "19:41:30" : "19:41";
 
         final int w = getWidth();
         final int h = getHeight();

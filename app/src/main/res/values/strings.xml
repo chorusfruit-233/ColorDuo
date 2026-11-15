@@ -313,7 +313,7 @@
 
     <!-- Capsule interior cell nudges, in design units. -->
     <string name="capsule_container_title">胶囊结构</string>
-    <string name="capsule_container_summary">长度与左右两格的位置。</string>
+    <string name="capsule_container_summary">长度、格数与内部位置。</string>
     <string name="capsule_length_title">胶囊长度</string>
     <string name="capsule_length_summary">默认 %1$d，可调 %2$d–%3$d。调整胶囊宽度，高度和圆角保持不变。</string>
     <string name="capsule_nudge_left_dx_title">左格水平位置</string>
@@ -468,4 +468,9 @@
     <string name="memory_interval_3">3 秒</string>
     <string name="memory_interval_5">5 秒</string>
     <string name="memory_interval_10">10 秒</string>
+    <string name="clock_seconds_title">显示秒数</string>
+    <string name="clock_seconds_summary">亮屏时显示时分秒；息屏时显示时分。</string>
+    <string name="capsule_columns_title">内部格数</string>
+    <string name="capsule_columns_two">两格（左 / 右）</string>
+    <string name="capsule_columns_three">三格（左 / 中 / 右）</string>
 </resources>

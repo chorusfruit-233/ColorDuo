@@ -103,6 +103,8 @@ internal enum class ContentControl(val owner: TrioSettingsPart) {
     ChargingTemp(TrioSettingsPart.Readouts),
     MemoryInterval(TrioSettingsPart.Memory),
     Clock(TrioSettingsPart.Clock),
+    ClockSeconds(TrioSettingsPart.Clock),
+    CapsuleColumns(TrioSettingsPart.Structure),
 }
 
 internal fun contentControlsFor(part: TrioSettingsPart, settings: TrioSettings): List<ContentControl> {
@@ -111,6 +113,7 @@ internal fun contentControlsFor(part: TrioSettingsPart, settings: TrioSettings):
     val paired = inside && a.hasRingPart(Prefs.PART_SIM_PAIR)
     return ContentControl.entries.filter { control ->
         control.owner == part && control !in listOf(ContentControl.Enabled, ContentControl.Style) && when (control) {
+            ContentControl.CapsuleColumns -> a.capsule
             ContentControl.SplitMode -> a.ring
             ContentControl.SplitLink, ContentControl.SplitCap -> a.ring && a.splitMode == 1
             ContentControl.ChargeFlowDirection -> settings.chargeFlow
@@ -302,16 +305,24 @@ internal fun ContentControlRow(
             R.string.perf_temp_charging_only_summary, master) { value ->
                 update { it.setPerfTempChargingOnly(value) }
             }
-        ContentControl.Clock -> Unit // Capsule time has a fixed slot.
+        ContentControl.Clock -> Unit // Capsule placement is edited in its cells.
+        ContentControl.ClockSeconds -> ContentToggle(settings.clockSeconds, R.string.clock_seconds_title,
+            R.string.clock_seconds_summary, master) { value -> update { it.setClockSeconds(value) } }
+        ContentControl.CapsuleColumns -> ContentChoice(settings.capsuleColumns - 2,
+            R.string.capsule_columns_title, null,
+            listOf(R.string.capsule_columns_two, R.string.capsule_columns_three), master) { value ->
+                update { it.setCapsuleColumns(value + 2) }
+            }
     }
 }
 
 /** The actual menu used by both arrangements, with no separate visibility switch. */
 internal fun boltPositionOptions(settings: TrioSettings): List<Int> =
     listOf(R.string.bolt_hidden, R.string.bolt_native) +
-        TrioZones.boltPositionZones(settings.trioStyle).map { zone ->
+        TrioZones.boltPositionZones(settings).map { zone ->
             when (zone) {
                 TrioZones.Zone.TOP -> R.string.drawing_hint_top
+                TrioZones.Zone.MIDDLE -> R.string.drawing_hint_centre
                 TrioZones.Zone.LEFT -> R.string.drawing_hint_left
                 TrioZones.Zone.CENTRE -> if (settings.trioStyle == Prefs.STYLE_CAPSULE)
                     R.string.drawing_hint_right else R.string.drawing_hint_centre
@@ -443,12 +454,7 @@ private fun WifiPositionControl(
     // index 3 - read as "fourth choice", which in a four-item list is the BOTTOM label.
     // The list had no Left entry at all, so there was no way to name that cell either.
     val capsule = ringSettings.trioStyle == Prefs.STYLE_CAPSULE
-    val slots = if (capsule) {
-        listOf(TrioZones.Zone.TOP, TrioZones.Zone.LEFT, TrioZones.Zone.CENTRE,
-            TrioZones.Zone.BOTTOM)
-    } else {
-        listOf(TrioZones.Zone.TOP, TrioZones.Zone.CENTRE, TrioZones.Zone.BOTTOM)
-    }
+    val slots = TrioZones.zonesFor(ringSettings).toList()
     val placedAt = ringSettings.ringZones.indexOfFirst { it.contains(id) }
     val slotIndex = if (placedAt < 0) 0 else slots.indexOf(TrioZones.Zone.entries[placedAt]) + 1
     // Off wins over "placed somewhere": a switch that is off draws no arcs whatever the
@@ -458,6 +464,7 @@ private fun WifiPositionControl(
         listOf(R.string.ring_position_native) + slots.map { zone ->
             when (zone) {
                 TrioZones.Zone.TOP -> R.string.drawing_hint_top
+                TrioZones.Zone.MIDDLE -> R.string.drawing_hint_centre
                 TrioZones.Zone.LEFT -> R.string.drawing_hint_left
                 TrioZones.Zone.CENTRE -> if (capsule) R.string.drawing_hint_right
                     else R.string.drawing_hint_centre
@@ -507,12 +514,7 @@ private fun RingPositionControl(
     // the tab strip.
     val slots = if (part == TrioZones.Part.SIM_PAIR) {
         listOf(TrioZones.Zone.TOP, TrioZones.Zone.CENTRE, TrioZones.Zone.BOTTOM)
-    } else if (settings.trioStyle == Prefs.STYLE_CAPSULE) {
-        listOf(TrioZones.Zone.TOP, TrioZones.Zone.LEFT, TrioZones.Zone.CENTRE,
-            TrioZones.Zone.BOTTOM)
-    } else {
-        listOf(TrioZones.Zone.TOP, TrioZones.Zone.CENTRE, TrioZones.Zone.BOTTOM)
-    }
+    } else TrioZones.zonesFor(settings).toList()
     // The stored index is a ZONE ordinal, and the choices are listed in [slots] order.
     // Translate one into the other rather than assuming they agree - that assumption
     // is what produced the wrong label.
@@ -545,6 +547,7 @@ private fun RingPositionControl(
         unplaced + slots.map { zone ->
             when (zone) {
                 TrioZones.Zone.TOP -> R.string.drawing_hint_top
+                TrioZones.Zone.MIDDLE -> R.string.drawing_hint_centre
                 TrioZones.Zone.LEFT -> R.string.drawing_hint_left
                 TrioZones.Zone.CENTRE -> if (settings.trioStyle == Prefs.STYLE_CAPSULE)
                     R.string.drawing_hint_right else R.string.drawing_hint_centre

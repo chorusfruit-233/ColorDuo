@@ -10,6 +10,7 @@ for name in Prefs TrioSettings TrioAppearance TrioGeometry TrioZones TrioSizing 
     printf '%s\n' "app/src/main/java/io/github/yixing233/hyperduo/$name.java" >> "$test_sources"
 done
 printf '%s\n' tests/ColorOsSettingsTest.java >> "$test_sources"
+printf '%s\n' tests/CapsuleColumnsTest.java >> "$test_sources"
 printf '%s\n' tests/ColorOsRenderingTest.java >> "$test_sources"
 printf '%s\n' tests/ChargeFlowTest.java >> "$test_sources"
 printf '%s\n' tests/ChargeSpeedTest.java >> "$test_sources"
@@ -28,3 +29,5 @@ java -Djava.awt.headless=true -Xmx512m -cp "$test_classes" io.github.yixing233.h
 java -Djava.awt.headless=true -Xmx512m -cp "$test_classes" io.github.yixing233.hyperduo.SignalTrackTest
 
 java -Djava.awt.headless=true -cp "$test_classes" io.github.yixing233.hyperduo.ChargeFlowTest
+
+java -Djava.awt.headless=true -cp "$test_classes" io.github.yixing233.hyperduo.CapsuleColumnsTest ${CAPSULE_PREVIEW_OUTPUT:+"$CAPSULE_PREVIEW_OUTPUT"}

@@ -1766,6 +1766,7 @@ private fun zoneLabelRes(zone: TrioZones.Zone, a: TrioAppearance): Int = when (z
     TrioZones.Zone.CENTRE -> if (a.capsule) R.string.drawing_hint_right
         else R.string.drawing_hint_centre
     TrioZones.Zone.BOTTOM -> R.string.drawing_hint_bottom
+    TrioZones.Zone.MIDDLE -> R.string.drawing_hint_centre
     TrioZones.Zone.LEFT -> R.string.drawing_hint_left
 }
 
@@ -1778,15 +1779,7 @@ private fun zoneLabelRes(zone: TrioZones.Zone, a: TrioAppearance): Int = when (z
  * LEFT is not one of them: their interiors are single cells.
  */
 private fun zonesFor(a: TrioAppearance): List<TrioZones.Zone> =
-    if (a.capsule) {
-        // Four cells, clockwise from the top: the two openings and the interior
-        // split into a left and a right half. Spatially ordered rather than
-        // enum-ordered, so the strip reads the way the glyph is laid out.
-        listOf(TrioZones.Zone.TOP, TrioZones.Zone.LEFT, TrioZones.Zone.CENTRE,
-                TrioZones.Zone.BOTTOM)
-    } else {
-        listOf(TrioZones.Zone.TOP, TrioZones.Zone.CENTRE, TrioZones.Zone.BOTTOM)
-    }
+    TrioZones.zonesFor(a).toList()
 
 /**
  * Says that the signal rows are drawn outside the ring, whatever this list holds.

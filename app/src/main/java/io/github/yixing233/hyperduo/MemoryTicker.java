@@ -135,10 +135,7 @@ final class MemoryTicker {
         if (!a.glyph || !a.slotted) return false;
         // Layouts retain their placements when switching styles. Only the capsule can
         // display LEFT; a saved left-column part must not poll while drawing a ring.
-        final int zones = a.capsule ? Prefs.ZONE_COUNT : TrioZones.Zone.LEFT.ordinal();
-        for (int z = 0; z < zones; z++)
-            for (int part : a.ringZones[z]) if (part == Prefs.PART_MEMORY) return true;
-        return false;
+        return a.hasRingPart(Prefs.PART_MEMORY);
     }
 
     private static boolean allowsSampling(Context context) {return PowerSampling.active(context);}

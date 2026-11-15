@@ -228,7 +228,7 @@ public final class Prefs {
      *
      * <p>Two sections, not {@link #ZONE_COUNT}: {@link #decodeLayout} reads a short
      * layout's missing sections as empty, so one string serves every arrangement -
-     * the ring's three bands, and the capsule's four cells (top, left, right, bottom).
+     * the ring's three bands and the capsule's two or three interior cells plus openings.
      * A layout written before the fourth cell existed therefore still decodes to the
      * cells it named, with the left column left empty.
      */
@@ -270,16 +270,14 @@ public final class Prefs {
     /**
      * How many zones the layout has, in the order the layout string stores them.
      *
-     * <p>Four, whatever the arrangement. The ring and the rectangle use the first three as
-     * top, middle and bottom; the capsule uses all four as top opening, LEFT interior,
-     * RIGHT interior and bottom opening. The fourth index is the left-hand half of an
-     * interior that used to be one cell, so an install upgrading from the three-zone form
-     * decodes its old string with that cell empty and falls back to the clock there - see
-     * {@code TrioAppearance.Capsule}.
+     * <p>Indexes 0..2 are top, centre/right and bottom; index 3 is the capsule's left
+     * interior and index 4 its optional middle interior. Missing sections decode empty.
      *
      * <p>Append-only: reordering would reinterpret every stored layout.
      */
-    public static final int ZONE_COUNT = 4;
+    public static final int ZONE_COUNT = 5;
+    /** Appended so old top/right/bottom/left layouts retain their stored IDs. */
+    public static final int ZONE_CAPSULE_MIDDLE = 4;
 
 
     /** The middle band, in the order {@link #ZONE_COUNT} stores them. */
@@ -317,6 +315,7 @@ public final class Prefs {
      * @param id a {@code PART_*} id; {@link #PART_NONE} (a cleared band) is always allowed
      */
     public static boolean zoneAccepts(int zone, int id) {
+        if (zone == ZONE_CAPSULE_MIDDLE && isSignalRow(id)) return false;
         if (id == PART_SIM_PAIR) return zone >= 0 && zone <= ZONE_BOTTOM;
         return !(zone == ZONE_CENTRE && isSignalRow(id));
     }
@@ -481,7 +480,11 @@ public final class Prefs {
     /** The inverse of {@link #decodeLayout}, with the same tolerance for gaps. */
     public static String encodeLayout(int[][] zones) {
         final StringBuilder sb = new StringBuilder();
-        for (int z = 0; z < ZONE_COUNT; z++) {
+        // Preserve the four-section encoding until the optional middle cell is used.
+        int count = zones != null && zones.length > ZONE_CAPSULE_MIDDLE
+                && zones[ZONE_CAPSULE_MIDDLE] != null && zones[ZONE_CAPSULE_MIDDLE].length > 0
+                ? ZONE_COUNT : ZONE_CAPSULE_MIDDLE;
+        for (int z = 0; z < count; z++) {
             if (z > 0) {
                 sb.append('|');
             }
@@ -855,6 +858,8 @@ public final class Prefs {
     public static final String KEY_CLOCK_SIZE = "clock_size";
     /** Font weight of the time, on the same reasoning as {@link #KEY_CLOCK_SIZE}. */
     public static final String KEY_CLOCK_WEIGHT = "clock_weight";
+    public static final String KEY_CLOCK_SECONDS = "clock_seconds";
+    public static final boolean DEF_CLOCK_SECONDS = false;
     /** Font size of the network type drawn inside the ring. */
     public static final String KEY_TYPE_SIZE = "type_size";
     /**
@@ -1537,6 +1542,8 @@ public final class Prefs {
      */
     public static final String KEY_CAPSULE_LENGTH = "capsule_length";
     public static final int DEF_CAPSULE_LENGTH = 0;
+    public static final String KEY_CAPSULE_COLUMNS = "capsule_columns";
+    public static final int DEF_CAPSULE_COLUMNS = 2;
     public static final int MIN_CAPSULE_LENGTH = -30;
     public static final int MAX_CAPSULE_LENGTH = 60;
     public static final int MAX_CAPSULE_NUDGE_X_RIGHT = 24;

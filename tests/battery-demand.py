@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Run real battery scheduling/selection code against counted, filtered Android services."""
-import ast,subprocess,tempfile,sys
+import subprocess,tempfile,sys
+from sampler_fixtures import fixtures as sampler_fixtures
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 SOURCE=ROOT/'app/src/main/java/io/github/yixing233/hyperduo'
-tree=ast.parse((ROOT/'tests/memory-ticker.py').read_text(encoding='utf-8'))
-fixtures=ast.literal_eval(next(n.value for n in tree.body if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='fixtures' for t in n.targets)))
+fixtures=dict(sampler_fixtures)
 fixtures['android/content/Intent.java']=r'''package android.content;public class Intent {
  public static final String ACTION_SCREEN_ON="on",ACTION_SCREEN_OFF="off",ACTION_BATTERY_CHANGED="battery";
  final String action;public java.util.Map<String,Integer> values=new java.util.HashMap<>();

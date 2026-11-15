@@ -66,25 +66,7 @@ public final class TrioZones {
     private TrioZones() {
     }
 
-    /** One of the glyph's three tappable thirds. */
-    /**
-     * The three placeable bands, shared by every arrangement.
-     *
-     * <p>Each arrangement maps them onto its own shape, because "top, middle, bottom" is the
-     * question the user is actually asking - where on the icon does this go - and the answer
-     * does not depend on whether the shape is a ring or a stadium:
-     *
-     * <ul>
-     *   <li><b>ring</b> - the 12 o'clock notch, the interior, the 6 o'clock opening;
-     *   <li><b>rectangle</b> - the top slot, the enlarged percentage, the dot columns and bar;
-     *   <li><b>capsule</b> - the top opening, the interior to the right of the fixed clock,
-     *       the bottom opening.
-     * </ul>
-     *
-     * <p>The capsule's clock is deliberately NOT a zone: it is fixed in the left column and
-     * is not something the user places, so exposing it here would offer a cell whose contents
-     * cannot be changed.
-     */
+    /** Stable persisted indexes; capsule body cells are ordered by {@link #zonesFor}. */
     public enum Zone {
         /** The 12 o'clock notch, the rectangle's top slot, or the capsule's top opening. */
         TOP,
@@ -100,7 +82,9 @@ public final class TrioZones {
          * capsule reads four cells (top, left, right, bottom); the ring and the rectangle
          * ignore this one.
          */
-        LEFT
+        LEFT,
+        /** Optional third interior cell; appended to preserve all prior ordinals. */
+        MIDDLE
     }
 
     /**
@@ -135,6 +119,20 @@ public final class TrioZones {
 
     public static final int BOLT_POSITION_HIDDEN = 0, BOLT_POSITION_NATIVE = 1;
 
+    /** Visual cell order shared by placement menus and the preview. */
+    public static Zone[] zonesFor(int style, int columns) {
+        if (style != Prefs.STYLE_CAPSULE) return new Zone[] {Zone.TOP, Zone.CENTRE, Zone.BOTTOM};
+        return columns == 3 ? new Zone[] {Zone.TOP, Zone.LEFT, Zone.MIDDLE, Zone.CENTRE, Zone.BOTTOM}
+                : new Zone[] {Zone.TOP, Zone.LEFT, Zone.CENTRE, Zone.BOTTOM};
+    }
+    public static Zone[] zonesFor(TrioSettings settings) {
+        return zonesFor(settings.trioStyle, settings.capsuleColumns);
+    }
+    public static Zone[] zonesFor(TrioAppearance appearance) {
+        return zonesFor(appearance.style, appearance.capsuleColumns);
+    }
+    public static Zone[] boltPositionZones(TrioSettings settings) { return zonesFor(settings); }
+
     /** Positions in the same visual order as the settings menu. */
     public static Zone[] boltPositionZones(int style) {
         return style == Prefs.STYLE_CAPSULE
@@ -145,7 +143,7 @@ public final class TrioZones {
     /** Hidden, native, then the arrangement's positions; old visibility values remain valid. */
     public static int boltPosition(TrioSettings current) {
         if (current == null || !current.showBolt) return BOLT_POSITION_HIDDEN;
-        Zone[] zones = boltPositionZones(current.trioStyle);
+        Zone[] zones = boltPositionZones(current);
         for (int i = 0; i < zones.length; i++) {
             for (int part : current.ringZones[zones[i].ordinal()]) {
                 if (part == Prefs.PART_BOLT) return i + 2;
@@ -157,7 +155,7 @@ public final class TrioZones {
     /** Update visibility and placement together, preserving every other priority entry. */
     public static TrioSettings withBoltPosition(TrioSettings current, int position) {
         if (current == null) return null;
-        Zone[] zones = boltPositionZones(current.trioStyle);
+        Zone[] zones = boltPositionZones(current);
         if (position < BOLT_POSITION_HIDDEN || position >= zones.length + 2) return current;
         if (position >= 2) return withPiece(current, zones[position - 2].ordinal(), Part.BOLT);
         TrioSettings next = current.copy();
@@ -263,6 +261,7 @@ public final class TrioZones {
      *             cut lines and adds the two dot columns
      */
     public static float[][] boxes(Zone zone, boolean rect) {
+        if (zone == Zone.LEFT || zone == Zone.MIDDLE) return new float[0][];
         if (rect) {
             switch (zone) {
                 case TOP:
@@ -392,6 +391,7 @@ public final class TrioZones {
 
     /** Layout-aware regions, including the capsule's four cells and its dot bands. */
     public static float[][] boxes(Zone zone, TrioAppearance a) {
+        if (!a.zoneVisible(zone.ordinal())) return new float[0][];
         if (!a.capsule) {
             return boxes(zone, a.rect);
         }
@@ -409,6 +409,12 @@ public final class TrioZones {
         final float fringe = 1f;
         final float left = TrioGeometry.CAP_INK_X - fringe;
         final float right = TrioGeometry.CAP_INK_X + TrioGeometry.capInkW() + fringe;
+        if (a.capsuleColumns == 3 && zone != Zone.TOP && zone != Zone.BOTTOM) {
+            int column = zone == Zone.LEFT ? 0 : zone == Zone.MIDDLE ? 1 : 2;
+            float start = column == 0 ? left : TrioGeometry.capColumnEdge(stroke, column);
+            float end = column == 2 ? right : TrioGeometry.capColumnEdge(stroke, column + 1);
+            return new float[][] {{ start, top, end, bottom }};
+        }
         switch (zone) {
             case TOP:
                 // The top opening: where the two dot rows cross the outline at 12 o'clock.
@@ -761,6 +767,9 @@ public final class TrioZones {
      * drawing. Only the ring has the notch geometry the rule is about.
      */
     public static boolean accepts(Zone zone, Part part, TrioSettings current) {
+        if (zone == null) return false;
+        if (current != null && !TrioAppearance.of(current).zoneVisible(zone.ordinal())) return false;
+        if (zone == Zone.MIDDLE && Prefs.isSignalRow(encodePart(part))) return false;
         if (current == null || part == null) {
             return true;
         }
@@ -1172,12 +1181,6 @@ public final class TrioZones {
     public static Assignment assign(Zone zone, boolean rect, Part want, TrioSettings current,
                                     int sims) {
         if (current == null) {
-            return null;
-        }
-        // The capsule's clock is fixed in the left column and is not a zone, so the clock is
-        // never something a placement can move - and putting it in a band would hide the real
-        // clock rather than move it.
-        if (current.trioStyle == Prefs.STYLE_CAPSULE && want == Part.CLOCK) {
             return null;
         }
         // A refused placement is unsolvable, so the page reports it as such ("the middle

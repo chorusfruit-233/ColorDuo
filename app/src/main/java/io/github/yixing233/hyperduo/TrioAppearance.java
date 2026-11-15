@@ -58,6 +58,7 @@ public final class TrioAppearance {
     public final int capsuleRightDy;
     /** Extra straight-run length; see {@link Prefs#KEY_CAPSULE_LENGTH}. */
     public final int capsuleLength;
+    public final int capsuleColumns;
     /**
      * True when {@link #style} is the ring.
      *
@@ -216,6 +217,7 @@ public final class TrioAppearance {
     /** Independent size and weight of the capsule or free-ring clock. */
     public final int clockSize;
     public final int clockWeight;
+    public final boolean clockSeconds;
     public final int typeSize;
     public final int outTypeSize;
     public final int outSignalSize;
@@ -402,6 +404,7 @@ public final class TrioAppearance {
         capsuleRightDx = c.capsuleRightDx;
         capsuleRightDy = c.capsuleRightDy;
         capsuleLength = c.capsuleLength;
+        capsuleColumns = c.capsuleColumns == 3 ? 3 : 2;
         ring = c.trioStyle == Prefs.STYLE_RING;
         slotted = !rect;
         ringZones = TrioSettings.copyZones(c.ringZones);
@@ -469,6 +472,7 @@ public final class TrioAppearance {
         valueWeight = c.valueWeight;
         clockSize = c.clockSize;
         clockWeight = c.clockWeight;
+        clockSeconds = c.clockSeconds;
         typeSize = c.typeSize;
         outTypeSize = c.outTypeSize;
         outSignalSize = c.outSignalSize;
@@ -584,8 +588,14 @@ public final class TrioAppearance {
      * "is it drawn this frame" instead would make the native icon flicker in and out as
      * the fallback chain moved.
      */
+    public boolean zoneVisible(int zone) {
+        return zone >= 0 && (zone < 3 || capsule && (zone == 3
+                || zone == Prefs.ZONE_CAPSULE_MIDDLE && capsuleColumns == 3));
+    }
+
     public boolean hasRingPart(int part) {
         for (int z = 0; z < Prefs.ZONE_COUNT; z++) {
+            if (!zoneVisible(z)) continue;
             final int[] ids = ringZones[z];
             for (int i = 0; i < ids.length; i++) {
                 if (ids[i] == part) {
@@ -593,6 +603,13 @@ public final class TrioAppearance {
                 }
             }
         }
+        return false;
+    }
+
+    /** A retained third-cell component must release its native counterpart in two-cell mode. */
+    private boolean onlyInHiddenMiddle(int part) {
+        if (!capsule || capsuleColumns == 3 || hasRingPart(part)) return false;
+        for (int id : ringZones[Prefs.ZONE_CAPSULE_MIDDLE]) if (id == part) return true;
         return false;
     }
 
@@ -605,7 +622,7 @@ public final class TrioAppearance {
      * the ring would read a layout those arrangements never consult.
      */
     public boolean ownsWifi() {
-        return followsTypePosition() || (wifi && (!ring || hasRingPart(Prefs.PART_WIFI)));
+        return followsTypePosition() || (wifi && !onlyInHiddenMiddle(Prefs.PART_WIFI) && (!ring || hasRingPart(Prefs.PART_WIFI)));
     }
 
     /** Automatic network display owns the configured inner TYPE slot, even with native Wi-Fi selected. */
@@ -625,16 +642,16 @@ public final class TrioAppearance {
     }
 
     public boolean ownsValue() {
-        return value && (!ring || hasRingPart(Prefs.PART_VALUE));
+        return value && !onlyInHiddenMiddle(Prefs.PART_VALUE) && (!ring || hasRingPart(Prefs.PART_VALUE));
     }
 
     public boolean ownsType() {
-        return typeOutOfRing || (typeInRing && (!ring || hasRingPart(Prefs.PART_TYPE)));
+        return typeOutOfRing || (typeInRing && !onlyInHiddenMiddle(Prefs.PART_TYPE) && (!ring || hasRingPart(Prefs.PART_TYPE)));
     }
 
     /** Native percentage follows the user's system style when the free ring releases it. */
     public boolean handsBackPercentage() {
-        return glyph && ring && !ownsValue();
+        return glyph && (ring || onlyInHiddenMiddle(Prefs.PART_VALUE)) && !ownsValue();
     }
 
     /** Hide the system bolt when hidden by choice or owned by a module position. */
@@ -1408,7 +1425,8 @@ public final class TrioAppearance {
             // Keep capsule and ring on the same route-based policy.
             final boolean yieldType = a.hidesTypeForWifi(wifiConnected);
             for (TrioZones.Zone band : TrioZones.Zone.values()) {
-                // The capsule reads FOUR cells: the three bands plus the left column, which
+                if (!a.zoneVisible(band.ordinal())) continue;
+                // The capsule reads its active cells: the three bands plus the left column, which
             // is the layout's LEFT section. It used to be a key of its own, which is
             // why this loop ran over the three bands only and the drawing dispatched the
             // left column separately.
@@ -1442,6 +1460,7 @@ public final class TrioAppearance {
             // distinction wrong is what made the cell ignore the list and draw the
             // clock whatever the user picked.
             final boolean anyPlaced = a.hasRingPart(Prefs.PART_SIM_PAIR) || anyPlacedExceptLeft(parts)
+                    || a.capsuleColumns == 2 && frameZones[Prefs.ZONE_CAPSULE_MIDDLE].length > 0
                     || frameZones[TrioZones.Zone.LEFT.ordinal()].length > 0
                     || dotBands[TrioZones.Zone.TOP.ordinal()]
                     || dotBands[TrioZones.Zone.BOTTOM.ordinal()];

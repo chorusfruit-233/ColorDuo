@@ -10,6 +10,28 @@ import org.junit.Test
 
 /** Execute the same row selectors and slider specs that the Compose sheets use. */
 class LayoutControlsTest {
+    @Test fun clockSecondsRemainEditableInBothSlottedStyles() {
+        for (style in listOf(Prefs.STYLE_RING, Prefs.STYLE_CAPSULE)) {
+            val s = settings(style)
+            assertTrue(contentControlsFor(TrioSettingsPart.Clock, s).contains(ContentControl.ClockSeconds))
+            assertFalse(s.clockSeconds)
+        }
+    }
+
+    @Test fun thirdCapsuleCellIsOptionalAndUsesTheSamePlacementOrder() {
+        val s = settings(Prefs.STYLE_CAPSULE)
+        assertEquals(2, s.capsuleColumns)
+        assertTrue(contentControlsFor(TrioSettingsPart.Structure, s).contains(ContentControl.CapsuleColumns))
+        assertFalse(contentControlsFor(TrioSettingsPart.Structure, settings()).contains(ContentControl.CapsuleColumns))
+        assertFalse(TrioZones.zonesFor(s).contains(TrioZones.Zone.MIDDLE))
+        s.capsuleColumns = 3
+        assertEquals(listOf(TrioZones.Zone.TOP, TrioZones.Zone.LEFT, TrioZones.Zone.MIDDLE,
+            TrioZones.Zone.CENTRE, TrioZones.Zone.BOTTOM), TrioZones.zonesFor(s).toList())
+        val moved = TrioZones.withBoltPosition(s, 4)
+        assertEquals(4, TrioZones.boltPosition(moved))
+        assertTrue(moved.ringZones[TrioZones.Zone.MIDDLE.ordinal].contains(Prefs.PART_BOLT))
+    }
+
     @Test fun memoryRefreshIntervalHasItsOwnComponentControl() {
         val controls=contentControlsFor(TrioSettingsPart.Memory,settings())
         assertTrue(controls.contains(ContentControl.MemoryInterval))
