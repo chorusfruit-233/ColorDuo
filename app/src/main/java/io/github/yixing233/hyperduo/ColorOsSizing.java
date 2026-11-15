@@ -2,9 +2,11 @@
 package io.github.yixing233.hyperduo;
 
 import android.graphics.Rect;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
+import android.widget.LinearLayout;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -66,8 +68,11 @@ final class ColorOsSizing {
 
     private static final class Surface {
         final ViewGroup view;
-        final boolean expandable;
-        Surface(ViewGroup view,boolean expandable) { this.view=view;this.expandable=expandable; }
+        final boolean expandable,keepCenter;
+        Surface(ViewGroup view,boolean expandable) { this(view,expandable,false); }
+        Surface(ViewGroup view,boolean expandable,boolean keepCenter) {
+            this.view=view;this.expandable=expandable;this.keepCenter=keepCenter;
+        }
     }
 
     private static final class HeightState {
@@ -224,10 +229,20 @@ final class ColorOsSizing {
         Set<ViewGroup> requiredHeights=Collections.newSetFromMap(new IdentityHashMap<>());
         Map<ViewGroup,Boolean> clips=new IdentityHashMap<>();
         Map<ViewGroup,Ink> overflow=new IdentityHashMap<>();
-        if(found.expandable) reservePath((ViewGroup)image.getParent(),surface,
+        if(found.expandable) reservePath((ViewGroup)image.getParent(),found,
                 metrics.height+image.getPaddingTop()+image.getPaddingBottom()+margins(image),requiredHeights);
         if(surface!=null && (found.expandable || metrics.height>Math.round(20f*density)))
             clipPath((ViewGroup)image.getParent(),found,clips);
+        if(found.keepCenter) {
+            // The real control-center row and its seamless copy share a native
+            // center. Let the centered header grow inside that row, not grow the
+            // row itself: 80 -> 120px otherwise moves the real glyph down 20px.
+            Ink ink=sourceInk(image,surface,metrics.height);
+            if(ink!=null) {
+                overflow.put(surface,ink);
+                clips.put(surface,ink.top<0 || ink.bottom>surface.getHeight());
+            }
+        }
 
         Set<ViewGroup> requiredMirrors=Collections.newSetFromMap(new IdentityHashMap<>());
         for(Map.Entry<ViewGroup,Mirror> entry:MIRRORS.entrySet()) {
@@ -289,12 +304,13 @@ final class ColorOsSizing {
         }
     }
 
-    private void reservePath(ViewGroup first,ViewGroup surface,int required,Set<ViewGroup> groups) {
+    private void reservePath(ViewGroup first,Surface surface,int required,Set<ViewGroup> groups) {
         for(ViewGroup group=first;group!=null;) {
+            if(group==surface.view && surface.keepCenter) break;
             groups.add(group);
             required+=group.getPaddingTop()+group.getPaddingBottom();
             required=acquireHeight(group,required)+margins(group);
-            if(group==surface) break;
+            if(group==surface.view) break;
             group=group.getParent() instanceof ViewGroup?(ViewGroup)group.getParent():null;
         }
     }
@@ -408,7 +424,15 @@ final class ColorOsSizing {
             if(group.getId()!=View.NO_ID) try {
                 name=group.getResources().getResourceEntryName(group.getId());
             } catch(RuntimeException ignored) { }
-            if("qs_status_bar_container_layout".equals(name) || "qs_fake_status_layout".equals(name)
+            if("qs_status_bar_container_layout".equals(name)) {
+                // OS17 uses a centered horizontal LinearLayout; older layouts
+                // may be RelativeLayout and retain their existing allocation.
+                boolean centered=group instanceof LinearLayout
+                        && ((LinearLayout)group).getOrientation()==LinearLayout.HORIZONTAL
+                        && (((LinearLayout)group).getGravity() & Gravity.VERTICAL_GRAVITY_MASK)==Gravity.CENTER_VERTICAL;
+                return new Surface(group,true,centered);
+            }
+            if("qs_fake_status_layout".equals(name)
                     || "separateqs_fake_status_layout".equals(name)
                     || "simple_qs_fake_status_layout".equals(name)) return new Surface(group,true);
             if("header_container".equals(name)) notificationRow=group;

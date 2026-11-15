@@ -41,6 +41,8 @@ alpha5 接管 `StatBatteryMeterView` 的各个实例，包括主状态栏、锁�
 
 2026-11-15，[反馈者确认 0.4.3-test1 更新后问题消失](https://github.com/chorusfruit-233/ColorDuo/issues/23#issuecomment-6896898626)，设备为 OPPO Find X10 Pro Max / PMX110，ColorOS 17.0.1.202，使用 modern。0.4.3 正式版保留同一修复；这项实机确认限于该设备与报告的控制中心收起问题。
 
+`0.4.4-test2` 补充处理一加 13 报告的展开控制中心下移：原生居中容器保持高度后，实际图标行仍被扩大，可能在真实视图与过渡副本之间形成中心差。依据此前一加日志中的 80/120 px 尺寸，当前生产测量代码可在 150% 场景复现 20 px 差值；修复只扩大居中容器内部的图标行，并放宽完整裁剪。100%–300% 离线回归通过，当前实机效果待反馈；ColorOS 15/16 的不同容器结构保留原有处理。
+
 ## 0.3.14-test1：移动信号刷新
 
 [#14](https://github.com/chorusfruit-233/ColorDuo/issues/14) 反馈 Find X10 Pro Max 的移动信号等级仅在重启 SystemUI 后变化。参考 SystemUI 中，`OplusMobileIconViewModel.icon` 及底层 `signalLevelIcon` 使用 `SharingStarted.WhileSubscribed`；读取 `getValue()` 不会启动上游收集，旧代码又用这个缓存覆盖电话服务的实时等级，存在与反馈一致的冻结路径。报告设备尚未提供本次日志，具体固件路径仍待验证。

@@ -4,4 +4,5 @@ package android.view;
 public final class Gravity {
     private Gravity() {}
     public static final int CENTER_VERTICAL = 16;
+    public static final int VERTICAL_GRAVITY_MASK = 0x70;
 }

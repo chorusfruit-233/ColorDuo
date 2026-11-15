@@ -7,6 +7,13 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "app/src/main/java/io/github/yixing233/hyperduo"
 fixtures = {
+    "android/widget/LinearLayout.java": """package android.widget;
+public class LinearLayout extends android.view.ViewGroup {
+    public static final int HORIZONTAL=0,VERTICAL=1;
+    public int gravity=16,orientation=HORIZONTAL;
+    public int getGravity(){return gravity;}
+    public int getOrientation(){return orientation;}
+}""",
     "android/view/ViewParent.java": "package android.view; public interface ViewParent { ViewParent getParent(); }",
     "android/util/DisplayMetrics.java": "package android.util; public class DisplayMetrics { public float density=1; }",
     "android/content/res/Resources.java": """package android.content.res;
@@ -221,6 +228,62 @@ public final class ColorOsSizingTest {
         check(separate.params.height>=41 && fixed.params.height>=41,"separate control-centre containers reserve the same full header height");
         small.release();
         check(separate.params.height==20 && fixed.params.height==26,"separate control-centre heights restore exactly");
+        // OS17's real control-center header is centered in a native-height horizontal
+        // row. Only the inner header/solver may grow, matching the unchanged fake row.
+        for(int percent:new int[]{100,150,200,300}) {
+            android.widget.LinearLayout centered=new android.widget.LinearLayout();
+            centered.parent=shade;centered.id=3;centered.width=1440;
+            centered.height=80;centered.params.height=80;centered.y=40;
+            centered.setClipBounds(new android.graphics.Rect(0,0,1440,80));
+            QuickStatusBarHeader inner=new QuickStatusBarHeader();inner.parent=centered;inner.height=80;
+            androidx.constraintlayout.widget.ConstraintLayout centeredRow=new androidx.constraintlayout.widget.ConstraintLayout();
+            centeredRow.parent=inner;centeredRow.id=2;centeredRow.height=80;centeredRow.minimumHeight=centeredRow.widgetMinimumHeight=80;
+            ViewGroup cell=child(centeredRow);cell.height=80;cell.params.height=0;cell.resources.metrics.density=4;
+            View glyph=icon(cell,4);glyph.height=80;glyph.top=0;glyph.y=40;
+            ColorOsSizing centeredOwner=new ColorOsSizing();s.glyphScale=percent;
+            TrioSizing.Metrics size=centeredOwner.measure(cell,glyph,TrioAppearance.of(s));
+            check(size.height==80*percent/100,"the requested glyph size remains available in the centered header");
+            check(centered.params.height==80 && centered.minimumHeight==0,
+                  "growing the real icon must not move the shared 80px animation center");
+            check(centeredRow.getMinHeight()>=size.height && inner.minimumHeight>=size.height,
+                  "inner measurement still reserves the enlarged glyph without squeezing it");
+            // Replay native CENTER_VERTICAL layout after the retained solver measure.
+            inner.height=inner.minimumHeight;inner.top=(centered.height-inner.height)/2;
+            centeredRow.height=centeredRow.getMinHeight();cell.height=centeredRow.height;glyph.height=size.height;
+            glyph.top=(cell.height-glyph.height)/2;
+            centeredOwner.measure(cell,glyph,TrioAppearance.of(s));
+            float realCenter=centered.y+inner.top+glyph.top+glyph.height/2f;
+            float mirrorCenter=40+80/2f; // Native seamless row at the same animation pose.
+            check(realCenter==mirrorCenter,"enlarged real and fake icon centers agree at handoff");
+            android.graphics.Rect bounds=centered.getClipBounds();
+            check(bounds.top<=realCenter-centered.y-size.height/2f
+                    && bounds.bottom>=realCenter-centered.y+size.height/2f,
+                  "centered overflow is fully visible above and below the native row");
+            if(percent>100)check(!centered.clipChildren,"the native-height row allows oversized centered children");
+            check(ColorOsSizing.retainMeasureSpec(centered,View.MeasureSpec.makeMeasureSpec(80,View.MeasureSpec.EXACTLY))
+                    ==View.MeasureSpec.makeMeasureSpec(80,View.MeasureSpec.EXACTLY),"outer row measurement stays native");
+            centered.setClipBounds(new android.graphics.Rect(0,8,1440,72));
+            check(centered.getClipBounds().top==8 && centered.getClipBounds().bottom==72,
+                  "partial system animation clipping remains native");
+            centered.setLayoutParams(new ViewGroup.LayoutParams(1440,96));centered.height=96;
+            centered.setClipBounds(new android.graphics.Rect(0,0,1440,96));
+            check(centered.params.height==96,"native configuration changes remain writable");
+            centeredOwner.release();
+            check(centered.params.height==96 && centered.getClipBounds().top==0 && centered.getClipBounds().bottom==96,
+                  "release restores the latest native clipping and row dimensions");
+            check(centered.clipChildren && centeredRow.getMinHeight()==80,"inner heights and original clipping restore independently");
+        }
+        for(int mode:new int[]{0,1}) {
+            android.widget.LinearLayout uncentered=new android.widget.LinearLayout();
+            uncentered.parent=shade;uncentered.id=3;uncentered.width=420;uncentered.height=20;uncentered.params.height=20;
+            if(mode==0)uncentered.gravity=48;else uncentered.orientation=android.widget.LinearLayout.VERTICAL;
+            ViewGroup cell=child(uncentered);View glyph=icon(cell,1);
+            ColorOsSizing fallbackOwner=new ColorOsSizing();s.glyphScale=150;
+            fallbackOwner.measure(cell,glyph,TrioAppearance.of(s));
+            check(uncentered.params.height>=30,"other native container arrangements keep their allocation policy");
+            fallbackOwner.release();
+        }
+        s.glyphScale=150;
         ViewGroup fake=child(shade);fake.id=4;fake.height=26;fake.width=420;fake.params.height=26;
         fixed.parent=fake;
         small.measure(battery,batteryImage,TrioAppearance.of(s));
