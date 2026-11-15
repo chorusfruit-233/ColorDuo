@@ -4,6 +4,14 @@
 
 离线检查与构建结果、参考固件数据和真机反馈分别记录，具体边界见 [适配与验证记录](COLOROS17.md)。
 
+## 0.4.3
+
+- 修复控制中心收起时状态栏图标再次上移：保留过渡层的原生高度与位置，按图标绘制范围放宽裁剪。[#23 反馈者已在 Find X10 Pro Max / ColorOS 17.0.1.202 / modern 确认修复](https://github.com/chorusfruit-233/ColorDuo/issues/23#issuecomment-6896898626)。
+- 合入 [#24](https://github.com/chorusfruit-233/ColorDuo/pull/24)：按需启停电池和内存采样，新增 3/5/10 秒内存刷新间隔，减少重复重绘；保留移动信号和网络类型的及时更新。
+- 同时提供 modern / legacy 正式签名包，可覆盖 `0.4.2` 和 `0.4.3-test1` 并保留配置。
+
+安装后重启 SystemUI 或手机。
+
 ## 0.4.3-test1
 
 - 针对 [#23](https://github.com/chorusfruit-233/ColorDuo/issues/23) 控制中心收起后图标再次上移的问题：保留过渡镜像的原生高度与居中位置，改为按绘制范围放宽裁剪；原生动画的局部裁剪仍保留。

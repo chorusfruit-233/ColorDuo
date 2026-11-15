@@ -35,6 +35,12 @@ alpha5 接管 `StatBatteryMeterView` 的各个实例，包括主状态栏、锁�
 
 绘图使用单独的 Canvas layer，避免上游渲染器清屏时影响相邻图标。电话服务采样限制为每秒一次，Wi-Fi 模型与连接通知独立更新缓存，绘制回调不访问电话服务；熄屏时降低刷新频率。系统流缺失时可使用已有平台采样兜底；缺少电量时不隐藏原生图标。
 
+## 0.4.3：控制中心收起交接
+
+[#23](https://github.com/chorusfruit-233/ColorDuo/issues/23) 的日志显示，原生 70 px 的过渡容器被旧尺寸分配逻辑撑到 88 px，导致镜像的垂直中心偏移。修复保留过渡容器的原生高度、测量和绘制位置，通过扩展完整裁剪范围容纳图标，仍保留原生局部动画裁剪。
+
+2026-11-15，[反馈者确认 0.4.3-test1 更新后问题消失](https://github.com/chorusfruit-233/ColorDuo/issues/23#issuecomment-6896898626)，设备为 OPPO Find X10 Pro Max / PMX110，ColorOS 17.0.1.202，使用 modern。0.4.3 正式版保留同一修复；这项实机确认限于该设备与报告的控制中心收起问题。
+
 ## 0.3.14-test1：移动信号刷新
 
 [#14](https://github.com/chorusfruit-233/ColorDuo/issues/14) 反馈 Find X10 Pro Max 的移动信号等级仅在重启 SystemUI 后变化。参考 SystemUI 中，`OplusMobileIconViewModel.icon` 及底层 `signalLevelIcon` 使用 `SharingStarted.WhileSubscribed`；读取 `getValue()` 不会启动上游收集，旧代码又用这个缓存覆盖电话服务的实时等级，存在与反馈一致的冻结路径。报告设备尚未提供本次日志，具体固件路径仍待验证。
