@@ -1819,7 +1819,15 @@ public final class TrioRenderer {
                                          float slotWidth, int suffixPercent,
                                          float heightLimit) {
         final float requested = Math.min(setting * TrioGeometry.CAP_TEXT_SCALE, heightLimit);
-        return fitSize(text, requested, slotWidth, suffixPercent);
+        float size = fitSize(text, requested, slotWidth, suffixPercent);
+        // Font advances can be rounded at the fitted size. Re-measure rather than
+        // assuming the first proportional estimate still fits beside another cell.
+        for (int i = 0; i < 4 && slotWidth > 0; i++) {
+            float width = measureType(text, size, suffixPercent);
+            if (width <= slotWidth) break;
+            size *= Math.max(0.1f, slotWidth - 0.5f) / width;
+        }
+        return size;
     }
 
     /** Wi-Fi arcs keep their cell centre; the optional standard uses independent space. */

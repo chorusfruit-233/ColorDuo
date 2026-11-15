@@ -17,9 +17,10 @@ public class Typeface {
     public static final int BOLD = 1;
     public static final int ITALIC = 2;
     public static boolean ignoreNumericWeights;
+    private static final String DEFAULT_FAMILY = System.getProperty("colorduo.test.font", "SansSerif");
 
-    public static final Typeface DEFAULT = new Typeface("SansSerif", NORMAL);
-    public static final Typeface DEFAULT_BOLD = new Typeface("SansSerif", BOLD);
+    public static final Typeface DEFAULT = new Typeface(DEFAULT_FAMILY, NORMAL);
+    public static final Typeface DEFAULT_BOLD = new Typeface(DEFAULT_FAMILY, BOLD);
     public static final Typeface SANS_SERIF = DEFAULT;
 
     private final String family;
@@ -40,9 +41,9 @@ public class Typeface {
      * geometry check.
      */
     public static Typeface create(String family, int style) {
-        String mapped = "SansSerif";
+        String mapped = DEFAULT_FAMILY;
         if (family != null && family.startsWith("sans-serif")) {
-            mapped = "SansSerif";
+            mapped = DEFAULT_FAMILY;
         }
         return new Typeface(mapped, style, family != null && family.contains("condensed"));
     }
@@ -58,7 +59,7 @@ public class Typeface {
         if (italic) {
             style |= ITALIC;
         }
-        return new Typeface(base == null ? "SansSerif" : base.family, style, base != null && base.condensed);
+        return new Typeface(base == null ? DEFAULT_FAMILY : base.family, style, base != null && base.condensed);
     }
 
     /**
@@ -84,7 +85,7 @@ public class Typeface {
         if (path == null || !new java.io.File(path).isFile()) {
             return null;
         }
-        return new Typeface("SansSerif", NORMAL);
+        return new Typeface(DEFAULT_FAMILY, NORMAL);
     }
 
     String family() { return family; }

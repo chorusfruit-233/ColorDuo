@@ -31,3 +31,5 @@ java -Djava.awt.headless=true -Xmx512m -cp "$test_classes" io.github.yixing233.h
 java -Djava.awt.headless=true -cp "$test_classes" io.github.yixing233.hyperduo.ChargeFlowTest
 
 java -Djava.awt.headless=true -cp "$test_classes" io.github.yixing233.hyperduo.CapsuleColumnsTest ${CAPSULE_PREVIEW_OUTPUT:+"$CAPSULE_PREVIEW_OUTPUT"}
+java -Djava.awt.headless=true -Dcolorduo.test.font="DejaVu Sans" -cp "$test_classes" io.github.yixing233.hyperduo.CapsuleColumnsTest
+java -Djava.awt.headless=true -Dcolorduo.test.font="Liberation Sans" -cp "$test_classes" io.github.yixing233.hyperduo.CapsuleColumnsTest
