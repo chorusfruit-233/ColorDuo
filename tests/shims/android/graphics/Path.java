@@ -10,6 +10,7 @@
 
 package android.graphics;
 
+import java.awt.geom.Arc2D;
 import java.awt.geom.Path2D;
 
 /** Minimal desktop stand-in for {@code android.graphics.Path}. */
@@ -26,6 +27,11 @@ public class Path {
     public void moveTo(float x, float y) { delegate.moveTo(x, y); }
 
     public void lineTo(float x, float y) { delegate.lineTo(x, y); }
+
+    public void arcTo(RectF oval, float startAngle, float sweepAngle) {
+        delegate.append(new Arc2D.Float(oval.left, oval.top, oval.width(), oval.height(),
+                -startAngle, -sweepAngle, Arc2D.OPEN), true);
+    }
 
     public void quadTo(float x1, float y1, float x2, float y2) { delegate.quadTo(x1, y1, x2, y2); }
 

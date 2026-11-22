@@ -6,7 +6,6 @@ import android.graphics.Path;
 import android.graphics.RectF;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -935,51 +934,72 @@ public final class ColorOsRenderingTest {
         }
     }
 
-    private static void fullCapsule() throws Exception {
-        Method fill = TrioRenderer.class.getDeclaredMethod("drawCapsuleFill", Canvas.class,
-                float.class, float.class, float.class, float.class);
-        fill.setAccessible(true);
+    private static void fullCapsule() {
         TrioSettings settings = TrioSettings.defaults();
         settings.trioStyle = Prefs.STYLE_CAPSULE;
         settings.roleColors = false;
+        settings.trackAlpha = 0;
         settings.showSim1 = settings.showSim2 = true;
-        settings.ringZones = Prefs.decodeLayout("7|3|8|");
         TrioState state = new TrioState();
-        state.level = 100;
-        state.slotLevels = new int[]{4, 2};
-        for (int length : new int[]{-30, -21, -20, 0, 60}) {
-            settings.capsuleLength = length;
-            for (int width : new int[]{Prefs.MIN_RING_STROKE, Prefs.DEF_RING_STROKE, Prefs.MAX_RING_STROKE}) {
-                settings.ringStroke = width;
-                // The live 100% frame repaints exactly the complete track, including asymmetric gaps.
-                try (Frame frame = new Frame()) {
-                    TrioRenderer.drawState(frame, 480, 400, state, settings);
-                    check(frame.pathColors.size() >= 2 && frame.pathColors.get(0) != frame.pathColors.get(1),
-                            "full battery repaints the entire track in foreground: length=" + length);
-                    check(frame.pathColors.get(1) == state.foreground(), "full track uses battery ink");
-                }
-                float stroke = width * TrioGeometry.CAP_STROKE_RATIO;
-                float reach = TrioGeometry.capDotReach(stroke);
-                // At 100%, each half-circle must be complete even when straight runs reverse direction.
-                try (Frame frame = new Frame()) {
-                    fill.invoke(null, frame, stroke, 1f, reach, reach);
-                    check(frame.arcs.size() == 2, "both caps draw");
-                    check(Math.abs(frame.arcs.get(0) - 180f) < 0.001f
-                                    && Math.abs(frame.arcs.get(1) - 180f) < 0.001f,
-                            "full budget reaches both complete caps: length=" + length + " stroke=" + width);
-                }
-                // With matching gaps, half the charge must finish the left cap before entering the right side.
-                try (Frame frame = new Frame()) {
-                    fill.invoke(null, frame, stroke, 0.5f, reach, reach);
-                    check(!frame.arcs.isEmpty() && Math.abs(frame.arcs.get(0) - 180f) < 0.001f,
-                            "50% reaches the end of the first cap at every permitted length");
-                }
-                try (Frame frame = new Frame()) {
-                    fill.invoke(null, frame, stroke, 0f, reach, reach);
-                    check(frame.arcs.isEmpty(), "empty battery never lights a cap");
+        state.slotLevels = new int[]{2, 4};
+        // One foreground pass leaves alpha 128. Overlapping rounded pieces leave 192.
+        state.useTint = true;
+        state.tintColor = 0x80ffffff;
+        BufferedImage image = new BufferedImage(880, 320, BufferedImage.TYPE_INT_ARGB);
+        try (Frame frame = new Frame(image.createGraphics())) {
+            for (boolean bottomDots : new boolean[]{true, false}) {
+                settings.ringZones = Prefs.decodeLayout(bottomDots ? "7|3|8|1" : "7|3||1");
+                for (int length : new int[]{0, -30, -21, -20, 60}) {
+                    settings.capsuleLength = length;
+                    for (int width : new int[]{Prefs.DEF_RING_STROKE, Prefs.MIN_RING_STROKE, Prefs.MAX_RING_STROKE}) {
+                        settings.ringStroke = width;
+                        float[] transform = new float[3];
+                        TrioSizing.transform(image.getWidth(), image.getHeight(), TrioAppearance.of(settings), 4f, transform);
+                        float stroke = width * TrioGeometry.CAP_STROKE_RATIO;
+                        float inset = stroke / 4f;
+                        float cx = TrioGeometry.capDotCx(), reach = TrioGeometry.capDotReach(stroke);
+                        float leftStart = cx - (bottomDots ? reach : 0);
+                        float top = TrioGeometry.CAP_TOP, bottom = TrioGeometry.CAP_BOTTOM;
+                        for (int level : new int[]{64, -1, 0, 1, 50, 51, 100}) {
+                            state.level = level;
+                            TrioRenderer.drawSizedState(frame, image.getWidth(), image.getHeight(), state, settings, 4f, true);
+                            int lit = 128;
+                            check(capsuleAlpha(image, transform, leftStart + inset, bottom) == (level > 0 ? lit : 0),
+                                    "bottom-left round start at " + level + "%, length=" + length);
+                            check(capsuleAlpha(image, transform, cx - reach + inset, top) == (level >= 50 ? lit : 0),
+                                    "completed left side covers its top round end");
+                            check(capsuleAlpha(image, transform, cx + reach - inset, top) == (level > 50 ? lit : 0),
+                                    "right side starts with a round tip only above half charge");
+                            if (bottomDots) {
+                                check(capsuleAlpha(image, transform, cx + reach - inset, bottom) == (level == 100 ? lit : 0),
+                                        "bottom-right round end remains track until the fill reaches it");
+                            }
+                            if (level >= 50) {
+                                float tangent = TrioGeometry.CAP_LEFT + TrioGeometry.CAP_RADIUS;
+                                check(capsuleAlpha(image, transform, tangent, bottom) == lit &&
+                                                capsuleAlpha(image, transform, tangent, top) == lit,
+                                        "straight and curved portions meet at a single stroke opacity");
+                            }
+                            if (level == 64 && length == 0 && bottomDots) {
+                                // The reported frame ends on the upper-right arc. Sample ahead of
+                                // the centerline endpoint, inside its round cap but outside a flat cut.
+                                float r = TrioGeometry.CAP_RADIUS, rightTangent = TrioGeometry.capRight() - r;
+                                float straight = rightTangent - (cx + reach);
+                                double angle = (0.28 * (2 * straight + Math.PI * r) - straight) / r;
+                                float x = rightTangent + (float)(r * Math.sin(angle) + inset * Math.cos(angle));
+                                float y = top + r + (float)(-r * Math.cos(angle) + inset * Math.sin(angle));
+                                check(capsuleAlpha(image, transform, x, y) == lit, "64% has a rounded moving tip");
+                            }
+                        }
+                    }
                 }
             }
         }
+    }
+
+    private static int capsuleAlpha(BufferedImage image, float[] transform, float x, float y) {
+        return image.getRGB(Math.round(transform[1] + x * transform[0]),
+                Math.round(transform[2] + y * transform[0])) >>> 24;
     }
 
     private static void clockHandoff() {

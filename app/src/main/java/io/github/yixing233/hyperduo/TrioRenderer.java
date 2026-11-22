@@ -1024,14 +1024,14 @@ public final class TrioRenderer {
         final float bottomReach =
                 openingReach(cap, TrioZones.Zone.BOTTOM, stroke, level, mobileType, a, wifiStandard);
         final int batterySave=canvas.save();canvas.translate(a.batteryDx,a.batteryDy);
-        buildCapsuleOutline(CAPSULE, topReach, bottomReach);
+        buildCapsuleOutline(CAPSULE, topReach, bottomReach, 100);
         STROKE.setColor(withAlpha(fg, a.trackAlpha));
         canvas.drawPath(CAPSULE, STROKE);
 
         if (level > 0 && flowPhase < 0) {
             STROKE.setColor(role);
-            if (level >= 100) canvas.drawPath(CAPSULE, STROKE);
-            else drawCapsuleFill(canvas, stroke, level / 100f, topReach, bottomReach);
+            if (level < 100) buildCapsuleOutline(CAPSULE, topReach, bottomReach, level);
+            canvas.drawPath(CAPSULE, STROKE);
         }
 
         drawChargeFlow(canvas,level,role,a,flowPhase,topReach,bottomReach,0,0);
@@ -1376,160 +1376,48 @@ public final class TrioRenderer {
                 + TrioGeometry.capDotClearance() + stroke * 0.5f;
     }
 
-    private static void buildCapsuleOutline(Path p, float topReach, float bottomReach) {
-        final float left = TrioGeometry.CAP_LEFT;
-        // The DRAWN width, not the reference one: this is the path the whole glyph is made of,
-        // and the host is sized from capInkW() which follows it. Reading the constant here is
-        // what made a lengthened capsule look stretched - the host grew and the outline did
-        // not, so the drawing scale shrank and every part of the shape distorted with it.
-        final float right = TrioGeometry.capRight();
-        final float top = TrioGeometry.CAP_TOP;
-        final float bottom = TrioGeometry.CAP_BOTTOM;
-        final float r = TrioGeometry.CAP_RADIUS;
-        final float cy = (top + bottom) * 0.5f;
-        final float cx = (left + right) * 0.5f;
-        final float k = 0.5522847498307936f * r;
+    /** Each mirrored side accounts for half the charge, from bottom left to bottom right. */
+    private static void buildCapsuleOutline(Path path, float topReach, float bottomReach, int level) {
+        path.reset();
+        if (level <= 0) return;
 
-        p.reset();
-        p.moveTo(cx + topReach, top);
-        p.lineTo(right - r, top);
-        p.cubicTo(right - r + k, top, right, cy - k, right, cy);
-        p.cubicTo(right, cy + k, right - r + k, bottom, right - r, bottom);
-        p.lineTo(cx + bottomReach, bottom);
-        p.moveTo(cx - bottomReach, bottom);
-        p.lineTo(left + r, bottom);
-        p.cubicTo(left + r - k, bottom, left, cy + k, left, cy);
-        p.cubicTo(left, cy - k, left + r - k, top, left + r, top);
-        p.lineTo(cx - topReach, top);
+        final float cx = TrioGeometry.capDotCx();
+        appendCapsuleSide(path, true, cx - bottomReach, cx - topReach, Math.min(level, 50) / 50f);
+        if (level > 50) {
+            appendCapsuleSide(path, false, cx + topReach, cx + bottomReach, (Math.min(level, 100) - 50) / 50f);
+        }
     }
 
-    /**
-     * The charged part of the outline, walked segment by segment.
-     *
-     * <p>Drawn as its own geometry rather than by dashing the track's path: a
-     * dash pattern would depend on the platform measuring the path for us, and
-     * the fill's end would land wherever that measurement said. Walking the
-     * outline explicitly means the fraction drawn is the fraction asked for, and
-     * it is the same code path on the device and in the offline harness.
-     *
-     * <p><b>Where it fills from.</b> The two dot rows divide the outline into
-     * exactly two arcs - a left one and a right one - and the level is read off
-     * them as two bars: full is entirely lit, and the charge is spent from the
-     * <em>bottom of the right bar</em>, travelling counterclockwise. So the grey
-     * starts as a stub at the foot of the right bar and eats its way up the right
-     * cap, across the top, down the left cap and along the bottom, and what is
-     * left lit is the run from the bottom gap's left edge clockwise round to its
-     * right edge.
-     *
-     * <p>That is why the walk below runs <em>clockwise from the bottom gap's left
-     * edge</em>: it visits the lit arc in the order the level grows through it, so
-     * simply drawing the first {@code fraction} of it puts the fill where the
-     * reading is taken. The reverse walk - counterclockwise from the top gap -
-     * fills from the other end and was the earlier, wrong, behaviour: it spent the
-     * charge from the top left, so a half-full battery lit the top and left while
-     * the user was reading the level off the right bar.
-     */
-    private static void drawCapsuleFill(Canvas c, float stroke, float fraction,
-                                        float topReach, float bottomReach) {
-        final float left = TrioGeometry.CAP_LEFT;
-        final float right = TrioGeometry.capRight();
-        final float top = TrioGeometry.CAP_TOP;
-        final float bottom = TrioGeometry.CAP_BOTTOM;
-        final float r = TrioGeometry.CAP_RADIUS;
-        final float cy = (top + bottom) * 0.5f;
-        final float cx = (left + right) * 0.5f;
-        // The same reach the track's outline was cut back by, from the same stroke:
-        // the fill and the track have to agree about where the gap is, or the
-        // charged run would stop somewhere other than where the outline resumes.
-        final float topGap = topReach;
-        final float bottomGap = bottomReach;
+    /** Append one continuous contour so only its exposed ends receive the stroke's round cap. */
+    private static void appendCapsuleSide(Path path, boolean left, float startX, float endX, float fraction) {
+        final float top = TrioGeometry.CAP_TOP, bottom = TrioGeometry.CAP_BOTTOM;
+        final float radius = TrioGeometry.CAP_RADIUS;
+        final float tangentX = left ? TrioGeometry.CAP_LEFT + radius : TrioGeometry.capRight() - radius;
+        final float startY = left ? bottom : top;
+        final float endY = left ? top : bottom;
+        final float startAngle = left ? 90f : 270f;
 
-        // Four straight runs and two half-circle caps, in travel order. The gaps
-        // are not segments: they carry no ink in either pass.
-        // A short capsule can place a gap edge beyond the cap's tangent. The
-        // outline still traverses that line, in the opposite direction; its
-        // length must remain positive in both the budget and the fill walk.
-        final float topLeft = Math.abs((cx - topReach) - (left + r));
-        final float bottomLeft = Math.abs((cx - bottomReach) - (left + r));
-        final float bottomRight = Math.abs((right - r) - (cx + bottomReach));
-        final float topRight = Math.abs((right - r) - (cx + topReach));
-        final float capLen = (float) Math.PI * r;
-        final float total = topLeft + capLen + bottomLeft + bottomRight + capLen + topRight;
-        if (total <= 0f) {
+        // A wide opening on a short capsule can reverse either straight segment.
+        final float entryLength = Math.abs(tangentX - startX);
+        final float arcLength = (float) Math.PI * radius;
+        final float exitLength = Math.abs(endX - tangentX);
+        final float distance = fraction * (entryLength + arcLength + exitLength);
+
+        path.moveTo(startX, startY);
+        if (distance <= entryLength) {
+            path.lineTo(startX + Math.copySign(distance, tangentX - startX), startY);
             return;
         }
-        float left0 = total * fraction;
-
-        // BUTT for the walk, and only for the walk.
-        //
-        // The six pieces below are drawn one call each, and adjacent pieces meet exactly at
-        // the four corner tangents. The shared STROKE carries a ROUND cap because the Wi-Fi
-        // arcs need one, so every piece ended in a half-round bead: at an interior joint the
-        // two beads overlapped into a single thicker dot, which is the bright knot users saw
-        // at the capsule's four corners (three of them while the level stopped short of the
-        // last). A flat cap makes each piece end where the next begins, so the joins are
-        // invisible; the fill's own end becomes a clean cut, which is what a bar of ink
-        // should look like.
-        final Paint.Cap previousCap = STROKE.getStrokeCap();
-        STROKE.setStrokeCap(Paint.Cap.BUTT);
-        try {
-            // The six pieces, clockwise from the bottom gap's left edge. Each starts
-            // exactly where the previous one ended, so the fill has no seam; the two
-            // gaps between the top and bottom runs are not pieces, because they carry
-            // ink in neither pass and counting them would make the fraction wrong.
-            //
-            // Both caps sweep +180 here and not -180: the sweep has to follow the
-            // direction of travel, or the fill would run the cap backwards and the two
-            // ends would meet in the middle of it.
-            left0 = run(c, left0, bottomLeft, cx - bottomReach, bottom, left + r, bottom);
-            left0 = cap(c, left0, capLen, left + r, cy, r, 90f, 180f);
-            left0 = run(c, left0, topLeft, left + r, top, cx - topReach, top);
-            left0 = run(c, left0, topRight, cx + topReach, top, right - r, top);
-            left0 = cap(c, left0, capLen, right - r, cy, r, 270f, 180f);
-            run(c, left0, bottomRight, right - r, bottom, cx + bottomReach, bottom);
-        } finally {
-            STROKE.setStrokeCap(previousCap);
+        path.lineTo(tangentX, startY);
+        ARC.set(tangentX - radius, top, tangentX + radius, bottom);
+        if (distance < entryLength + arcLength) {
+            path.arcTo(ARC, startAngle, 180f * (distance - entryLength) / arcLength);
+            return;
         }
-    }
-
-    /**
-     * Draws as much of one straight run as {@code remaining} allows, and answers
-     * what is left.
-     */
-    private static float run(Canvas c, float remaining, float length,
-                             float x1, float y1, float x2, float y2) {
-        if (remaining <= 0f || length <= 0f) {
-            return remaining;
-        }
-        if (remaining >= length) {
-            c.drawLine(x1, y1, x2, y2, STROKE);
-            return remaining - length;
-        }
-        final float t = remaining / length;
-        c.drawLine(x1, y1, x1 + (x2 - x1) * t, y1 + (y2 - y1) * t, STROKE);
-        return 0f;
-    }
-
-    /**
-     * The same for one half-circle cap.
-     *
-     * <p>{@code startDeg} is the angle the cap is entered at and {@code sweepDeg}
-     * is signed, so a partial cap grows from the end the walk arrives at rather
-     * than from the middle - which is what keeps the fill's edge moving smoothly
-     * across the cap instead of jumping when it crosses one.
-     */
-    private static float cap(Canvas c, float remaining, float length,
-                             float cx, float cy, float r, float startDeg, float sweepDeg) {
-        if (remaining <= 0f || length <= 0f) {
-            return remaining;
-        }
-        ARC.set(cx - r, cy - r, cx + r, cy + r);
-        if (remaining >= length) {
-            c.drawArc(ARC, startDeg, sweepDeg, false, STROKE);
-            return remaining - length;
-        }
-        c.drawArc(ARC, startDeg, sweepDeg * (remaining / length), false, STROKE);
-        return 0f;
+        path.arcTo(ARC, startAngle, 180f);
+        final float tipX = fraction == 1f ? endX
+                : tangentX + Math.copySign(distance - (entryLength + arcLength), endX - tangentX);
+        path.lineTo(tipX, endY);
     }
 
     /**
@@ -2126,9 +2014,8 @@ public final class TrioRenderer {
         STROKE.setStyle(Paint.Style.STROKE);STROKE.setStrokeCap(Paint.Cap.ROUND);
         if(a.capsule) {
             STROKE.setStrokeWidth(a.ringStroke*TrioGeometry.CAP_STROKE_RATIO);STROKE.setColor(Color.WHITE);
-            if(level>=100) {
-                buildCapsuleOutline(CAPSULE,p0,p1);c.drawPath(CAPSULE,STROKE);
-            } else drawCapsuleFill(c,STROKE.getStrokeWidth(),level/100f,p0,p1);
+            buildCapsuleOutline(CAPSULE, p0, p1, level);
+            c.drawPath(CAPSULE, STROKE);
         } else drawBattery(c,level,Color.WHITE,0,a,p0,p1,sweep,start,false);
     }
 
