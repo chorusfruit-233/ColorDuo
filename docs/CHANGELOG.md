@@ -4,6 +4,12 @@
 
 离线检查与构建结果、参考固件数据和真机反馈分别记录，具体边界见 [适配与验证记录](COLOROS17.md)。
 
+## 0.4.5
+
+修复胶囊模式下未满电时圆弧端点露出灰色底轨的问题。静态电量和充电流光都能填满圆头，直线与圆弧的接缝只绘制一次。反馈者已在一加 15 上确认测试版显示正常。[#25 实机反馈](https://github.com/chorusfruit-233/ColorDuo/issues/25#issuecomment-7080088455) · [64% 电量对比图](https://github.com/chorusfruit-233/ColorDuo/blob/v0.4.5/docs/images/capsule-endpoints-64.png)
+
+提供 modern 和 legacy 正式签名包，可覆盖 `0.4.4` 或 `0.4.5-test1` 并保留配置。安装后重启 SystemUI 或手机。
+
 ## 0.4.5-test1
 
 - 修复胶囊电量圆弧在未满电时端点露出灰色底轨的问题。电量描边和充电流光共用圆头轮廓，直线与圆弧接缝只绘制一次。[#25](https://github.com/chorusfruit-233/ColorDuo/issues/25) · [64% 电量对比图](images/capsule-endpoints-64.png)
