@@ -6,7 +6,7 @@
 
 ## 0.4.5-test1
 
-- 修复胶囊电量圆弧在未满电时端点露出灰色底轨的问题。电量描边和充电流光共用圆头轮廓，直线与圆弧接缝只绘制一次。[#25](https://github.com/chorusfruit-233/ColorDuo/issues/25)
+- 修复胶囊电量圆弧在未满电时端点露出灰色底轨的问题。电量描边和充电流光共用圆头轮廓，直线与圆弧接缝只绘制一次。[#25](https://github.com/chorusfruit-233/ColorDuo/issues/25) · [64% 电量对比图](images/capsule-endpoints-64.png)
 
 提供 modern 和 legacy 测试包，可覆盖安装并保留配置。安装后重启 SystemUI 或手机。
 
